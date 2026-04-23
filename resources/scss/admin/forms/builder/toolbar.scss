@@ -1,0 +1,63 @@
+.quotemate-toolbar {
+  display: flex;
+  border-bottom: 1px solid $color-border;
+  .quotemate-toolbar__left {
+    width: 6.5%;
+    padding: $space-m;
+    img.quotemate-toolbar__logo {
+      object-fit: contain;
+      width: 100%;
+      max-height: 50px;
+    }
+  }
+
+  .quotemate-toolbar__center {
+    border-inline: 1px solid $color-border;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 88.5%;
+    padding: $space-m $space-xl;
+    text-align: center;
+    .quotemate-toolbar__title {
+      font-size: $font-xl;
+      color: $color-text;
+    }
+
+    .quotemate-toolbar__actions {
+      .quotemate-help-link {
+        display: flex;
+        align-items: center;
+        font-size: $font-m;
+        color: $color-text;
+        text-decoration: none;
+        .quotemate-help-link__icon {
+          width: 16px;
+          height: 16px;
+          margin-right: $space-xs;
+        }
+
+        .quotemate-help-link__text {
+          display: inline-block;
+        }
+      }
+    }
+  }
+
+  .quotemate-toolbar__right {
+    width: 5%;
+    padding: $space-m;
+    text-align: center;
+    .quotemate-toolbar__close-button {
+      .quotemate-toolbar__close-icon {
+        width: 20px;
+        height: 100%;
+      }
+
+      &:focus {
+        outline: none;
+        box-shadow: none;
+      }
+    }
+  }
+}

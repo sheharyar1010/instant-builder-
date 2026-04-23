@@ -1,0 +1,206 @@
+@use "sass:color";
+
+#quotemate-form-setup {
+  .quotemate-form-setup__header {
+    padding: $space-xl;
+    background-color: $color-background-quaternary;
+    border: 1px solid $color-border;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .quotemate-form-setup__title {
+      font-size: $font-l;
+      color: $color-text;
+    }
+
+    .quotemate-form-setup__title-input {
+      width: 75%;
+      padding: $space-s $space-m;
+      background-color: $color-background;
+      border: 1px solid $color-border;
+      border-radius: $rounded-xs;
+      font-size: $font-m;
+      color: $color-text;
+    }
+  }
+
+  .quotemate-form-setup__body {
+    padding: $space-xxl 0;
+    .quotemate-form-setup__description {
+      padding: 0 0 $space-xxl;
+      .quotemate-form-setup__description-title {
+        margin-bottom: $space-s;
+        font-size: $font-m;
+        color: $color-text;
+      }
+
+      .quotemate-form-setup__description-text {
+        font-size: $font-xs;
+        color: $color-text-secondary;
+      }
+    }
+
+    .quotemate-form-setup__template-selection {
+      display: flex;
+      border-top: 1px solid $color-border;
+      .quotemate-form-setup__templates-sidebar {
+        width: 25%;
+        padding: $space-xxl $space-xxl 0 0;
+        border-right: 1px solid $color-border;
+        .quotemate-form-template-search {
+          width: 100%;
+          margin-bottom: $space-xl;
+          padding: $space-xs $space-s;
+          border: 1px solid $color-border;
+          border-radius: $rounded-xs;
+          font-size: $font-s;
+          color: $color-text;
+        }
+
+        .quotemate-form-setup__template-categories-list {
+          .quotemate-form-setup__template-category-item {
+            display: flex;
+            justify-content: space-between;
+            padding: $space-m;
+            cursor: pointer;
+            font-size: $font-xs;
+            color: $color-text;
+            .quotemate-form-setup__template-categories-count {
+              color: $color-text-secondary;
+            }
+
+            &--active {
+              background-color: $color-accent-tertiary;
+              border-radius: $rounded-xs;
+              font-weight: 600;
+              color: $color-text-tertiary;
+              .quotemate-form-setup__template-categories-count {
+                font-weight: 600;
+                color: $color-text-tertiary;
+              }
+            }
+          }
+        }
+      }
+
+      .quotemate-form-setup__templates-content {
+        width: 75%;
+        padding: $space-xxl 0 0 $space-xxl;
+        .quotemate-form-setup__templates-list {
+          display: grid;
+          gap: $space-xl;
+          grid-template-columns: repeat(3, 1fr);
+          .quotemate-form-setup__template-item {
+            display: flex;
+            flex-direction: column;
+            transition: $transition-fast;
+            border: 2px solid $color-border;
+            border-radius: $rounded-m;
+            .quotemate-form-setup__template-image-wrapper {
+              padding: $space-xl $space-xxxl 0;
+              background-color: $color-accent-quaternary;
+              border-radius: $rounded-m $rounded-m 0 0;
+              .quotemate-form-setup__template-image {
+                box-shadow: $shadow-xs;
+                border-radius: $rounded-xs $rounded-xs 0 0;
+              }
+            }
+
+            .quotemate-form-setup__template-body {
+              display: flex;
+              flex-direction: column;
+              justify-content: end;
+              position: relative;
+              height: 100%;
+              .quotemate-form-setup__template-content {
+                display: flex;
+                flex-direction: column;
+                flex-grow: 1;
+                z-index: 1;
+                padding: $space-l $space-xl;
+                border-top: 1px solid $color-border;
+                .quotemate-form-setup__template-title {
+                  margin-bottom: $space-m;
+                  font-size: $font-s;
+                  color: $color-text;
+                }
+
+                .quotemate-form-setup__template-description {
+                  opacity: 1;
+                  transition: $transition-medium;
+                  font-size: $font-xs;
+                  color: $color-text-secondary;
+                }
+              }
+
+              .quotemate-form-setup__template-actions {
+                display: flex;
+                justify-content: space-between;
+                gap: $space-m;
+                position: absolute;
+                z-index: -1;
+                visibility: hidden;
+                opacity: 0;
+                width: 100%;
+                padding: $space-l $space-xl;
+                transition: $transition-medium;
+                .quotemate-form-setup__template-button {
+                  width: 100%;
+                  padding: $space-sm $space-l;
+                  transition: $transition-fast;
+                  background-color: $color-primary;
+                  cursor: pointer;
+                  border: 1px solid $color-border;
+                  border-radius: $rounded-s;
+                  font-size: $font-xs;
+                  color: $color-accent;
+                  &:hover {
+                    background-color: color.adjust(
+                      $color-primary,
+                      $lightness: -5%
+                    );
+                    color: color.adjust($color-accent, $lightness: 10%);
+                  }
+
+                  &--demo {
+                    background-color: $color-accent-secondary;
+                    color: $color-text;
+
+                    &:hover {
+                      background-color: color.adjust(
+                        $color-accent-secondary,
+                        $lightness: -5%
+                      );
+                      color: color.adjust($color-text, $lightness: 10%);
+                    }
+                  }
+                }
+              }
+            }
+
+            &:hover {
+              .quotemate-form-setup__template-content {
+                .quotemate-form-setup__template-description {
+                  z-index: -1;
+                  visibility: hidden;
+                  opacity: 0;
+                }
+              }
+
+              .quotemate-form-setup__template-actions {
+                z-index: 1;
+                visibility: visible;
+                opacity: 1;
+              }
+            }
+
+            &--hidden {
+              display: none;
+            }
+          }
+        }
+      }
+    }
+  }
+}

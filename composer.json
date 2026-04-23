@@ -1,0 +1,19 @@
+{
+    "name": "dawnsol/quotemate",
+    "description": "A powerful and flexible \"Request a Quote\" form builder for WordPress. QuoteMate lets you create custom, multi-step quote forms with dynamic pricing, drag-and-drop fields, conditional logic, and email notifications. Easily manage form submissions, generate PDF quotes, and customize frontend templates-all with zero coding.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "autoload": {
+        "psr-4": {
+            "Dawnsol\\Quotemate\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Dawnsol",
+            "email": "admin@dawnsol.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {}
+}

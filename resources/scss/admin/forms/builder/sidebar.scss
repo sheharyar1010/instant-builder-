@@ -1,0 +1,40 @@
+.quotemate-panels-sidebar {
+  display: flex;
+  flex-direction: column;
+  background: $color-secondary;
+  width: 6.5%;
+  height: 100%;
+
+  .quotemate-panels-sidebar__button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-xs;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: $space-l $space-m;
+
+    .quotemate-panels-sidebar__icon {
+      width: 30px;
+      height: 30px;
+    }
+
+    .quotemate-panels-sidebar__label {
+      font-size: $font-s;
+      color: $color-accent;
+    }
+
+    &--active {
+      background: $color-primary;
+
+      .quotemate-panels-sidebar__icon {
+        filter: brightness(0) invert(1);
+      }
+
+      .quotemate-panels-sidebar__label {
+        color: $color-background;
+      }
+    }
+  }
+}

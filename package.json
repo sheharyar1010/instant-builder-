@@ -1,0 +1,30 @@
+{
+  "name": "quotemate",
+  "version": "1.0.0",
+  "description": "**QuoteMate** is a powerful and flexible “Request a Quote” form builder plugin for WordPress.  \r Easily create dynamic, multi-step quote forms with drag-and-drop fields, real-time pricing, conditional logic, and customizable templates—no coding required.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node post-build-cleanup.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/waleed-dawnsol/quotemate.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/waleed-dawnsol/quotemate/issues"
+  },
+  "homepage": "https://github.com/waleed-dawnsol/quotemate#readme",
+  "devDependencies": {
+    "@vitejs/plugin-legacy": "^7.0.1",
+    "sass": "^1.89.0",
+    "vite": "^7.0.5"
+  },
+  "dependencies": {
+    "sortablejs": "^1.15.6"
+  }
+}

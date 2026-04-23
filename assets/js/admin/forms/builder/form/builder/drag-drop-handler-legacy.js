@@ -1,0 +1,1 @@
+System.register([],function(t,e){"use strict";return{execute:function(){t("D",class{constructor(t){this.formBuilder=t}init(){this.setupDragItems()}setupDragItems(){document.querySelectorAll(".quotemate-form-builder__field-item").forEach(t=>{t.addEventListener("dragstart",e=>{e.dataTransfer.setData("text/plain",t.dataset.fieldType)})})}})}}});

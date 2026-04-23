@@ -1,0 +1,430 @@
+/* Progressive Service Selector - Frontend Only Styles */
+/* This CSS only applies to frontend forms, not admin form builder */
+
+/* Main container - only for frontend forms */
+.quotemate-frontend-form .progressive-service-selector,
+body:not(.wp-admin) .progressive-service-selector {
+  margin: 20px 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  position: relative;
+}
+
+.quotemate-frontend-form .progressive-steps,
+body:not(.wp-admin) .progressive-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* tighter, cleaner spacing between rows */
+}
+
+.quotemate-frontend-form .step-container,
+body:not(.wp-admin) .step-container {
+  /* Make each dropdown look independent / flat but aligned */
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  padding-bottom: 8px;
+  /* small space under each step */
+  transition: all 0.2s ease;
+  position: relative;
+  box-shadow: none;
+}
+
+.quotemate-frontend-form .step-container.active,
+body:not(.wp-admin) .step-container.active {
+  /* Do not highlight active step with its own box */
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.quotemate-frontend-form .step-label,
+body:not(.wp-admin) .step-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+.quotemate-frontend-form .step-number,
+body:not(.wp-admin) .step-number {
+  display: none !important;
+}
+
+.quotemate-frontend-form .step-container:not(.active) .step-number,
+body:not(.wp-admin) .step-container:not(.active) .step-number {
+  background: #6c757d;
+}
+
+.quotemate-frontend-form .step-select,
+body:not(.wp-admin) .step-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 16px;
+  background: white;
+  transition: border-color 0.2s ease;
+}
+
+.quotemate-frontend-form .step-select:focus,
+body:not(.wp-admin) .step-select:focus {
+  outline: none;
+  border-color: #007cba;
+  box-shadow: 0 0 0 3px rgba(0, 124, 186, 0.1);
+}
+
+/* Service Details */
+.quotemate-frontend-form .service-details,
+body:not(.wp-admin) .service-details {
+  margin-top: 15px;
+  padding: 15px;
+  background: #f1f3f4;
+  border-radius: 6px;
+  border-left: 4px solid #007cba;
+}
+
+.quotemate-frontend-form .service-desc,
+body:not(.wp-admin) .service-desc {
+  margin: 0 0 10px 0;
+  color: #555;
+  line-height: 1.5;
+}
+
+.quotemate-frontend-form .pricing-info,
+body:not(.wp-admin) .pricing-info {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.quotemate-frontend-form .pricing-type,
+body:not(.wp-admin) .pricing-type {
+  background: #007cba;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.quotemate-frontend-form .base-price,
+body:not(.wp-admin) .base-price {
+  font-size: 18px;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.quotemate-frontend-form .delivery,
+body:not(.wp-admin) .delivery {
+  color: #6c757d;
+  font-size: 14px;
+}
+
+/* Quantity Options Grid */
+.quotemate-frontend-form .quantity-options-grid,
+body:not(.wp-admin) .quantity-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.quotemate-frontend-form .quantity-option,
+body:not(.wp-admin) .quantity-option {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quotemate-frontend-form .quantity-option:hover,
+body:not(.wp-admin) .quantity-option:hover {
+  transform: translateY(-2px);
+}
+
+.quotemate-frontend-form .quantity-option.selected .option-card,
+body:not(.wp-admin) .quantity-option.selected .option-card {
+  border-color: #007cba;
+  background: linear-gradient(135deg, #007cba 0%, #005a8b 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 124, 186, 0.3);
+}
+
+.quotemate-frontend-form .option-card,
+body:not(.wp-admin) .option-card {
+  background: white;
+  border: 2px solid #dee2e6;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.quotemate-frontend-form .option-card:hover,
+body:not(.wp-admin) .option-card:hover {
+  border-color: #007cba;
+  box-shadow: 0 4px 8px rgba(0, 124, 186, 0.2);
+}
+
+.quotemate-frontend-form .option-number,
+body:not(.wp-admin) .option-number {
+  font-size: 32px;
+  font-weight: bold;
+  color: #007cba;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.quotemate-frontend-form .quantity-option.selected .option-number,
+body:not(.wp-admin) .quantity-option.selected .option-number {
+  color: white;
+}
+
+.quotemate-frontend-form .option-label,
+body:not(.wp-admin) .option-label {
+  font-size: 14px;
+  color: #6c757d;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.quotemate-frontend-form .quantity-option.selected .option-label,
+body:not(.wp-admin) .quantity-option.selected .option-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.quotemate-frontend-form .option-price,
+body:not(.wp-admin) .option-price {
+  font-size: 18px;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.quotemate-frontend-form .quantity-option.selected .option-price,
+body:not(.wp-admin) .quantity-option.selected .option-price {
+  color: white;
+}
+
+.quotemate-frontend-form .custom-quantity .custom-quantity-input,
+body:not(.wp-admin) .custom-quantity .custom-quantity-input {
+  width: 80px;
+  padding: 8px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+.quotemate-frontend-form .custom-quantity .custom-quantity-input:focus,
+body:not(.wp-admin) .custom-quantity .custom-quantity-input:focus {
+  outline: none;
+  border-color: #007cba;
+}
+
+/* Quantity Input (fallback for non-page services) */
+.quotemate-frontend-form .quantity-input-container,
+body:not(.wp-admin) .quantity-input-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 200px;
+}
+
+.quotemate-frontend-form .quantity-input,
+body:not(.wp-admin) .quantity-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 16px;
+  text-align: center;
+  min-width: 80px;
+}
+
+.quotemate-frontend-form .quantity-input:focus,
+body:not(.wp-admin) .quantity-input:focus {
+  outline: none;
+  border-color: #007cba;
+  box-shadow: 0 0 0 3px rgba(0, 124, 186, 0.1);
+}
+
+.quotemate-frontend-form .quantity-unit,
+body:not(.wp-admin) .quantity-unit {
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.quotemate-frontend-form .delivery-estimate,
+body:not(.wp-admin) .delivery-estimate {
+  margin-top: 10px;
+}
+
+.quotemate-frontend-form .delivery-estimate small,
+body:not(.wp-admin) .delivery-estimate small {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.quotemate-frontend-form .delivery-time,
+body:not(.wp-admin) .delivery-time {
+  font-weight: 600;
+  color: #007cba;
+}
+
+/* Price Summary */
+.quotemate-frontend-form .price-summary,
+body:not(.wp-admin) .price-summary {
+  background: linear-gradient(135deg, #007cba 0%, #005a8b 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.quotemate-frontend-form .price-breakdown,
+body:not(.wp-admin) .price-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quotemate-frontend-form .price-line,
+body:not(.wp-admin) .price-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quotemate-frontend-form .price-line.total-line,
+body:not(.wp-admin) .price-line.total-line {
+  border-top: 2px solid rgba(255, 255, 255, 0.3);
+  padding-top: 12px;
+  margin-top: 8px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.quotemate-frontend-form .price-label,
+body:not(.wp-admin) .price-label {
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.quotemate-frontend-form .service-name-display,
+.quotemate-frontend-form .quantity-display,
+.quotemate-frontend-form .unit-price-display,
+.quotemate-frontend-form .total-price-display,
+body:not(.wp-admin) .service-name-display,
+body:not(.wp-admin) .quantity-display,
+body:not(.wp-admin) .unit-price-display,
+body:not(.wp-admin) .total-price-display {
+  font-weight: 600;
+}
+
+.quotemate-frontend-form .total-price-display,
+body:not(.wp-admin) .total-price-display {
+  font-size: 24px;
+  color: #90EE90;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+
+  .quotemate-frontend-form .progressive-service-selector,
+  body:not(.wp-admin) .progressive-service-selector {
+    margin: 15px 0;
+  }
+
+  .quotemate-frontend-form .step-container,
+  body:not(.wp-admin) .step-container {
+    /* keep same flat layout on mobile */
+    padding: 0;
+    margin: 0;
+    padding-bottom: 10px;
+  }
+
+  .quotemate-frontend-form .step-label,
+  body:not(.wp-admin) .step-label {
+    font-size: 15px;
+  }
+
+  .quotemate-frontend-form .step-number,
+  body:not(.wp-admin) .step-number {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+
+  .quotemate-frontend-form .pricing-info,
+  body:not(.wp-admin) .pricing-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .quotemate-frontend-form .quantity-input-container,
+  body:not(.wp-admin) .quantity-input-container {
+    max-width: none;
+    width: 100%;
+  }
+
+  .quotemate-frontend-form .price-line,
+  body:not(.wp-admin) .price-line {
+    font-size: 14px;
+  }
+
+  .quotemate-frontend-form .price-line.total-line,
+  body:not(.wp-admin) .price-line.total-line {
+    font-size: 16px;
+  }
+
+  .quotemate-frontend-form .total-price-display,
+  body:not(.wp-admin) .total-price-display {
+    font-size: 20px;
+  }
+
+  /* Mobile quantity grid adjustments */
+  .quotemate-frontend-form .quantity-options-grid,
+  body:not(.wp-admin) .quantity-options-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .quotemate-frontend-form .option-card,
+  body:not(.wp-admin) .option-card {
+    padding: 15px;
+  }
+
+  .quotemate-frontend-form .option-number,
+  body:not(.wp-admin) .option-number {
+    font-size: 24px;
+  }
+
+  .quotemate-frontend-form .option-price,
+  body:not(.wp-admin) .option-price {
+    font-size: 16px;
+  }
+}
+
+/* Animation for step transitions – keep subtle, without nesting illusion */
+.quotemate-frontend-form .step-container,
+body:not(.wp-admin) .step-container {
+  transform: none;
+  opacity: 1;
+}
+
+.quotemate-frontend-form .step-container:not(.active),
+body:not(.wp-admin) .step-container:not(.active) {
+  opacity: 1;
+  transform: none;
+}

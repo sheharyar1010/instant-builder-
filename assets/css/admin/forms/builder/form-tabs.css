@@ -1,0 +1,57 @@
+/* Form Builder Tabs */
+.quotemate-form-builder__tabs {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  background: #f8f9fa;
+}
+
+.quotemate-form-builder__tab {
+  flex: 1;
+  padding: 15px;
+  text-align: center;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.quotemate-form-builder__tab.active {
+  border-bottom-color: #007cba;
+  color: #007cba;
+  background: white;
+}
+
+.quotemate-form-builder__tab:hover:not(.active) {
+  background: #f1f1f1;
+  color: #333;
+}
+
+.quotemate-form-builder__tab-content {
+  display: none;
+  height: calc(100% - 51px);
+  overflow-y: auto;
+}
+
+.quotemate-form-builder__tab-content.active {
+  display: block;
+}
+
+.quotemate-form-builder__no-field-selected {
+  padding: 30px;
+  text-align: center;
+  color: #666;
+}
+
+.quotemate-form-builder__no-field-selected p {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Form Field Selected State */
+.quotemate-form-field.selected {
+  border-color: #007cba;
+  box-shadow: 0 0 0 1px #007cba;
+} 

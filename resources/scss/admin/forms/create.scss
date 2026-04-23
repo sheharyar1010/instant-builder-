@@ -1,0 +1,6 @@
+@use "@global/base";
+
+.quotemate-panels-sidebar__button:not(.quotemate-panels-sidebar__button--active) {
+  cursor: default !important;
+  opacity: 0.4;
+}

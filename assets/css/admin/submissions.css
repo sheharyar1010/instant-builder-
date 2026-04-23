@@ -1,0 +1,80 @@
+/* Submissions List Styles */
+.new-submission {
+    font-weight: bold;
+    color: #0073aa;
+}
+
+.submission-legend {
+    margin-top: 20px;
+    display: flex;
+    gap: 20px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.status-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #ccc;
+}
+
+.status-indicator.new-submission {
+    background-color: #0073aa;
+}
+
+/* Submission Detail Styles */
+.quotemate-submission-detail .meta-box {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    padding: 10px 20px;
+    margin-bottom: 20px;
+}
+
+.quotemate-submission-detail .submission-data {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    padding: 10px 20px;
+    margin-bottom: 20px;
+}
+
+.quotemate-submission-detail .field-type {
+    color: #666;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.quotemate-submission-detail .price-field {
+    display: flex;
+    align-items: center;
+}
+
+.quotemate-submission-detail .price-symbol {
+    margin-right: 5px;
+    font-weight: bold;
+}
+
+.quotemate-submission-detail #submission-price {
+    width: 100px;
+    margin-right: 10px;
+}
+
+.quotemate-submission-detail .field-value {
+    width: 100%;
+}
+
+.quotemate-submission-detail textarea.field-value {
+    min-height: 100px;
+}
+
+.quotemate-submission-detail .submission-actions {
+    margin-top: 20px;
+    text-align: right;
+} 
