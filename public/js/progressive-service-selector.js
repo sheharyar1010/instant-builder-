@@ -17,6 +17,11 @@ class ProgressiveServiceSelector {
     this.attachEventListeners();
   }
 
+  isHostMultiStep(container) {
+    const hostForm = container?.closest('form');
+    return !!hostForm && hostForm.classList.contains('multi-step-form');
+  }
+
   initializeProgressiveSelectors() {
 
     const serviceFields = document.querySelectorAll('[data-field-type="service"]');
@@ -144,7 +149,26 @@ class ProgressiveServiceSelector {
     // Query ALL active pages at any level
     const activePages = Array.from(progressiveSelector.querySelectorAll('.step-2-page.active-page, .category-page.active-page, .step-page.active-page'));
 
-    if (!activePages.length) return;
+    if (!activePages.length) {
+      // No active paged container; still support internal step-container wizarding.
+      const activeStep = progressiveSelector.querySelector('.step-container.active');
+      if (!activeStep) return;
+
+      const activeStepNumber = parseInt((activeStep.className.match(/\bstep-(\d+)\b/) || [])[1] || '0', 10);
+      if (!activeStepNumber) return;
+
+      const nextStep = progressiveSelector.querySelector(`.step-container.step-${activeStepNumber + 1}`);
+      if (nextStep && nextStep.innerHTML.trim() !== '') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        activeStep.style.display = 'none';
+        activeStep.classList.remove('active');
+        nextStep.style.display = 'block';
+        nextStep.classList.add('active');
+      }
+      return;
+    }
 
     // Sort active pages by depth (we want to navigate the deepest active level first)
     // We can infer depth from the parent step container class or data-attribute, 
@@ -182,6 +206,25 @@ class ProgressiveServiceSelector {
       if (e.detail && e.detail.callback) {
         e.detail.callback(true);
       }
+      return;
+    }
+
+    // No more pages in current step; move to next internal step container if present.
+    const activeStep = progressiveSelector.querySelector('.step-container.active');
+    if (!activeStep) return;
+
+    const activeStepNumber = parseInt((activeStep.className.match(/\bstep-(\d+)\b/) || [])[1] || '0', 10);
+    if (!activeStepNumber) return;
+
+    const nextStep = progressiveSelector.querySelector(`.step-container.step-${activeStepNumber + 1}`);
+    if (nextStep && nextStep.innerHTML.trim() !== '') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      activeStep.style.display = 'none';
+      activeStep.classList.remove('active');
+      nextStep.style.display = 'block';
+      nextStep.classList.add('active');
     }
   }
 
@@ -226,6 +269,25 @@ class ProgressiveServiceSelector {
       const prevPage = allPages[currentIndex - 1];
       prevPage.style.display = 'block';
       prevPage.classList.add('active-page');
+      return;
+    }
+
+    // If no previous internal page exists, move to previous internal step container
+    const activeStep = progressiveSelector.querySelector('.step-container.active');
+    if (!activeStep) return;
+
+    const activeStepNumber = parseInt((activeStep.className.match(/\bstep-(\d+)\b/) || [])[1] || '0', 10);
+    if (activeStepNumber > 1) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      const prevStep = progressiveSelector.querySelector(`.step-container.step-${activeStepNumber - 1}`);
+      if (prevStep) {
+        activeStep.style.display = 'none';
+        activeStep.classList.remove('active');
+        prevStep.style.display = 'block';
+        prevStep.classList.add('active');
+      }
     }
   }
 
@@ -358,9 +420,10 @@ class ProgressiveServiceSelector {
       if (serviceData.children && serviceData.children.length > 0) {
         // Render next level of services
         this.renderGenericStep(container, nextStep, serviceData.children, "Select Option");
+        // Move to next internal page (step) after selection.
         this.showStep(container, nextStep);
         this.hideStepsAfter(container, nextStep);
-        this.updateProgressClasses(container, currentStep); // Active up to current
+        this.updateProgressClasses(container, nextStep);
       } else {
         // LEAF NODE: Render Quantity/Details Step
         // Use nextStep for Quantity/Details
@@ -373,7 +436,6 @@ class ProgressiveServiceSelector {
 
         if (serviceData.pricingType === 'fixed') {
           this.updatePriceSummary(container, serviceData, 1);
-          // Summary is nextStep + 1
           this.showStep(container, nextStep + 1);
           this.updateProgressClasses(container, nextStep + 1);
         } else {
@@ -739,6 +801,13 @@ class ProgressiveServiceSelector {
   showStep(container, stepNumber) {
     const stepElement = container.querySelector(`.step-${stepNumber}`);
     if (stepElement) {
+      // Always show one internal step at a time (prevents stacked dropdown levels).
+      const allInternalSteps = container.querySelectorAll('.step-container');
+      allInternalSteps.forEach(step => {
+        step.style.display = 'none';
+        step.classList.remove('active');
+      });
+
       stepElement.style.display = 'block';
       stepElement.classList.add('active');
     }

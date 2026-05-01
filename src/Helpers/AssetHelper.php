@@ -59,7 +59,7 @@ class AssetHelper
             return;
         }
 
-        $css_path = WP_PLUGIN_DIR . "/quotemate/assets/css/{$name}.css";
+        $css_path = QUOTEMATE_DIR . "assets/css/{$name}.css";
         if (file_exists($css_path)) {
             $css_url = QUOTEMATE_URL . "assets/css/{$name}.css";
             wp_enqueue_style($css_handle, $css_url, [], QUOTEMATE_VERSION);
@@ -67,7 +67,7 @@ class AssetHelper
         }
 
         if ($with_scripts) {
-            $js_path = WP_PLUGIN_DIR . "/quotemate/assets/js/{$name}.js";
+            $js_path = QUOTEMATE_DIR . "assets/js/{$name}.js";
             error_log("AssetHelper: Looking for JS file at: {$js_path}");
             
             if (file_exists($js_path)) {

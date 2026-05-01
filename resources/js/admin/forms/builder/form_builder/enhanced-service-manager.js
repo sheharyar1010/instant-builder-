@@ -171,6 +171,12 @@ export class EnhancedServiceManager {
         this.addSiblingPageBreak(siblingPath);
       }
 
+      if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-add-page-break-under-parent]')) {
+        const button = e.target.closest('[data-add-page-break-under-parent]');
+        const parentPath = button.dataset.parentPath;
+        this.addPageBreakToParent(parentPath);
+      }
+
       if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-remove-service]')) {
         const button = e.target.closest('[data-remove-service]');
         const servicePath = button.dataset.servicePath;
@@ -375,6 +381,17 @@ export class EnhancedServiceManager {
     const addRowParentPath = isChildView ? parentPath : '';
 
     return topLevelWithPaths.map(({ service, path: servicePath }) => {
+      if (service.type === 'page_break') {
+        return `
+          <div class="service-flat-row service-flat-row--page-break" data-service-path="${servicePath}">
+            <div class="service-page-break-indicator">PAGE BREAK</div>
+            <button type="button" class="btn-icon btn-delete" data-remove-service data-service-path="${servicePath}" title="Delete page break">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+            </button>
+          </div>
+        `;
+      }
+
       const name = (service.name || '').replace(/"/g, '&quot;');
       const price = service.basePrice ?? service.price ?? '';
 
@@ -1252,6 +1269,36 @@ export class EnhancedServiceManager {
     return segments;
   }
 
+  /**
+   * Find a non-empty optionsLabel from siblings at the same level.
+   * Used to auto-fill newly opened categories with a consistent child label.
+   */
+  getSiblingOptionsLabel(path) {
+    if (!path) return '';
+
+    const fieldData = this.getFieldData(this.currentFieldId);
+    const structure = fieldData?.enhancedServiceStructure || [];
+    const pathParts = path.split('.');
+    const currentIndex = parseInt(pathParts[pathParts.length - 1], 10);
+
+    let siblings = structure;
+    if (pathParts.length > 1) {
+      const parentPath = pathParts.slice(0, -1).join('.');
+      const parent = this.getServiceByPath(structure, parentPath);
+      siblings = parent?.children || [];
+    }
+
+    for (let i = 0; i < siblings.length; i++) {
+      if (i === currentIndex) continue;
+      const candidate = (siblings[i]?.optionsLabel || '').trim();
+      if (candidate) {
+        return candidate;
+      }
+    }
+
+    return '';
+  }
+
   /** Save current row data, turn row into category with children, then show view to add options under it */
   openOptionsViewForRow(parentPath) {
     const fieldData = this.getFieldData(this.currentFieldId);
@@ -1264,6 +1311,12 @@ export class EnhancedServiceManager {
 
     parent.type = 'category';
     if (!parent.children) parent.children = [];
+    if (!parent.optionsLabel || !String(parent.optionsLabel).trim()) {
+      const inheritedLabel = this.getSiblingOptionsLabel(parentPath);
+      if (inheritedLabel) {
+        parent.optionsLabel = inheritedLabel;
+      }
+    }
 
     if (parent.children.length === 0) {
       parent.children.push({
@@ -1625,16 +1678,9 @@ export class EnhancedServiceManager {
     };
 
     if (siblingPath === '' || siblingPath.indexOf('.') === -1) {
-      // It's a root level item
-      if (siblingPath === '') {
-        fieldData.enhancedServiceStructure.push(newPageBreak);
-      } else {
-        const index = parseInt(siblingPath);
-        fieldData.enhancedServiceStructure.splice(index + 1, 0, newPageBreak);
-      }
+      this.showNotification('Page breaks are only allowed inside child levels.', 'error');
+      return;
     } else {
-      // Nested page breaks are not supported for now, or just treated as root level
-      // But keeping it consistent with other sibling adders:
       const parentPathParts = siblingPath.split('.');
       const siblingIndex = parseInt(parentPathParts.pop());
       const parentPath = parentPathParts.join('.');
@@ -1645,6 +1691,32 @@ export class EnhancedServiceManager {
       }
     }
 
+    this.refreshModal(fieldData);
+  }
+
+  addPageBreakToParent(parentPath) {
+    const fieldData = this.getFieldData(this.currentFieldId);
+
+    if (!fieldData.enhancedServiceStructure) {
+      fieldData.enhancedServiceStructure = [];
+    }
+
+    if (!parentPath) {
+      this.showNotification('Page breaks are only allowed inside child levels.', 'error');
+      return;
+    }
+
+    const parent = this.getServiceByPath(fieldData.enhancedServiceStructure, parentPath);
+    if (!parent) {
+      this.showNotification('Could not find target parent for page break.', 'error');
+      return;
+    }
+
+    if (!parent.children) {
+      parent.children = [];
+    }
+
+    parent.children.push({ type: 'page_break' });
     this.refreshModal(fieldData);
   }
 
@@ -1667,8 +1739,7 @@ export class EnhancedServiceManager {
         const childLabel = (parent?.optionsLabel || '').replace(/"/g, '&quot;');
         const children = parent?.children || [];
         const childrenWithPaths = children
-          .map((service, index) => ({ service, path: `${this.currentViewParentPath}.${index}` }))
-          .filter(({ service }) => service.type !== 'page_break');
+          .map((service, index) => ({ service, path: `${this.currentViewParentPath}.${index}` }));
 
         const breadcrumb = this.getOptionsViewBreadcrumb(fieldData);
         const breadcrumbHtml = breadcrumb.map((s, i) => {
@@ -1691,13 +1762,22 @@ export class EnhancedServiceManager {
           </div>
           <div class="service-options-label-field">
             <label>Label</label>
-            <input
-              type="text"
-              class="service-input service-label-input"
-              placeholder="e.g Model, Type, Size"
-              value="${childLabel}"
-              data-field="optionsLabel"
-              data-service-path="${this.currentViewParentPath}">
+            <div class="service-options-label-field-row">
+              <input
+                type="text"
+                class="service-input service-label-input"
+                placeholder="e.g Model, Type, Size"
+                value="${childLabel}"
+                data-field="optionsLabel"
+                data-service-path="${this.currentViewParentPath}">
+              <button
+                type="button"
+                class="btn btn-primary"
+                data-add-page-break-under-parent
+                data-parent-path="${this.currentViewParentPath}">
+                Add Page Break
+              </button>
+            </div>
           </div>
           <div class="service-options-view-rows">
             ${this.generateFlatCategoryRowsHtml(childrenWithPaths, { isChildView: true, parentPath: this.currentViewParentPath })}

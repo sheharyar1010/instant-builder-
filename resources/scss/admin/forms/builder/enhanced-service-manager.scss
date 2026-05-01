@@ -575,6 +575,29 @@
       color: #a0aec0;
     }
   }
+
+  .service-options-label-field-row {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    max-width: 640px;
+
+    .service-label-input {
+      flex: 1;
+      max-width: none;
+    }
+
+    [data-add-page-break-under-parent] {
+      white-space: nowrap;
+      border-radius: 6px;
+      padding: 0 14px;
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: stretch;
+    }
+  }
 }
 
 /* Structure Header */
