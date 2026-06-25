@@ -59,6 +59,7 @@ class FormDisplayController
         // Check if any fields have conditional logic
         $has_conditional_logic = false;
         $has_calculation_fields = false;
+        $has_form_summary = false;
         
         foreach ($fields as $field) {
             // Check for conditional logic
@@ -70,8 +71,12 @@ class FormDisplayController
             }
             
             // Check for calculation-related fields
-            if (in_array($field['type'], ['service', 'service_options', 'quantity', 'quote_total'])) {
+            if (in_array($field['type'], ['service', 'service_options', 'quantity', 'quote_total', 'form_summary'])) {
                 $has_calculation_fields = true;
+            }
+
+            if (($field['type'] ?? '') === 'form_summary') {
+                $has_form_summary = true;
             }
         }
 
@@ -109,9 +114,14 @@ class FormDisplayController
             );
         }
         
+        $has_enhanced_service = $this->hasEnhancedServiceFields($fields);
+        $needs_unified_steps = $has_enhanced_service
+            || $this->hasFormPageBreaks($fields)
+            || $this->hasServiceStructurePageBreaks($fields);
+
         // Enqueue progressive service selector if enhanced service fields are present
         // Only load on frontend, not in admin
-        if (!is_admin() && $this->hasEnhancedServiceFields($fields)) {
+        if (!is_admin() && $has_enhanced_service) {
             wp_enqueue_script(
                 'quotemate-progressive-service-selector',
                 QUOTEMATE_URL . 'public/js/progressive-service-selector.js',
@@ -124,6 +134,40 @@ class FormDisplayController
                 QUOTEMATE_URL . 'public/css/progressive-service-selector.css',
                 [],
                 QUOTEMATE_VERSION
+            );
+        }
+
+        if (!is_admin() && $needs_unified_steps) {
+            $unified_deps = $has_enhanced_service ? ['quotemate-progressive-service-selector'] : [];
+            wp_enqueue_script(
+                'quotemate-unified-form-steps',
+                QUOTEMATE_URL . 'public/js/unified-form-steps.js',
+                $unified_deps,
+                time(),
+                true
+            );
+        }
+
+        if (!is_admin() && $has_form_summary) {
+            $summary_deps = [];
+            if ($has_enhanced_service) {
+                $summary_deps[] = 'quotemate-progressive-service-selector';
+            }
+            if ($needs_unified_steps) {
+                $summary_deps[] = 'quotemate-unified-form-steps';
+            }
+            wp_enqueue_style(
+                'quotemate-quote-summary',
+                QUOTEMATE_URL . 'public/css/quote-summary.css',
+                [],
+                time()
+            );
+            wp_enqueue_script(
+                'quotemate-quote-summary',
+                QUOTEMATE_URL . 'public/js/quote-summary.js',
+                array_values(array_unique($summary_deps)),
+                time(),
+                true
             );
         }
         // Always enqueue multi-step form script as it handles pagination if present
@@ -179,6 +223,7 @@ class FormDisplayController
         $fields = json_decode($form->fields, true) ?? [];
         $submitted_data = [];
         $user_email = '';
+        $quote_total_price = 0.00;
 
         // Process form data
         foreach ($fields as $field) {
@@ -190,7 +235,7 @@ class FormDisplayController
             $field_value = $_POST[$field_id] ?? '';
 
             // Validate required fields
-            if (!empty($field['required']) && empty($field_value)) {
+            if (!empty($field['required']) && empty($field_value) && $field['type'] !== 'form_summary') {
                 wp_send_json_error(['message' => sprintf(esc_html__('Field "%s" is required.', 'quotemate'), esc_html($field['label']))]);
                 return;
             }
@@ -231,6 +276,22 @@ class FormDisplayController
                     'value' => $service_data,
                     'type' => $field['type'],
                     'display_value' => $service_data['selected_service'] . ' ($' . number_format($service_data['final_price'], 2) . ')'
+                ];
+            } elseif ($field['type'] === 'form_summary') {
+                $snapshot_raw = wp_unslash($_POST[$field_id . '_snapshot'] ?? '');
+                $snapshot = json_decode($snapshot_raw, true);
+                $total_value = is_numeric($field_value) ? floatval($field_value) : 0.0;
+                if ($total_value <= 0 && is_array($snapshot) && isset($snapshot['totals']['total'])) {
+                    $total_value = floatval($snapshot['totals']['total']);
+                }
+                $quote_total_price = $total_value;
+
+                $submitted_data[$field_id] = [
+                    'label' => $field['label'] ?? $field_id,
+                    'value' => $total_value,
+                    'type' => $field['type'],
+                    'snapshot' => is_array($snapshot) ? $snapshot : [],
+                    'display_value' => '$' . number_format($total_value, 2),
                 ];
             } else {
                 // Sanitize based on field type
@@ -281,7 +342,7 @@ class FormDisplayController
                 'form_id' => $form_id,
                 'submitted_data' => json_encode($submitted_data),
                 'user_email' => $user_email,
-                'price' => 0.00, // You can implement pricing logic here
+                'price' => $quote_total_price,
                 'viewed' => 0
             ];
 
@@ -431,6 +492,53 @@ class FormDisplayController
                 if (!empty($field['enhancedServiceStructure']) && is_array($field['enhancedServiceStructure']) && count($field['enhancedServiceStructure']) > 0) {
                     return true;
                 }
+            }
+        }
+        return false;
+    }
+
+    private function hasFormPageBreaks($fields)
+    {
+        foreach ($fields as $field) {
+            if (($field['type'] ?? '') === 'page_break') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function hasServiceStructurePageBreaks($fields)
+    {
+        foreach ($fields as $field) {
+            if (!in_array($field['type'] ?? '', ['service', 'service_options'], true)) {
+                continue;
+            }
+
+            $structure = $field['enhancedServiceStructure'] ?? $field['serviceStructure'] ?? [];
+            if ($this->structureHasPageBreaks($structure)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function structureHasPageBreaks($structure)
+    {
+        foreach ($structure as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            if (($item['type'] ?? '') === 'page_break') {
+                return true;
+            }
+
+            if (!empty($item['pageBreakBeforeOptions'])) {
+                return true;
+            }
+
+            if (!empty($item['children']) && $this->structureHasPageBreaks($item['children'])) {
+                return true;
             }
         }
         return false;

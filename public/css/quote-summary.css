@@ -1,0 +1,192 @@
+/* Form Summary step */
+.quotemate-form-summary {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.quotemate-form-summary__title {
+  margin: 0;
+  padding: 16px 20px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.quotemate-form-summary__body {
+  padding: 20px;
+}
+
+.quotemate-summary-empty {
+  padding: 24px;
+  text-align: center;
+  color: #6b7280;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.quotemate-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.quotemate-summary-table th,
+.quotemate-summary-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: top;
+}
+
+.quotemate-summary-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #374151;
+}
+
+.quotemate-summary-amount {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.quotemate-summary-tier,
+.quotemate-summary-savings {
+  color: #6b7280;
+}
+
+.quotemate-summary-savings {
+  color: #059669;
+  font-weight: 600;
+}
+
+.quotemate-summary-lines--compact {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+}
+
+.quotemate-summary-lines--compact .quotemate-summary-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.quotemate-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.quotemate-summary-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+  background: #fafafa;
+}
+
+.quotemate-summary-card__title {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.quotemate-summary-card__name {
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.quotemate-summary-card__path,
+.quotemate-summary-card__meta,
+.quotemate-summary-card__tier,
+.quotemate-summary-card__delivery {
+  font-size: 13px;
+  color: #4b5563;
+  margin-bottom: 4px;
+}
+
+.quotemate-summary-card__savings {
+  color: #059669;
+  font-weight: 600;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.quotemate-summary-card__total {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 12px;
+  color: #111827;
+}
+
+.quotemate-summary-totals {
+  border-top: 2px solid #e5e7eb;
+  padding-top: 16px;
+  margin-top: 8px;
+}
+
+.quotemate-summary-totals__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  font-size: 15px;
+}
+
+.quotemate-summary-totals__row--discount {
+  color: #dc2626;
+}
+
+.quotemate-summary-totals__row--savings {
+  color: #059669;
+}
+
+.quotemate-summary-totals__row--grand {
+  font-size: 1.2rem;
+  font-weight: 800;
+  padding-top: 12px;
+  margin-top: 8px;
+  border-top: 2px solid #111827;
+}
+
+.quotemate-summary-terms {
+  margin-top: 20px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.quotemate-summary-terms__label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.quotemate-summary-disclaimer {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.quotemate-summary-actions {
+  margin-top: 16px;
+}
+
+@media print {
+  .quotemate-summary-actions,
+  .unified-form-navigation,
+  .step-progress {
+    display: none !important;
+  }
+}

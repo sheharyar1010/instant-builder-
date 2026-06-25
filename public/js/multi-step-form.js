@@ -3,10 +3,21 @@
  * Handles pagination for Quotemate forms
  */
 document.addEventListener('DOMContentLoaded', function () {
-    const multiStepForms = document.querySelectorAll('.multi-step-form');
+    const bootMultiStepForms = () => {
+        document.querySelectorAll('.multi-step-form').forEach((form) => {
+            if (form.dataset.multiStepBound === '1') return;
+            if (form.classList.contains('unified-multi-step-form')) return;
+            if (window.quotemateUnifiedSteps) return;
 
-    multiStepForms.forEach(form => {
-        new MultiStepForm(form);
+            form.dataset.multiStepBound = '1';
+            new MultiStepForm(form);
+        });
+    };
+
+    // Defer once so unified-form-steps can attach first.
+    requestAnimationFrame(() => {
+        bootMultiStepForms();
+        setTimeout(bootMultiStepForms, 0);
     });
 });
 
@@ -36,6 +47,10 @@ class MultiStepForm {
     }
 
     showStep(index) {
+        if (this.form.classList.contains('unified-multi-step-form') || window.quotemateUnifiedSteps) {
+            return;
+        }
+
         // Hide all steps
         this.steps.forEach((step, i) => {
             if (i === index) {

@@ -155,7 +155,7 @@ class QuotemateFormBuilder {
 
   /** Span units for field sizing within a row (capacity = 3) */
   getFieldSpan(fieldData) {
-    const fullWidthTypes = ['page_break', 'section_break', 'divider', 'quote_total'];
+    const fullWidthTypes = ['page_break', 'section_break', 'divider', 'quote_total', 'form_summary'];
     if (fullWidthTypes.includes(fieldData?.type)) return 3;
     const size = (fieldData?.fieldSize || 'large');
     if (size === 'large') return 3;
@@ -554,14 +554,14 @@ class QuotemateFormBuilder {
   }
 
   getFieldSizeClass(fieldData) {
-    const fullWidthTypes = ['page_break', 'section_break', 'html', 'quote_total', 'divider'];
+    const fullWidthTypes = ['page_break', 'section_break', 'html', 'quote_total', 'form_summary', 'divider'];
     const size = fullWidthTypes.includes(fieldData?.type) ? 'large' : (fieldData?.fieldSize || 'large');
     return `quotemate-form-field--size-${size}`;
   }
 
   /** Grid column span: small=1, medium=2, large=3 */
   getFieldSpan(fieldData) {
-    const fullWidthTypes = ['page_break', 'section_break', 'html', 'quote_total', 'divider'];
+    const fullWidthTypes = ['page_break', 'section_break', 'html', 'quote_total', 'form_summary', 'divider'];
     const size = fullWidthTypes.includes(fieldData?.type) ? 'large' : (fieldData?.fieldSize || 'large');
     return size === 'small' ? 1 : size === 'medium' ? 2 : 3;
   }
@@ -1031,6 +1031,19 @@ class QuotemateFormBuilder {
           </div>`;
         break;
 
+      case "form_summary":
+        inputHtml = `
+          <div class="quotemate-form-summary-preview">
+            <div class="quotemate-form-summary-preview__title">${fieldData.summaryTitle || 'Quote Summary'}</div>
+            <div class="quotemate-form-summary-preview__line">Service line item — ${this.escapeHtml(fieldData.currencySymbol || '$')}0.00</div>
+            ${fieldData.showSubtotal !== false ? '<div class="quotemate-form-summary-preview__line">Subtotal</div>' : ''}
+            ${fieldData.showTax ? `<div class="quotemate-form-summary-preview__line">Tax (${fieldData.taxRate || 0}%)</div>` : ''}
+            ${fieldData.showDiscount ? '<div class="quotemate-form-summary-preview__line">Discount</div>' : ''}
+            ${fieldData.showGrandTotal !== false ? `<div class="quotemate-form-summary-preview__total">Grand Total — ${this.escapeHtml(fieldData.currencySymbol || '$')}0.00</div>` : ''}
+            <div class="quotemate-form-summary-preview__hint">Live totals appear on the frontend after all steps are completed.</div>
+          </div>`;
+        break;
+
       case "quote_total":
         inputHtml = `
           <div class="quotemate-quote-total">
@@ -1090,7 +1103,7 @@ class QuotemateFormBuilder {
     // Build the label/description HTML (if applicable)
     let labelHtml = '';
     let descriptionHtml = '';
-    if (fieldType !== 'page_break' && fieldType !== 'section_break' && fieldType !== 'html' && fieldType !== 'divider') {
+    if (fieldType !== 'page_break' && fieldType !== 'section_break' && fieldType !== 'html' && fieldType !== 'divider' && fieldType !== 'form_summary') {
       labelHtml = `<label for="${this.escapeAttr(fieldId)}" class="field-label quotemate-form-field__label">${fieldLabel} ${fieldData.required ? '<span class="quotemate-form-field__required">*</span>' : ''}</label>`;
       if (fieldData.description) {
         descriptionHtml = `<p class="quotemate-form-field__description">${fieldData.description}</p>`;
@@ -1683,6 +1696,34 @@ class QuotemateFormBuilder {
       fieldData.page_description = '';
     } else if (fieldType === 'section_break') {
       fieldData.section_title = 'New Section';
+    } else if (fieldType === 'form_summary') {
+      Object.assign(fieldData, {
+        summaryTitle: 'Quote Summary',
+        showSubtotal: true,
+        currencyCode: 'USD',
+        currencySymbol: '$',
+        showQuantity: true,
+        showPricingType: true,
+        showPath: true,
+        serviceDisplayMode: 'final_only',
+        showTax: false,
+        taxRate: 0,
+        taxMode: 'exclusive',
+        showDiscount: false,
+        discountType: 'percent',
+        discountValue: 0,
+        showGrandTotal: true,
+        submitButtonText: 'Submit Quote Request',
+        emptyStateMessage: 'Complete the steps above to see your quote summary.',
+        showTermsCheckbox: false,
+        termsText: 'I agree to the terms and conditions.',
+        termsRequired: true,
+        disclaimerText: '',
+        layoutStyle: 'detailed',
+        showDeliveryTime: true,
+        showPrintButton: true,
+        showSavingsHighlight: true,
+      });
     } else if (fieldType === 'quote_total') {
       fieldData.show_tax = false;
       fieldData.tax_rate = 0;
@@ -1756,6 +1797,7 @@ class QuotemateFormBuilder {
       additional_options: "Additional Options",
       addons: "Add-ons",
       quote_total: "Quote Total",
+      form_summary: "Form Summary",
       quote_notes: "Quote Notes",
       deadline: "Project Deadline",
       description: "Project Description",
@@ -1801,6 +1843,14 @@ class QuotemateFormBuilder {
     // Show properties in the field settings tab and switch to it
     this.fieldProperties.showProperties(fieldElement);
   }
+
+  getCanvasFieldElement(fieldId) {
+    if (!fieldId) return null;
+    if (this.selectedField?.dataset?.fieldId === fieldId) {
+      return this.selectedField;
+    }
+    return document.querySelector(`.quotemate-form-field[data-field-id="${fieldId}"]`);
+  }
   removeServiceOption(fieldId, index) {
     const fieldData = this.formData.fields.find((f) => f.id === fieldId);
     if (fieldData && fieldData.services && fieldData.services.length > 0) {
@@ -1817,8 +1867,30 @@ class QuotemateFormBuilder {
     const fieldData = this.formData.fields.find((f) => f.id === fieldId);
     if (fieldData) {
       fieldData[property] = value;
+
+      if (fieldData.type === 'form_summary' && property === 'currencyCode') {
+        const currency = FieldProperties.getCurrencyByCode(value);
+        if (currency) {
+          fieldData.currencySymbol = currency.symbol;
+        }
+      }
+
       this.updateFormData();
       this.refreshFieldInCanvas(fieldId);
+
+      const shouldRefreshProperties =
+        (fieldData.type === 'form_summary' &&
+          ['showTax', 'showDiscount', 'showTermsCheckbox', 'discountType', 'currencyCode', 'taxMode'].includes(
+            property
+          )) ||
+        (fieldData.type === 'quote_total' && ['show_tax', 'show_discount'].includes(property));
+
+      if (shouldRefreshProperties) {
+        const fieldElement = this.getCanvasFieldElement(fieldId);
+        if (fieldElement) {
+          this.fieldProperties.showProperties(fieldElement);
+        }
+      }
     }
   }
 
@@ -1859,7 +1931,7 @@ class QuotemateFormBuilder {
   }
 
   refreshFieldInCanvas(fieldId) {
-    const fieldElement = document.querySelector(`[data-field-id="${fieldId}"]`);
+    const fieldElement = this.getCanvasFieldElement(fieldId);
     const fieldData = this.formData.fields.find((f) => f.id === fieldId);
 
     if (fieldElement && fieldData) {

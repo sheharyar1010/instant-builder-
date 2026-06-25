@@ -15,6 +15,77 @@ class ProgressiveServiceSelector {
   init() {
     this.initializeProgressiveSelectors();
     this.attachEventListeners();
+    this.initUnifiedSteps();
+  }
+
+  initUnifiedSteps() {
+    if (window.quotemateUnifiedSteps || !window.UnifiedFormSteps) return;
+
+    const buildFields = () => {
+      const raw =
+        window.quoteMateFormData?.fields ||
+        Array.from(document.querySelectorAll('.form-group[data-field-id]')).map((group) => {
+          try {
+            const container = group.querySelector('[data-field-data]');
+            if (container?.dataset.fieldData) {
+              return JSON.parse(container.dataset.fieldData);
+            }
+          } catch (e) {
+            /* ignore */
+          }
+          return { id: group.dataset.fieldId, type: group.dataset.fieldType };
+        });
+
+      return UnifiedFormSteps.getLayoutFields(
+        (raw || []).map((field) => UnifiedFormSteps.enrichServiceField(field))
+      );
+    };
+
+    const tryInit = () => {
+      if (window.quotemateUnifiedSteps) {
+        window.quotemateUnifiedSteps.fields = buildFields();
+        window.quotemateUnifiedSteps.ensurePostServiceFields();
+        window.quotemateUnifiedSteps.updateNavigationButtons();
+        return true;
+      }
+
+      if (!window.quoteMateFormData?.fields?.length) {
+        const hasDomFields = document.querySelectorAll('.form-group[data-field-id]').length > 0;
+        if (!hasDomFields) return false;
+      }
+
+      const fields = buildFields();
+      const plan = UnifiedFormSteps.buildStepPlan(fields);
+      const serviceField = fields.find((f) => f.type === 'service' || f.type === 'service_options');
+      const hasStructure =
+        serviceField?.enhancedServiceStructure?.length || serviceField?.serviceStructure?.length;
+      const hasServiceStep = plan.steps.some((step) =>
+        step.tokens.some((token) => token.type === 'service_categories')
+      );
+
+      if (serviceField && hasStructure && !hasServiceStep) {
+        return false;
+      }
+
+      if (plan.steps.length <= 1 && !plan.postServiceFields?.length) {
+        return true;
+      }
+
+      window.quotemateUnifiedSteps = new UnifiedFormSteps(this);
+      return true;
+    };
+
+    if (tryInit()) return;
+
+    const retry = () => {
+      if (!tryInit()) return;
+      document.removeEventListener('quotemate-form-data-ready', retry);
+    };
+
+    document.addEventListener('quotemate-form-data-ready', retry);
+    setTimeout(retry, 50);
+    setTimeout(retry, 200);
+    setTimeout(retry, 500);
   }
 
   isHostMultiStep(container) {
@@ -23,10 +94,9 @@ class ProgressiveServiceSelector {
   }
 
   initializeProgressiveSelectors() {
+    const serviceFields = document.querySelectorAll('.service-field-container[data-field-id]');
 
-    const serviceFields = document.querySelectorAll('[data-field-type="service"]');
-
-    serviceFields.forEach(field => {
+    serviceFields.forEach((field) => {
       const fieldId = field.dataset.fieldId;
       const fieldData = this.getFieldData(fieldId);
 
@@ -80,10 +150,17 @@ class ProgressiveServiceSelector {
     // Create dynamic steps based on service structure
     const serviceStructure = fieldData.enhancedServiceStructure || fieldData.serviceStructure;
     const steps = this.createDynamicSteps(serviceStructure);
+    const segments = this.chunkStructureByPageBreak(serviceStructure);
 
     container.innerHTML = `
       <div class="progressive-steps">
         ${steps}
+      </div>
+
+      <div class="progressive-selector-navigation" style="display:none;">
+        <button type="button" class="btn btn-secondary progressive-nav-prev">← Previous</button>
+        <span class="progressive-nav-indicator"></span>
+        <button type="button" class="btn btn-primary progressive-nav-next">Next →</button>
       </div>
 
       <!-- Dynamic hidden inputs container -->
@@ -95,6 +172,9 @@ class ProgressiveServiceSelector {
       <input type="hidden" class="final-service-value" name="${fieldId}" value="">
     `;
 
+    container.dataset.serviceSegments = JSON.stringify(segments);
+
+    this.updateInternalNavigation(container);
     return container;
   }
 
@@ -127,6 +207,47 @@ class ProgressiveServiceSelector {
       }
     });
 
+    // Internal step / page navigation
+    document.addEventListener('click', (e) => {
+      const container = e.target.closest('.progressive-service-selector');
+      if (!container) return;
+
+      if (e.target.closest('.progressive-nav-next')) {
+        e.preventDefault();
+        this.navigateInternalNext(container);
+        return;
+      }
+
+      if (e.target.closest('.progressive-nav-prev')) {
+        e.preventDefault();
+        this.navigateInternalPrev(container);
+        return;
+      }
+
+      if (e.target.closest('[data-action="next-category-page"]')) {
+        e.preventDefault();
+        this.navigateActivePage(container, 1);
+        return;
+      }
+
+      if (e.target.closest('[data-action="prev-category-page"]')) {
+        e.preventDefault();
+        this.navigateActivePage(container, -1);
+        return;
+      }
+
+      if (e.target.closest('.progressive-page-next')) {
+        e.preventDefault();
+        this.navigateActivePage(container, 1);
+        return;
+      }
+
+      if (e.target.closest('.progressive-page-prev')) {
+        e.preventDefault();
+        this.navigateActivePage(container, -1);
+      }
+    });
+
     // Listen for custom events from the main form navigation
     document.addEventListener('quotemate-next-step-check', (e) => {
       this.handleNextStepCheck(e);
@@ -150,22 +271,17 @@ class ProgressiveServiceSelector {
     const activePages = Array.from(progressiveSelector.querySelectorAll('.step-2-page.active-page, .category-page.active-page, .step-page.active-page'));
 
     if (!activePages.length) {
-      // No active paged container; still support internal step-container wizarding.
       const activeStep = progressiveSelector.querySelector('.step-container.active');
       if (!activeStep) return;
 
       const activeStepNumber = parseInt((activeStep.className.match(/\bstep-(\d+)\b/) || [])[1] || '0', 10);
-      if (!activeStepNumber) return;
+      const hasPending = !!progressiveSelector.dataset.pendingInternalStep;
+      const hasNextStep = this.findNextPopulatedStep(progressiveSelector, activeStepNumber) !== null;
 
-      const nextStep = progressiveSelector.querySelector(`.step-container.step-${activeStepNumber + 1}`);
-      if (nextStep && nextStep.innerHTML.trim() !== '') {
+      if (hasPending || hasNextStep) {
         e.preventDefault();
         e.stopImmediatePropagation();
-
-        activeStep.style.display = 'none';
-        activeStep.classList.remove('active');
-        nextStep.style.display = 'block';
-        nextStep.classList.add('active');
+        this.navigateInternalNext(progressiveSelector);
       }
       return;
     }
@@ -202,6 +318,8 @@ class ProgressiveServiceSelector {
       nextPage.style.display = 'block';
       nextPage.classList.add('active-page');
 
+      this.updateInternalNavigation(progressiveSelector);
+
       // Notify check success
       if (e.detail && e.detail.callback) {
         e.detail.callback(true);
@@ -214,34 +332,40 @@ class ProgressiveServiceSelector {
     if (!activeStep) return;
 
     const activeStepNumber = parseInt((activeStep.className.match(/\bstep-(\d+)\b/) || [])[1] || '0', 10);
-    if (!activeStepNumber) return;
+    const hasPending = !!progressiveSelector.dataset.pendingInternalStep;
+    const hasNextStep = this.findNextPopulatedStep(progressiveSelector, activeStepNumber) !== null;
 
-    const nextStep = progressiveSelector.querySelector(`.step-container.step-${activeStepNumber + 1}`);
-    if (nextStep && nextStep.innerHTML.trim() !== '') {
+    if (hasPending || hasNextStep) {
       e.preventDefault();
       e.stopImmediatePropagation();
-
-      activeStep.style.display = 'none';
-      activeStep.classList.remove('active');
-      nextStep.style.display = 'block';
-      nextStep.classList.add('active');
+      this.navigateInternalNext(progressiveSelector);
     }
   }
 
   handlePrevStepCheck(e) {
-    // Find active progressive selector in the current visible form step
     const currentFormStep = document.querySelector('.form-step:not([style*="display: none"])');
     if (!currentFormStep) return;
 
     const progressiveSelector = currentFormStep.querySelector('.progressive-service-selector');
     if (!progressiveSelector) return;
 
-    // Check if there are internal pages to navigate
     const activePages = Array.from(progressiveSelector.querySelectorAll('.step-2-page.active-page, .category-page.active-page, .step-page.active-page'));
 
-    if (!activePages.length) return;
+    if (!activePages.length) {
+      const activeStep = progressiveSelector.querySelector('.step-container.active');
+      if (!activeStep) return;
 
-    // Sort active pages by depth (deepest first)
+      const activeStepNumber = parseInt((activeStep.className.match(/\bstep-(\d+)\b/) || [])[1] || '0', 10);
+      const hasPrevStep = this.findPreviousPopulatedStep(progressiveSelector, activeStepNumber) < activeStepNumber;
+
+      if (hasPrevStep) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        this.navigateInternalPrev(progressiveSelector);
+      }
+      return;
+    }
+
     activePages.sort((a, b) => {
       const selectA = a.querySelector('select');
       const selectB = b.querySelector('select');
@@ -251,43 +375,34 @@ class ProgressiveServiceSelector {
     });
 
     const activePage = activePages[0];
-
-    // Find the container holding the pages
     const pagesContainer = activePage.parentElement;
     const allPages = Array.from(pagesContainer.children);
     const currentIndex = allPages.indexOf(activePage);
 
     if (currentIndex > 0) {
-      // Prevent main form navigation
       e.preventDefault();
       e.stopImmediatePropagation();
 
-      // Navigate internally
       activePage.style.display = 'none';
       activePage.classList.remove('active-page');
 
       const prevPage = allPages[currentIndex - 1];
       prevPage.style.display = 'block';
       prevPage.classList.add('active-page');
+      this.updateInternalNavigation(progressiveSelector);
       return;
     }
 
-    // If no previous internal page exists, move to previous internal step container
     const activeStep = progressiveSelector.querySelector('.step-container.active');
     if (!activeStep) return;
 
     const activeStepNumber = parseInt((activeStep.className.match(/\bstep-(\d+)\b/) || [])[1] || '0', 10);
-    if (activeStepNumber > 1) {
+    const hasPrevStep = this.findPreviousPopulatedStep(progressiveSelector, activeStepNumber) < activeStepNumber;
+
+    if (hasPrevStep) {
       e.preventDefault();
       e.stopImmediatePropagation();
-
-      const prevStep = progressiveSelector.querySelector(`.step-container.step-${activeStepNumber - 1}`);
-      if (prevStep) {
-        activeStep.style.display = 'none';
-        activeStep.classList.remove('active');
-        prevStep.style.display = 'block';
-        prevStep.classList.add('active');
-      }
+      this.navigateInternalPrev(progressiveSelector);
     }
   }
 
@@ -299,94 +414,87 @@ class ProgressiveServiceSelector {
     const fieldData = this.getFieldData(fieldId);
 
     if (!selectedValue || !fieldData) {
+      this.clearInlineCascade(container, 1, 2);
+      this.clearSeparateStepsFrom(container, 2);
       this.hideStepsAfter(container, 1);
       this.updateProgressClasses(container, 1);
+      this.clearUnifiedPendingState(container);
+      window.quotemateUnifiedSteps?.removeDynamicStepsFrom?.(window.quotemateUnifiedSteps.currentStep);
+      window.quotemateUnifiedSteps?.resetPostServiceFieldsFrom?.(
+        window.quotemateUnifiedSteps?.currentStep ?? 0
+      );
+      this.notifyUnifiedStepsChanged(container);
+      this.updateInternalNavigation(container);
       return;
     }
 
-    // Find selected category
-    // Filter out page breaks first
-    const serviceStructure = fieldData.enhancedServiceStructure || fieldData.serviceStructure;
-    const categories = serviceStructure.filter(item => item.type !== 'page_break');
-    const selectedCategory = categories.find(cat =>
-      this.sanitizeValue(cat.name) === selectedValue
-    );
+    // Prefer full category object from option data (avoids name/sanitize mismatches)
+    const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+    let selectedCategory = null;
+    selectedCategory = this.parseOptionData(selectedOption);
 
-    if (!selectedCategory || !selectedCategory.children || selectedCategory.children.length === 0) {
+    if (!selectedCategory) {
+      const serviceStructure = fieldData.enhancedServiceStructure || fieldData.serviceStructure;
+      const categories = serviceStructure.filter(item => item.type !== 'page_break');
+      selectedCategory = categories.find(cat =>
+        this.sanitizeValue(cat.name) === selectedValue
+      );
+    }
+
+    const hasRealChildren = this.getSelectableItems(selectedCategory?.children).length > 0;
+
+    if (!selectedCategory || !hasRealChildren) {
+      this.clearInlineCascade(container, 1, 2);
+      this.clearSeparateStepsFrom(container, 2);
       this.hideStepsAfter(container, 1);
       this.updateProgressClasses(container, 1);
+      this.clearUnifiedPendingState(container);
+      window.quotemateUnifiedSteps?.removeDynamicStepsFrom?.(window.quotemateUnifiedSteps.currentStep);
+      window.quotemateUnifiedSteps?.resetPostServiceFieldsFrom?.(
+        window.quotemateUnifiedSteps?.currentStep ?? 0
+      );
+      this.notifyUnifiedStepsChanged(container);
+      this.updateInternalNavigation(container);
       return;
     }
 
     // Create hidden input for category selection
     this.createDynamicHiddenInput(container, fieldId, 'category', selectedCategory.name, selectedCategory);
 
-    // Chunk children by page breaks for Step 2
-    const childrenPages = [];
-    let currentChildPage = [];
+    const childItems = this.getSelectableItems(selectedCategory.children);
+    const step2Label = (selectedCategory.optionsLabel || 'Select Service').trim();
 
-    if (selectedCategory.children) {
-      selectedCategory.children.forEach(item => {
-        if (item.type === 'page_break' || item.type === 'page-break') {
-          if (currentChildPage.length > 0) {
-            childrenPages.push(currentChildPage);
-            currentChildPage = [];
-          }
-        } else {
-          if (item.name || item.basePrice || item.type) {
-            currentChildPage.push(item);
-          }
-        }
-      });
-      if (currentChildPage.length > 0) {
-        childrenPages.push(currentChildPage);
+    this.clearInlineCascade(container, 1, 2);
+    this.clearSeparateStepsFrom(container, 2);
+    window.quotemateUnifiedSteps?.removeDynamicStepsFrom?.(window.quotemateUnifiedSteps.currentStep);
+    window.quotemateUnifiedSteps?.resetPostServiceFieldsFrom?.(
+      window.quotemateUnifiedSteps?.currentStep ?? 0
+    );
+
+    if (this.hasPageBreakBefore(selectedCategory)) {
+      if (this.isUnifiedMode(container)) {
+        this.preparePendingPageBreakLevel(container, 2, childItems, step2Label, selectedCategory);
+      } else {
+        this.renderSeparateLevel(container, 2, childItems, step2Label);
+        container.dataset.pendingInternalStep = '2';
+        this.showStep(container, 1);
+        this.updateProgressClasses(container, 1);
       }
+    } else if (this.isUnifiedMode(container)) {
+      this.clearUnifiedPendingState(container);
+      this.preparePendingInlineLevel(container, 1, 2, childItems, step2Label);
+      this.showStep(container, 1);
+      this.updateProgressClasses(container, 1);
+    } else {
+      delete container.dataset.pendingInternalStep;
+      this.renderInlineLevel(container, 1, 2, childItems, step2Label);
+      this.showStep(container, 1);
+      this.updateProgressClasses(container, 1);
     }
 
-    // Render Step 2
-    const step2Container = container.querySelector('.step-2');
-    if (!step2Container) return;
-
-    let step2HTML = `
-      <label class="step-label">
-        <span class="step-number">2</span>
-        Select Service
-      </label>
-      
-      <div class="step-2-pages-container">
-        ${childrenPages.map((pageItems, pageIndex) => `
-          <div class="step-2-page step-2-page-${pageIndex} ${pageIndex === 0 ? 'active-page' : ''}" 
-               style="${pageIndex === 0 ? 'display: block;' : 'display: none;'}">
-               
-            ${pageItems.length > 0 ? `
-              <select class="step-select service-select" data-step="service" data-step-number="2" data-page-index="${pageIndex}">
-                <option value="">Choose a service...</option>
-                ${pageItems
-          .filter(service => service.type !== 'page_break' && service.type !== 'page-break')
-          .map(service =>
-            `<option value="${this.sanitizeValue(service.name)}" 
-                           data-service='${JSON.stringify(service)}'>
-                    ${service.name} 
-                    ${this.formatPricing(service)}
-                  </option>`
-          ).join('')}
-              </select>
-            ` : `
-              <div class="empty-page-placeholder">
-                <p>Click details to continue.</p>
-              </div>
-            `}
-          </div>
-        `).join('')}
-      </div>
-    `;
-
-    step2Container.innerHTML = step2HTML;
-
-    // Show step 2
-    this.showStep(container, 2);
-    this.hideStepsAfter(container, 2);
-    this.updateProgressClasses(container, 2);
+    this.hideStepsAfter(container, 1);
+    this.notifyUnifiedStepsChanged(container);
+    this.updateInternalNavigation(container);
   }
 
   handleServiceSelection(e) {
@@ -396,177 +504,491 @@ class ProgressiveServiceSelector {
 
     const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
     const container = serviceSelect.closest('.progressive-service-selector');
+    const isInlineSelect = !!serviceSelect.closest('.inline-cascade-levels');
+    const activeStepNumber = this.getActiveStepNumber(container);
 
     // Determine current step from the select element
-    const currentStep = parseInt(serviceSelect.dataset.stepNumber) || 2;
+    const currentStep = parseInt(serviceSelect.dataset.stepNumber, 10) || 2;
     const nextStep = currentStep + 1;
 
     if (!selectedOption.value) {
-      this.hideStepsAfter(container, currentStep);
-      this.updateProgressClasses(container, currentStep);
+      if (isInlineSelect) {
+        const inlineContainer = serviceSelect.closest('.inline-cascade-levels');
+        this.clearInlineCascadeFrom(inlineContainer, currentStep + 1);
+      }
+      this.clearSeparateStepsFrom(container, currentStep + 1);
+      this.hideStepsAfter(container, isInlineSelect ? activeStepNumber : currentStep);
+      this.updateProgressClasses(container, isInlineSelect ? activeStepNumber : currentStep);
+      this.clearUnifiedPendingState(container);
+      window.quotemateUnifiedSteps?.removeDynamicStepsFrom?.(window.quotemateUnifiedSteps.currentStep);
+      window.quotemateUnifiedSteps?.resetPostServiceFieldsFrom?.(
+        window.quotemateUnifiedSteps?.currentStep ?? 0
+      );
+      this.notifyUnifiedStepsChanged(container);
+      this.updateInternalNavigation(container);
+      return;
+    }
+
+    const serviceData = this.parseOptionData(selectedOption);
+    if (!serviceData) {
+      console.error('Error parsing service data for option:', selectedOption?.text);
       return;
     }
 
     try {
-      const serviceData = JSON.parse(selectedOption.dataset.service);
       const fieldId = container.dataset.fieldId;
+      const childItems = this.getSelectableItems(serviceData.children);
 
       // Create hidden input for service selection
-      // We append the step number to make the input name unique for nested steps
       const inputName = currentStep === 2 ? 'service' : `subservice_${currentStep}`;
       this.createDynamicHiddenInput(container, fieldId, inputName, serviceData.name, serviceData);
 
-      // Check if this service has children (Sub-services)
-      if (serviceData.children && serviceData.children.length > 0) {
-        // Render next level of services
-        this.renderGenericStep(container, nextStep, serviceData.children, "Select Option");
-        // Move to next internal page (step) after selection.
-        this.showStep(container, nextStep);
-        this.hideStepsAfter(container, nextStep);
-        this.updateProgressClasses(container, nextStep);
-      } else {
-        // LEAF NODE: Render Quantity/Details Step
-        // Use nextStep for Quantity/Details
-        this.renderQuantityStep(container, nextStep, serviceData);
-        this.showStep(container, nextStep);
+      if (childItems.length > 0) {
+        const nextLabel = (serviceData.optionsLabel || 'Select Option').trim();
 
-        // If fixed price with no quantity options, we might want to auto-show summary?
-        // But renderQuantityStep prepares the UI.
-        // Let's rely on configureQuantityStep logic which is now part of renderQuantityStep
-
-        if (serviceData.pricingType === 'fixed') {
-          this.updatePriceSummary(container, serviceData, 1);
-          this.showStep(container, nextStep + 1);
-          this.updateProgressClasses(container, nextStep + 1);
+        this.clearSeparateStepsFrom(container, nextStep);
+        if (isInlineSelect) {
+          this.clearInlineCascadeFrom(serviceSelect.closest('.inline-cascade-levels'), nextStep);
         } else {
-          this.hideStepsAfter(container, nextStep);
-          this.updateProgressClasses(container, nextStep);
+          this.clearInlineCascade(container, activeStepNumber, nextStep);
         }
-      }
+        window.quotemateUnifiedSteps?.removeDynamicStepsFrom?.(window.quotemateUnifiedSteps.currentStep);
+        window.quotemateUnifiedSteps?.resetPostServiceFieldsFrom?.(
+          window.quotemateUnifiedSteps?.currentStep ?? 0
+        );
 
+        if (this.hasPageBreakBefore(serviceData)) {
+          if (this.isUnifiedMode(container)) {
+            this.preparePendingPageBreakLevel(container, nextStep, childItems, nextLabel, serviceData);
+          } else {
+            this.renderSeparateLevel(container, nextStep, childItems, nextLabel);
+            container.dataset.pendingInternalStep = String(nextStep);
+            this.showStep(container, activeStepNumber);
+            this.updateProgressClasses(container, activeStepNumber);
+          }
+        } else if (this.isUnifiedMode(container)) {
+          this.clearUnifiedPendingState(container);
+          const hostStep = isInlineSelect ? activeStepNumber : activeStepNumber;
+          this.preparePendingInlineLevel(container, hostStep, nextStep, childItems, nextLabel);
+          this.showStep(container, hostStep);
+          this.updateProgressClasses(container, hostStep);
+        } else {
+          delete container.dataset.pendingInternalStep;
+          const hostStep = activeStepNumber;
+          this.renderInlineLevel(container, hostStep, nextStep, childItems, nextLabel);
+          this.showStep(container, hostStep);
+          this.updateProgressClasses(container, hostStep);
+        }
+
+        this.hideStepsAfter(container, this.hasPageBreakBefore(serviceData) ? activeStepNumber : activeStepNumber);
+        this.notifyUnifiedStepsChanged(container);
+        this.updateInternalNavigation(container);
+      } else {
+        this.markServiceSelectionComplete(container, serviceData);
+
+        if (!this.isUnifiedMode(container)) {
+          const activeStep = container.querySelector('.step-container.active');
+          const useInlineLeaf = isInlineSelect || !!activeStep?.querySelector('.inline-cascade-level');
+
+          this.clearSeparateStepsFrom(container, nextStep);
+
+          if (useInlineLeaf) {
+            this.renderInlineQuantity(container, activeStepNumber, nextStep, serviceData);
+            this.showStep(container, activeStepNumber);
+            this.updateProgressClasses(container, activeStepNumber);
+
+            if (serviceData.pricingType === 'fixed') {
+              this.updatePriceSummary(container, serviceData, 1);
+            }
+          } else {
+            this.renderQuantityStep(container, nextStep, serviceData);
+            this.showStep(container, nextStep);
+
+            if (serviceData.pricingType === 'fixed') {
+              this.updatePriceSummary(container, serviceData, 1);
+              this.showStep(container, nextStep + 1);
+              this.updateProgressClasses(container, nextStep + 1);
+            } else {
+              this.hideStepsAfter(container, nextStep);
+              this.updateProgressClasses(container, nextStep);
+            }
+          }
+        } else {
+          this.processQuantitySelection(
+            container,
+            Math.max(1, serviceData.minQuantity || 1)
+          );
+        }
+
+        this.updateInternalNavigation(container);
+        this.notifyUnifiedStepsChanged(container);
+      }
     } catch (error) {
-      console.error('Error parsing service data:', error);
+      console.error('Error handling service selection:', error);
     }
+  }
+
+  buildLevelSelectHtml(stepNumber, items, labelText, selectClass = 'service-select') {
+    return `
+      <label class="step-label">
+        <span class="step-number">${stepNumber}</span>
+        ${labelText}
+      </label>
+      <select class="step-select ${selectClass}" data-step="service" data-step-number="${stepNumber}">
+        <option value="">Choose an option...</option>
+        ${items.map(item => `
+          <option value="${this.sanitizeValue(item.name)}" data-service="${this.encodeOptionData(item)}">
+            ${item.name}
+            ${this.formatPricing(item)}
+          </option>
+        `).join('')}
+      </select>
+    `;
+  }
+
+  ensureInlineContainer(stepElement) {
+    let inlineContainer = stepElement.querySelector('.inline-cascade-levels');
+    if (!inlineContainer) {
+      inlineContainer = document.createElement('div');
+      inlineContainer.className = 'inline-cascade-levels';
+      stepElement.appendChild(inlineContainer);
+    }
+    return inlineContainer;
+  }
+
+  clearInlineCascadeFrom(inlineContainer, fromLevel) {
+    if (!inlineContainer) return;
+    inlineContainer.querySelectorAll('.inline-cascade-level').forEach(el => {
+      const level = parseInt(el.dataset.cascadeLevel, 10) || 0;
+      if (level >= fromLevel) {
+        el.remove();
+      }
+    });
+  }
+
+  clearInlineCascade(container, hostStepNumber, fromLevel = 2) {
+    const hostStep = container.querySelector(`.step-container.step-${hostStepNumber}`);
+    const inlineContainer = hostStep?.querySelector('.inline-cascade-levels');
+    this.clearInlineCascadeFrom(inlineContainer, fromLevel);
+  }
+
+  clearSeparateStepsFrom(container, fromStep) {
+    for (let i = fromStep; i <= 5; i++) {
+      const step = container.querySelector(`.step-container.step-${i}`);
+      if (!step) continue;
+      step.innerHTML = '';
+      step.style.display = 'none';
+      step.classList.remove('active');
+      delete step.dataset.pageBreakStep;
+    }
+  }
+
+  renderInlineLevel(container, hostStepNumber, levelNumber, items, labelText) {
+    const hostStep = container.querySelector(`.step-container.step-${hostStepNumber}`);
+    if (!hostStep) return;
+
+    const inlineContainer = this.ensureInlineContainer(hostStep);
+    this.clearInlineCascadeFrom(inlineContainer, levelNumber);
+
+    const levelEl = document.createElement('div');
+    levelEl.className = 'inline-cascade-level';
+    levelEl.dataset.cascadeLevel = String(levelNumber);
+    levelEl.innerHTML = this.buildLevelSelectHtml(levelNumber, items, labelText, 'service-select');
+    inlineContainer.appendChild(levelEl);
+  }
+
+  renderSeparateLevel(container, stepNumber, items, labelText) {
+    const stepContainer = container.querySelector(`.step-container.step-${stepNumber}`);
+    if (!stepContainer) return;
+
+    stepContainer.dataset.pageBreakStep = '1';
+    stepContainer.innerHTML = `
+      ${this.buildLevelSelectHtml(stepNumber, items, labelText, 'service-select')}
+      <div class="inline-cascade-levels"></div>
+    `;
   }
 
   renderGenericStep(container, stepNumber, items, labelText) {
-    // Chunk items by page break
-    const pages = [];
-    let currentPage = [];
-
-    items.forEach(item => {
-      // Robust check for page break
-      if (item.type === 'page_break' || item.type === 'page-break') {
-        if (currentPage.length > 0) {
-          pages.push(currentPage);
-          currentPage = [];
-        }
-      } else {
-        if (item.name || item.basePrice || item.type) {
-          currentPage.push(item);
-        } else {
-          console.warn('[QuoteMate] Skipped potential malformed item in Generic Step:', item);
-        }
-      }
-    });
-    if (currentPage.length > 0) {
-      pages.push(currentPage);
-    }
-
-    const stepContainer = container.querySelector(`.step-${stepNumber}`);
-    if (!stepContainer) {
-      console.warn(`Step container .step-${stepNumber} not found.`);
-      return;
-    }
-
-    let html = `
-        <label class="step-label">
-            <span class="step-number">${stepNumber}</span>
-            ${labelText}
-        </label>
-        <div class="step-pages-container">
-            ${pages.map((pageItems, pageIndex) => `
-                <div class="step-page step-page-${pageIndex} ${pageIndex === 0 ? 'active-page' : ''}"
-                     style="${pageIndex === 0 ? 'display: block;' : 'display: none;'}">
-                    
-                    ${pageItems.length > 0 ? `
-                        <select class="step-select service-select" data-step="service" data-step-number="${stepNumber}" data-page-index="${pageIndex}">
-                            <option value="">Choose an option...</option>
-                             ${pageItems
-          .filter(item => item.type !== 'page_break' && item.type !== 'page-break')
-          .map(item => `
-                                <option value="${this.sanitizeValue(item.name)}" 
-                                        data-service='${JSON.stringify(item)}'>
-                                    ${item.name}
-                                    ${this.formatPricing(item)}
-                                </option>
-                            `).join('')}
-                        </select>
-                    ` : `
-                        <div class="empty-page-placeholder">
-                             <p>Click next to view available options.</p>
-                        </div>
-                    `}
-                </div>
-            `).join('')}
-        </div>
-      `;
-    stepContainer.innerHTML = html;
+    this.renderSeparateLevel(container, stepNumber, this.getSelectableItems(items), labelText);
+    this.updateInternalNavigation(container);
   }
 
-  renderQuantityStep(container, stepNumber, serviceData) {
-    const stepContainer = container.querySelector(`.step-${stepNumber}`);
-    if (!stepContainer) return;
+  getSelectableItems(items) {
+    return (items || []).filter(item =>
+      item?.type !== 'page_break' &&
+      item?.type !== 'page-break' &&
+      (item?.name || item?.basePrice || item?.type)
+    );
+  }
 
-    // Construct Quantity Step HTML
-    // We generate the grid options dynamically if needed
+  hasPageBreakBefore(node) {
+    const value = node?.pageBreakBeforeOptions;
+    return value === true || value === 1 || value === '1' || value === 'true';
+  }
+
+  encodeOptionData(item) {
+    try {
+      return encodeURIComponent(JSON.stringify(item));
+    } catch (e) {
+      return '';
+    }
+  }
+
+  parseOptionData(option) {
+    if (!option) return null;
+
+    const raw =
+      option.getAttribute('data-service') ||
+      option.getAttribute('data-category-data') ||
+      option.dataset?.service ||
+      option.dataset?.categoryData;
+
+    if (!raw) return null;
+
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      try {
+        return JSON.parse(decodeURIComponent(raw));
+      } catch (e2) {
+        return null;
+      }
+    }
+  }
+
+  isServiceReadyForPostFields(container) {
+    if (!container) return false;
+    if (this.hasUnifiedPending(container)) return false;
+
+    const finalValue = container.querySelector('.final-service-value');
+    if (finalValue?.value?.trim()) return true;
+
+    return this.isServicePathComplete(container);
+  }
+
+  isUnifiedMode(container) {
+    return container?.dataset?.unifiedMode === '1';
+  }
+
+  clearUnifiedPendingState(container) {
+    if (!container) return;
+    delete container.dataset.pendingInlineReveal;
+    delete container.dataset.pendingInlineData;
+    delete container.dataset.pendingInternalStep;
+    delete container.dataset.pendingParentJson;
+  }
+
+  preparePendingInlineLevel(container, hostStepNumber, levelNumber, items, labelText) {
+    container.dataset.pendingInlineReveal = '1';
+    container.dataset.pendingInlineData = JSON.stringify({
+      hostStep: hostStepNumber,
+      levelNumber,
+      items,
+      labelText,
+    });
+    window.quotemateUnifiedSteps?.updateNavigationButtons?.();
+  }
+
+  revealPendingInline(container) {
+    if (!container || container.dataset.pendingInlineReveal !== '1') return false;
+
+    let data = {};
+    try {
+      data = JSON.parse(container.dataset.pendingInlineData || '{}');
+    } catch (e) {
+      data = {};
+    }
+
+    if (!data.items?.length) return false;
+
+    this.renderInlineLevel(
+      container,
+      data.hostStep || 1,
+      data.levelNumber || 2,
+      data.items,
+      data.labelText || 'Select Option'
+    );
+    delete container.dataset.pendingInlineReveal;
+    delete container.dataset.pendingInlineData;
+    this.showStep(container, data.hostStep || 1);
+    this.updateProgressClasses(container, data.hostStep || 1);
+    this.updateInternalNavigation(container);
+    return true;
+  }
+
+  preparePendingPageBreakLevel(container, stepNumber, items, labelText, parentItem) {
+    this.renderSeparateLevel(container, stepNumber, items, labelText);
+    container.dataset.pendingInternalStep = String(stepNumber);
+    if (parentItem) {
+      container.dataset.pendingParentJson = JSON.stringify(parentItem);
+    }
+    this.showStep(container, stepNumber - 1);
+    this.hideStepsAfter(container, stepNumber - 1);
+    this.updateProgressClasses(container, stepNumber - 1);
+    window.quotemateUnifiedSteps?.updateNavigationButtons?.();
+  }
+
+  getDeepestSelectedServiceSelect(container) {
+    const selects = Array.from(container.querySelectorAll('select.service-select'));
+    for (let i = selects.length - 1; i >= 0; i--) {
+      if (selects[i].value) {
+        return selects[i];
+      }
+    }
+    return container.querySelector('select.service-select');
+  }
+
+  hasUnifiedPending(container) {
+    return (
+      container?.dataset?.pendingInlineReveal === '1' || !!container?.dataset?.pendingInternalStep
+    );
+  }
+
+  getLastSelectedItem(container) {
+    if (!container) return null;
+
+    const catSelect = container.querySelector('.category-select');
+    if (!catSelect?.value) return null;
+
+    let lastItem = null;
+    const catOption = catSelect.options[catSelect.selectedIndex];
+    lastItem = this.parseOptionData(catOption);
+
+    if (!lastItem) {
+      const fieldId = container.dataset.fieldId;
+      const fieldData = this.getFieldData(fieldId);
+      const structure = fieldData?.enhancedServiceStructure || fieldData?.serviceStructure || [];
+      lastItem = this.getSelectableItems(structure).find(
+        (cat) => this.sanitizeValue(cat.name) === catSelect.value
+      );
+    }
+
+    container.querySelectorAll('select.service-select').forEach((select) => {
+      if (!select.value) return;
+      const option = select.options[select.selectedIndex];
+      const parsed = this.parseOptionData(option);
+      if (parsed) {
+        lastItem = parsed;
+      }
+    });
+
+    return lastItem;
+  }
+
+  isServicePathComplete(container) {
+    if (!container) return true;
+    if (this.hasUnifiedPending(container)) return false;
+
+    const finalValue = container.querySelector('.final-service-value');
+    if (finalValue?.value?.trim()) return true;
+
+    const catSelect = container.querySelector('.category-select');
+    if (!catSelect?.value) return false;
+
+    const deepest = this.getDeepestSelectedServiceSelect(container);
+    if (deepest?.value) {
+      const option = deepest.options[deepest.selectedIndex];
+      const data = this.parseOptionData(option);
+      if (data) {
+        if (this.getSelectableItems(data.children).length === 0) {
+          return true;
+        }
+        return false;
+      }
+    }
+
+    const lastItem = this.getLastSelectedItem(container);
+    if (!lastItem) return false;
+
+    return this.getSelectableItems(lastItem.children).length === 0;
+  }
+
+  markServiceSelectionComplete(container, serviceData) {
+    if (!container || !serviceData?.name) return;
+
+    this.clearUnifiedPendingState(container);
+
+    const finalServiceValue = container.querySelector('.final-service-value');
+    if (finalServiceValue) {
+      finalServiceValue.value = serviceData.name;
+      finalServiceValue.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    container.classList.add('complete');
+  }
+
+  notifyUnifiedStepsChanged(container) {
+    const unified = window.quotemateUnifiedSteps;
+    if (!unified || !this.isUnifiedMode(container)) return;
+    unified.ensurePostServiceFields?.();
+    unified.enforcePostServiceFieldVisibility?.();
+    unified.syncProgressBar();
+    unified.updateNavigationButtons();
+  }
+
+  buildQuantityHtml(serviceData) {
     let gridHTML = '';
     if (serviceData.pricingType === 'per_page') {
       for (let i = 1; i <= 8; i++) {
         gridHTML += `
-                <div class="quantity-option" data-quantity="${i}">
-                    <span class="option-label">${i} ${i === 1 ? 'page' : 'pages'}</span>
-                    <span class="option-price">...</span>
-                </div>
-              `;
+          <div class="quantity-option" data-quantity="${i}">
+            <span class="option-label">${i} ${i === 1 ? 'page' : 'pages'}</span>
+            <span class="option-price">...</span>
+          </div>
+        `;
       }
     }
 
-    const html = `
-        <div class="service-details">
-            <div class="service-description" style="display: ${serviceData.description ? 'block' : 'none'}">
-                <p class="service-desc">${serviceData.description || ''}</p>
-            </div>
-            <div class="service-pricing-info">
-                <div class="pricing-info">
-                    <span class="pricing-type">${this.formatPricingType(serviceData.pricingType)}</span>
-                    <span class="base-price">$${serviceData.basePrice}</span>
-                    ${serviceData.deliveryTime ? `<span class="delivery">Delivery: ${serviceData.deliveryTime} days</span>` : ''}
-                </div>
-            </div>
+    return `
+      <div class="service-details">
+        <div class="service-description" style="display: ${serviceData.description ? 'block' : 'none'}">
+          <p class="service-desc">${serviceData.description || ''}</p>
         </div>
-
-        <div class="quantity-section" style="${serviceData.pricingType === 'fixed' ? 'display:none;' : ''}">
-           <label class="quantity-label">Quantity</label>
-           
-           <div class="quantity-options-grid" style="display: ${serviceData.pricingType === 'per_page' ? 'grid' : 'none'}">
-              ${gridHTML}
-           </div>
-
-           <div class="quantity-input-container" style="display: ${serviceData.pricingType !== 'per_page' ? 'flex' : 'none'}">
-              <input type="number" class="quantity-input form-control" min="${serviceData.minQuantity || 1}" value="${Math.max(1, serviceData.minQuantity || 1)}" max="${serviceData.maxQuantity || ''}">
-              <span class="quantity-unit">${this.getQuantityUnit(serviceData.pricingType)}</span>
-           </div>
-           
-           <div class="delivery-estimate" style="display: ${serviceData.deliveryTime ? 'block' : 'none'}">
-              Est. Delivery: <span class="delivery-time">${serviceData.deliveryTime} days</span>
-           </div>
+        <div class="service-pricing-info">
+          <div class="pricing-info">
+            <span class="pricing-type">${this.formatPricingType(serviceData.pricingType)}</span>
+            <span class="base-price">$${serviceData.basePrice}</span>
+            ${serviceData.deliveryTime ? `<span class="delivery">Delivery: ${serviceData.deliveryTime} days</span>` : ''}
+          </div>
         </div>
-      `;
+      </div>
+      <div class="quantity-section" style="${serviceData.pricingType === 'fixed' ? 'display:none;' : ''}">
+        <label class="quantity-label">Quantity</label>
+        <div class="quantity-options-grid" style="display: ${serviceData.pricingType === 'per_page' ? 'grid' : 'none'}">
+          ${gridHTML}
+        </div>
+        <div class="quantity-input-container" style="display: ${serviceData.pricingType !== 'per_page' ? 'flex' : 'none'}">
+          <input type="number" class="quantity-input form-control" min="${serviceData.minQuantity || 1}" value="${Math.max(1, serviceData.minQuantity || 1)}" max="${serviceData.maxQuantity || ''}">
+          <span class="quantity-unit">${this.getQuantityUnit(serviceData.pricingType)}</span>
+        </div>
+        <div class="delivery-estimate" style="display: ${serviceData.deliveryTime ? 'block' : 'none'}">
+          Est. Delivery: <span class="delivery-time">${serviceData.deliveryTime} days</span>
+        </div>
+      </div>
+    `;
+  }
 
-    stepContainer.innerHTML = html;
+  renderInlineQuantity(container, hostStepNumber, levelNumber, serviceData) {
+    const hostStep = container.querySelector(`.step-container.step-${hostStepNumber}`);
+    if (!hostStep) return;
 
-    // Configure it (updates logic, prices in grid, etc)
+    const inlineContainer = this.ensureInlineContainer(hostStep);
+    this.clearInlineCascadeFrom(inlineContainer, levelNumber);
+
+    const levelEl = document.createElement('div');
+    levelEl.className = 'inline-cascade-level inline-cascade-level--quantity';
+    levelEl.dataset.cascadeLevel = String(levelNumber);
+    levelEl.innerHTML = this.buildQuantityHtml(serviceData);
+    inlineContainer.appendChild(levelEl);
+
+    this.configureQuantityStep(container, serviceData);
+  }
+
+  renderQuantityStep(container, stepNumber, serviceData) {
+    const stepContainer = container.querySelector(`.step-container.step-${stepNumber}`);
+    if (!stepContainer) return;
+
+    stepContainer.innerHTML = this.buildQuantityHtml(serviceData);
     this.configureQuantityStep(container, serviceData);
   }
 
@@ -604,15 +1026,15 @@ class ProgressiveServiceSelector {
   }
 
   processQuantitySelection(container, quantity) {
-    const serviceSelect = container.querySelector('.service-select');
-    const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+    const serviceSelect = this.getDeepestSelectedServiceSelect(container);
+    const selectedOption = serviceSelect?.options[serviceSelect.selectedIndex];
 
-    if (!selectedOption.value) return;
+    if (!selectedOption?.value) return;
+
+    const serviceData = this.parseOptionData(selectedOption);
+    if (!serviceData) return;
 
     try {
-      const serviceData = JSON.parse(selectedOption.dataset.service);
-
-      // Validate quantity constraints
       if (serviceData.minQuantity && quantity < serviceData.minQuantity) {
         quantity = serviceData.minQuantity;
       }
@@ -621,11 +1043,18 @@ class ProgressiveServiceSelector {
         quantity = serviceData.maxQuantity;
       }
 
-      // Update price summary
       this.updatePriceSummary(container, serviceData, quantity);
-      this.showStep(container, 4);
-      this.updateProgressClasses(container, 4);
 
+      if (!this.isUnifiedMode(container) && !this.hasInlineLevels(container)) {
+        this.showStep(container, 4);
+        this.updateProgressClasses(container, 4);
+      } else {
+        this.updateInternalNavigation(container);
+      }
+
+      if (this.isUnifiedMode(container)) {
+        window.quotemateUnifiedSteps?.updateNavigationButtons?.();
+      }
     } catch (error) {
       console.error('Error updating quantity:', error);
     }
@@ -728,31 +1157,35 @@ class ProgressiveServiceSelector {
   }
 
   updatePriceSummary(container, serviceData, quantity) {
-    const serviceNameDisplay = container.querySelector('.service-name-display');
-    const quantityDisplay = container.querySelector('.quantity-display');
-    const unitPriceDisplay = container.querySelector('.unit-price-display');
-    const totalPriceDisplay = container.querySelector('.total-price-display');
-
-    // Calculate price based on pricing tiers if available
     const pricingInfo = this.calculatePriceWithTiers(serviceData, quantity);
     const unitPrice = pricingInfo.unitPrice;
     const totalPrice = pricingInfo.totalPrice;
     const deliveryTime = pricingInfo.deliveryTime;
 
-    serviceNameDisplay.textContent = serviceData.name;
+    const serviceNameDisplay = container.querySelector('.service-name-display');
+    const quantityDisplay = container.querySelector('.quantity-display');
+    const unitPriceDisplay = container.querySelector('.unit-price-display');
+    const totalPriceDisplay = container.querySelector('.total-price-display');
 
-    // Show different display for different pricing types
-    if (serviceData.pricingType === 'fixed') {
-      quantityDisplay.textContent = '1 service';
-      unitPriceDisplay.textContent = `$${unitPrice.toFixed(2)} (Fixed)`;
-    } else {
-      const unitLabel = this.getQuantityUnit(serviceData.pricingType);
-      quantityDisplay.textContent = `${quantity} ${unitLabel}`;
-      const pricingLabel = this.formatPricingType(serviceData.pricingType);
-      unitPriceDisplay.textContent = `$${unitPrice.toFixed(2)} ${pricingLabel.toLowerCase()}`;
+    if (serviceNameDisplay) {
+      serviceNameDisplay.textContent = serviceData.name;
     }
 
-    totalPriceDisplay.textContent = `$${totalPrice.toFixed(2)}`;
+    if (quantityDisplay && unitPriceDisplay) {
+      if (serviceData.pricingType === 'fixed') {
+        quantityDisplay.textContent = '1 service';
+        unitPriceDisplay.textContent = `$${unitPrice.toFixed(2)} (Fixed)`;
+      } else {
+        const unitLabel = this.getQuantityUnit(serviceData.pricingType);
+        quantityDisplay.textContent = `${quantity} ${unitLabel}`;
+        const pricingLabel = this.formatPricingType(serviceData.pricingType);
+        unitPriceDisplay.textContent = `$${unitPrice.toFixed(2)} ${pricingLabel.toLowerCase()}`;
+      }
+    }
+
+    if (totalPriceDisplay) {
+      totalPriceDisplay.textContent = `$${totalPrice.toFixed(2)}`;
+    }
 
     // Update delivery estimate if tier-specific delivery time is available
     if (deliveryTime && deliveryTime !== serviceData.deliveryTime) {
@@ -765,7 +1198,6 @@ class ProgressiveServiceSelector {
       }
     }
 
-    // Update hidden inputs for form submission
     const finalServiceValue = container.querySelector('.final-service-value');
     const finalQuantityValue = container.querySelector('.final-quantity-value');
     const finalPriceValue = container.querySelector('.final-price-value');
@@ -774,19 +1206,21 @@ class ProgressiveServiceSelector {
     const finalPriceValue2 = container.querySelector('.final-price-value[name$="_final_price"]');
     const selectedPathValue = container.querySelector('.selected-path-value');
 
-    // Get category and service names for the path
     const categorySelect = container.querySelector('.category-select');
-    const serviceSelect = container.querySelector('.service-select');
-    const categoryName = categorySelect.options[categorySelect.selectedIndex]?.text || '';
-    const serviceName = serviceSelect.options[serviceSelect.selectedIndex]?.text || '';
+    const serviceSelect = this.getDeepestSelectedServiceSelect(container);
+    const categoryName = categorySelect?.options[categorySelect.selectedIndex]?.text || '';
+    const serviceName = serviceSelect?.options[serviceSelect.selectedIndex]?.text || '';
 
-    finalServiceValue.value = serviceData.name;
-    finalQuantityValue.value = quantity;
-    finalPriceValue.value = totalPrice;
-    pricingTypeValue.value = serviceData.pricingType || '';
-    basePriceValue.value = serviceData.basePrice || 0;
+    if (finalServiceValue) {
+      finalServiceValue.value = serviceData.name;
+      finalServiceValue.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    if (finalQuantityValue) finalQuantityValue.value = quantity;
+    if (finalPriceValue) finalPriceValue.value = totalPrice;
+    if (pricingTypeValue) pricingTypeValue.value = serviceData.pricingType || '';
+    if (basePriceValue) basePriceValue.value = serviceData.basePrice || 0;
     if (finalPriceValue2) finalPriceValue2.value = totalPrice;
-    selectedPathValue.value = `${categoryName} → ${serviceName}`;
+    if (selectedPathValue) selectedPathValue.value = `${categoryName} → ${serviceName}`;
 
 
 
@@ -798,11 +1232,72 @@ class ProgressiveServiceSelector {
     this.triggerCalculationUpdate();
   }
 
+  shouldHideHostFields(container) {
+    const activeStepNumber = this.getActiveStepNumber(container);
+    const logicalPosition = this.getLogicalStepPosition(container, activeStepNumber);
+    const { pages, pageIndex } = this.getActivePageInfo(container);
+
+    if (logicalPosition > 1) {
+      return true;
+    }
+
+    return pages.length > 1 && pageIndex > 0;
+  }
+
+  updateHostFieldVisibility(container) {
+    if (container.dataset.unifiedMode === '1') return;
+
+    const formStep = container.closest('.form-step') || container.closest('form.quotemate-form');
+    if (!formStep) return;
+
+    const hideHostFields = this.shouldHideHostFields(container);
+
+    formStep.querySelectorAll('.form-group').forEach(group => {
+      if (group.contains(container)) {
+        const fieldLabel = group.querySelector(':scope > .field-label');
+        const fieldDesc = group.querySelector(':scope > .field-description');
+        if (fieldLabel) {
+          fieldLabel.style.display = hideHostFields ? 'none' : '';
+        }
+        if (fieldDesc) {
+          fieldDesc.style.display = hideHostFields ? 'none' : '';
+        }
+        return;
+      }
+
+      if (hideHostFields) {
+        group.style.display = 'none';
+        group.dataset.progressiveHidden = '1';
+      } else if (group.dataset.progressiveHidden === '1') {
+        group.style.display = '';
+        delete group.dataset.progressiveHidden;
+      }
+    });
+
+    formStep.querySelectorAll('.form-section').forEach(section => {
+      if (section.contains(container)) {
+        const sectionTitle = section.querySelector(':scope > .section-title');
+        if (sectionTitle) {
+          sectionTitle.style.display = hideHostFields ? 'none' : '';
+        }
+        return;
+      }
+
+      if (hideHostFields) {
+        section.style.display = 'none';
+        section.dataset.progressiveHidden = '1';
+      } else if (section.dataset.progressiveHidden === '1') {
+        section.style.display = '';
+        delete section.dataset.progressiveHidden;
+      }
+    });
+  }
+
   showStep(container, stepNumber) {
-    const stepElement = container.querySelector(`.step-${stepNumber}`);
+    const stepElement = container.querySelector(`.step-container.step-${stepNumber}`);
     if (stepElement) {
       // Always show one internal step at a time (prevents stacked dropdown levels).
-      const allInternalSteps = container.querySelectorAll('.step-container');
+      const allInternalSteps = container.querySelectorAll('.progressive-steps > .step-container');
       allInternalSteps.forEach(step => {
         step.style.display = 'none';
         step.classList.remove('active');
@@ -810,17 +1305,434 @@ class ProgressiveServiceSelector {
 
       stepElement.style.display = 'block';
       stepElement.classList.add('active');
+      this.updateInternalNavigation(container);
     }
   }
 
+  renderInlinePaginationControls(pageIndex, totalPages) {
+    if (totalPages <= 1) {
+      return '';
+    }
+
+    return `
+      <div class="progressive-pagination-controls">
+        ${pageIndex > 0 ? `
+          <button type="button" class="btn btn-sm btn-secondary progressive-page-prev" data-page-index="${pageIndex}">
+            ← Previous
+          </button>
+        ` : '<span class="progressive-pagination-spacer"></span>'}
+        <span class="progressive-page-indicator">Page ${pageIndex + 1} of ${totalPages}</span>
+        ${pageIndex < totalPages - 1 ? `
+          <button type="button" class="btn btn-sm btn-primary progressive-page-next" data-page-index="${pageIndex}">
+            Next →
+          </button>
+        ` : '<span class="progressive-pagination-spacer"></span>'}
+      </div>
+    `;
+  }
+
+  isStepMeaningful(stepEl) {
+    if (!stepEl) return false;
+    return !!(
+      stepEl.querySelector('.category-select') ||
+      stepEl.querySelector('.service-select') ||
+      stepEl.querySelector('.inline-cascade-level') ||
+      stepEl.querySelector('.quantity-section')
+    );
+  }
+
+  findPreviousPopulatedStep(container, fromStep) {
+    for (let step = fromStep - 1; step >= 1; step--) {
+      const stepEl = container.querySelector(`.step-container.step-${step}`);
+      if (this.isStepMeaningful(stepEl)) {
+        return step;
+      }
+    }
+    return 1;
+  }
+
+  findNextPopulatedStep(container, fromStep) {
+    for (let step = fromStep + 1; step <= 5; step++) {
+      const stepEl = container.querySelector(`.step-container.step-${step}`);
+      if (this.isStepMeaningful(stepEl)) {
+        return step;
+      }
+    }
+    return null;
+  }
+
+  getPopulatedStepNumbers(container) {
+    const numbers = [];
+    for (let step = 1; step <= 5; step++) {
+      const stepEl = container.querySelector(`.step-container.step-${step}`);
+      if (this.isStepMeaningful(stepEl)) {
+        numbers.push(step);
+      }
+    }
+    return numbers;
+  }
+
+  getLogicalStepPosition(container, physicalStep) {
+    const populated = this.getPopulatedStepNumbers(container);
+    const index = populated.indexOf(physicalStep);
+    return index >= 0 ? index + 1 : 1;
+  }
+
+  getTotalLogicalSteps(container) {
+    return this.getPopulatedStepNumbers(container).length;
+  }
+
+  getActiveStepNumber(container) {
+    const activeStep = container.querySelector('.step-container.active');
+    if (!activeStep) return 1;
+    return parseInt((activeStep.className.match(/\bstep-(\d+)\b/) || [])[1] || '1', 10);
+  }
+
+  getActivePageInfo(container) {
+    const activeStep = container.querySelector('.step-container.active');
+    if (!activeStep) return { pages: [], activePage: null, pageIndex: 0 };
+
+    const activePage = activeStep.querySelector('.category-page.active-page, .step-2-page.active-page, .step-page.active-page');
+    const pagesContainer = activePage?.parentElement;
+    const pages = pagesContainer
+      ? Array.from(pagesContainer.children).filter(el => el.matches('.category-page, .step-2-page, .step-page'))
+      : [];
+
+    return {
+      pages,
+      activePage,
+      pageIndex: activePage ? pages.indexOf(activePage) : 0,
+    };
+  }
+
+  showPage(nextPage, allPages) {
+    allPages.forEach(page => {
+      page.style.display = 'none';
+      page.classList.remove('active-page');
+    });
+    nextPage.style.display = 'block';
+    nextPage.classList.add('active-page');
+  }
+
+  navigateActivePage(container, direction) {
+    const { pages, activePage, pageIndex } = this.getActivePageInfo(container);
+    if (!activePage || pages.length <= 1) return;
+
+    const nextIndex = pageIndex + direction;
+    if (nextIndex < 0 || nextIndex >= pages.length) return;
+
+    this.showPage(pages[nextIndex], pages);
+    this.updateInternalNavigation(container);
+  }
+
+  hasInlineLevels(container) {
+    return !!container.querySelector('.inline-cascade-level');
+  }
+
+  canAdvanceFromActiveStep(container) {
+    const activeStep = container.querySelector('.step-container.active');
+    if (!activeStep) return true;
+
+    const selects = activeStep.querySelectorAll('select.step-select');
+    for (const select of selects) {
+      if (select.value === '') {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  navigateInternalNext(container) {
+    if (container.dataset.pendingInternalStep) {
+      if (!this.canAdvanceFromActiveStep(container)) {
+        return;
+      }
+
+      const stepNumber = parseInt(container.dataset.pendingInternalStep, 10);
+      delete container.dataset.pendingInternalStep;
+      this.showStep(container, stepNumber);
+      this.updateProgressClasses(container, stepNumber);
+      return;
+    }
+
+    const { pages, pageIndex } = this.getActivePageInfo(container);
+    if (pages.length > 1 && pageIndex < pages.length - 1) {
+      this.navigateActivePage(container, 1);
+      return;
+    }
+
+    const activeStepNumber = this.getActiveStepNumber(container);
+    const nextStep = this.findNextPopulatedStep(container, activeStepNumber);
+
+    if (nextStep !== null) {
+      if (!this.canAdvanceFromActiveStep(container)) {
+        return;
+      }
+
+      this.showStep(container, nextStep);
+      this.updateProgressClasses(container, nextStep);
+    }
+  }
+
+  navigateInternalPrev(container) {
+    const { pages, pageIndex } = this.getActivePageInfo(container);
+    if (pages.length > 1 && pageIndex > 0) {
+      this.navigateActivePage(container, -1);
+      return;
+    }
+
+    const activeStepNumber = this.getActiveStepNumber(container);
+    if (activeStepNumber <= 1) return;
+
+    const activeStepEl = container.querySelector(`.step-container.step-${activeStepNumber}`);
+    const targetStep = this.findPreviousPopulatedStep(container, activeStepNumber);
+
+    if (activeStepEl?.dataset.pageBreakStep === '1') {
+      container.dataset.pendingInternalStep = String(activeStepNumber);
+    } else {
+      delete container.dataset.pendingInternalStep;
+    }
+
+    this.showStep(container, targetStep);
+    this.updateProgressClasses(container, targetStep);
+  }
+
+  setUnifiedMode(enabled) {
+    document.querySelectorAll('.progressive-service-selector').forEach((container) => {
+      container.dataset.unifiedMode = enabled ? '1' : '';
+      const nav = container.querySelector('.progressive-selector-navigation');
+      if (nav) {
+        nav.style.display = enabled ? 'none' : '';
+      }
+
+      container.querySelectorAll('.final-service-value').forEach((input) => {
+        if (enabled) {
+          if (input.hasAttribute('required')) {
+            input.dataset.unifiedRequired = '1';
+            input.removeAttribute('required');
+          }
+        } else if (input.dataset.unifiedRequired === '1') {
+          input.setAttribute('required', 'required');
+          delete input.dataset.unifiedRequired;
+        }
+      });
+    });
+  }
+
+  getServiceContainer(fieldId) {
+    const group = document.querySelector(`.form-group[data-field-id="${fieldId}"]`);
+    if (group) {
+      const scoped = group.querySelector('.progressive-service-selector');
+      if (scoped) return scoped;
+    }
+    return document.querySelector(`.progressive-service-selector[data-field-id="${fieldId}"]`);
+  }
+
+  ensureServiceContainerVisible(container) {
+    if (!container) return;
+
+    container.style.display = '';
+    const host = container.closest('.service-field-container');
+    if (host) host.style.display = '';
+    const fieldInput = container.closest('.field-input');
+    if (fieldInput) fieldInput.style.display = '';
+    const stepsRoot = container.querySelector('.progressive-steps');
+    if (stepsRoot) stepsRoot.style.display = '';
+  }
+
+  applyUnifiedServiceState(state) {
+    const container = this.getServiceContainer(state.fieldId);
+    if (!container) return;
+
+    this.ensureServiceContainerVisible(container);
+
+    if (state.mode === 'categories') {
+      let categories = state.categories || [];
+      if (!categories.length) {
+        const fieldData = this.getFieldData(state.fieldId);
+        const structure = fieldData?.enhancedServiceStructure || fieldData?.serviceStructure || [];
+        categories = this.getSelectableItems(structure);
+      }
+
+      this.rebuildCategorySelect(container, categories);
+
+      if (!container.dataset.pendingInternalStep && container.dataset.pendingInlineReveal !== '1') {
+        this.clearSeparateStepsFrom(container, 2);
+        this.clearInlineCascade(container, 1, 2);
+      }
+
+      this.showStep(container, 1);
+      this.updateProgressClasses(container, 1);
+      return;
+    }
+
+    if (state.mode === 'options') {
+      const parent = state.parentItem;
+      const children = this.getSelectableItems(parent?.children);
+      const label = (parent?.optionsLabel || 'Select Option').trim();
+      const physicalStep = state.internalStep || state.physicalStep || 2;
+      const catSelect = container.querySelector('.category-select');
+
+      if (catSelect && parent?.name) {
+        const sanitized = this.sanitizeValue(parent.name);
+        if ([...catSelect.options].some((opt) => opt.value === sanitized)) {
+          catSelect.value = sanitized;
+          this.createDynamicHiddenInput(container, container.dataset.fieldId, 'category', parent.name, parent);
+        }
+      }
+
+      const stepEl = container.querySelector(`.step-container.step-${physicalStep}`);
+      if (!stepEl?.querySelector('select.service-select')) {
+        this.renderSeparateLevel(container, physicalStep, children, label);
+      } else {
+        const select = stepEl.querySelector('select.service-select');
+        const labelEl = stepEl.querySelector('.step-label');
+        if (labelEl) {
+          labelEl.innerHTML = `<span class="step-number">${physicalStep}</span> ${label}`;
+        }
+      }
+
+      this.showStep(container, physicalStep);
+      this.updateProgressClasses(container, physicalStep);
+    }
+  }
+
+  validateUnifiedServiceState(state) {
+    const container = this.getServiceContainer(state.fieldId);
+    if (!container) return true;
+
+    if (this.isServiceReadyForPostFields(container)) {
+      return true;
+    }
+
+    if (state.mode === 'categories') {
+      const select = container.querySelector('.category-select');
+      if (!select?.value) return false;
+
+      const step1 = container.querySelector('.step-container.step-1');
+      const inlineSelects = step1?.querySelectorAll('.inline-cascade-levels select.service-select') || [];
+      for (const inlineSelect of inlineSelects) {
+        if (!inlineSelect.value) return false;
+      }
+
+      return true;
+    }
+
+    if (state.mode === 'options') {
+      const physicalStep = state.internalStep || state.physicalStep || 2;
+      const stepEl = container.querySelector(`.step-container.step-${physicalStep}`);
+      const parentSelect = stepEl?.querySelector(':scope > select.service-select');
+      if (!parentSelect?.value) return false;
+
+      const inlineSelects = stepEl?.querySelectorAll('.inline-cascade-levels select.service-select') || [];
+      for (const select of inlineSelects) {
+        if (!select.value) return false;
+      }
+
+      return true;
+    }
+
+    return true;
+  }
+
+  rebuildCategorySelect(container, categories) {
+    let select = container.querySelector('.category-select');
+
+    if (!select) {
+      const step1 = container.querySelector('.step-container.step-1');
+      if (step1) {
+        step1.innerHTML = `
+          <select class="step-select category-select form-control" data-step="category" data-step-number="1">
+            <option value="">Choose a category...</option>
+          </select>
+          <div class="inline-cascade-levels"></div>
+        `;
+        select = step1.querySelector('.category-select');
+      }
+    }
+
+    if (!select) return;
+
+    const currentValue = select.value;
+    select.innerHTML = `
+      <option value="">Choose a category...</option>
+      ${categories.map((category) => `
+        <option value="${this.sanitizeValue(category.name)}" data-category-name="${category.name}" data-category-data="${this.encodeOptionData(category)}">
+          ${category.name}
+          ${category.description ? ` - ${category.description}` : ''}
+        </option>
+      `).join('')}
+    `;
+
+    if (currentValue && [...select.options].some((opt) => opt.value === currentValue)) {
+      select.value = currentValue;
+    }
+  }
+
+  updateInternalNavigation(container) {
+    const nav = container.querySelector('.progressive-selector-navigation');
+    if (!nav) return;
+
+    const form = container.closest('form');
+    const hasFormStepUI = form && (
+      form.classList.contains('multi-step-form') ||
+      form.classList.contains('unified-multi-step-form') ||
+      !!form.querySelector('.step-progress')
+    );
+
+    if (hasFormStepUI || container.dataset.unifiedMode === '1') {
+      nav.style.display = 'none';
+      if (container.dataset.unifiedMode !== '1') {
+        this.updateHostFieldVisibility(container);
+      }
+      return;
+    }
+
+    const prevBtn = nav.querySelector('.progressive-nav-prev');
+    const nextBtn = nav.querySelector('.progressive-nav-next');
+    const indicator = nav.querySelector('.progressive-nav-indicator');
+
+    const activeStepNumber = this.getActiveStepNumber(container);
+    const logicalPosition = this.getLogicalStepPosition(container, activeStepNumber);
+    const totalLogicalSteps = this.getTotalLogicalSteps(container);
+    const { pages, pageIndex } = this.getActivePageInfo(container);
+    const hasPendingStep = !!container.dataset.pendingInternalStep;
+    const hasMultiplePages = pages.length > 1;
+    const hasPagedSteps = totalLogicalSteps > 1;
+
+    const showNav = hasPendingStep || hasPagedSteps || hasMultiplePages;
+    nav.style.display = showNav ? 'flex' : 'none';
+
+    const canPrevPage = hasMultiplePages && pageIndex > 0;
+    const canPrevStep = logicalPosition > 1;
+    prevBtn.style.display = (canPrevPage || canPrevStep) ? 'inline-flex' : 'none';
+
+    const canNextPage = hasMultiplePages && pageIndex < pages.length - 1;
+    const nextPopulatedStep = this.findNextPopulatedStep(container, activeStepNumber);
+    const canNextStep = nextPopulatedStep !== null && nextPopulatedStep > activeStepNumber;
+    nextBtn.style.display = (canNextPage || canNextStep || hasPendingStep) ? 'inline-flex' : 'none';
+
+    if (hasMultiplePages) {
+      indicator.textContent = `Page ${pageIndex + 1} of ${pages.length}`;
+    } else if (showNav) {
+      indicator.textContent = `Step ${logicalPosition} of ${totalLogicalSteps}`;
+    } else {
+      indicator.textContent = '';
+    }
+
+    this.updateHostFieldVisibility(container);
+  }
+
   hideStepsAfter(container, stepNumber) {
-    for (let i = stepNumber + 1; i <= 4; i++) {
-      const stepElement = container.querySelector(`.step-${i}`);
+    for (let i = stepNumber + 1; i <= 5; i++) {
+      const stepElement = container.querySelector(`.step-container.step-${i}`);
       if (stepElement) {
         stepElement.style.display = 'none';
         stepElement.classList.remove('active');
       }
     }
+    this.updateInternalNavigation(container);
   }
 
   formatPricing(service) {
@@ -923,97 +1835,51 @@ class ProgressiveServiceSelector {
     return sortedTiers.length > 0 ? sortedTiers[0] : null;
   }
 
-  createDynamicSteps(serviceStructure) {
-    let stepsHTML = '';
-    let stepNumber = 1;
+  chunkStructureByPageBreak(structure) {
+    const pages = [];
+    let current = [];
 
-    // Chunk categories by page breaks
-    const categoryPages = [];
-    let currentPage = [];
-
-    serviceStructure.forEach(item => {
-      // Robust check for page break
-      if (item.type === 'page_break' || item.type === 'page-break') {
-        if (currentPage.length > 0) {
-          categoryPages.push(currentPage);
-          currentPage = [];
-        }
+    for (const item of structure || []) {
+      if (item?.type === 'page_break' || item?.type === 'page-break') {
+        if (current.length) pages.push(current);
+        current = [];
       } else {
-        // Double check it's not a malformed page break
-        if (item.name || item.type === 'category' || item.children) {
-          currentPage.push(item);
-        } else {
-          console.warn('[QuoteMate] Skipped potential malformed category item:', item);
-        }
+        current.push(item);
       }
-    });
-
-    if (currentPage.length > 0) {
-      categoryPages.push(currentPage);
     }
 
-    // Debug logging
-    console.log('[QuoteMate] Page Break Pagination:', {
-      totalCategories: serviceStructure.filter(i => i.type !== 'page_break').length,
-      pageBreaks: serviceStructure.filter(i => i.type === 'page_break').length,
-      totalPages: categoryPages.length,
-      pagesContent: categoryPages.map((page, idx) => ({
-        pageIndex: idx,
-      }))
-    });
+    if (current.length) pages.push(current);
+    return pages.length ? pages : [this.getSelectableItems(structure)];
+  }
 
-    // If we have pages, create pagination structure
-    stepsHTML += `
+  createDynamicSteps(serviceStructure) {
+    const stepNumber = 1;
+    const segments = this.chunkStructureByPageBreak(serviceStructure);
+    const categories = this.getSelectableItems(segments[0] || serviceStructure);
+
+    return `
       <div class="step-container step-${stepNumber} active" data-step="${stepNumber}">
-
-        
-        <div class="category-pages-container">
-          ${categoryPages.map((pageItems, pageIndex) => `
-            <div class="category-page category-page-${pageIndex} ${pageIndex === 0 ? 'active-page' : ''}" 
-                 style="${pageIndex === 0 ? 'display: block;' : 'display: none;'}">
-                 
-              <select class="step-select category-select" data-step="category" data-step-number="${stepNumber}" data-page-index="${pageIndex}">
-                <option value="">Choose a category...</option>
-                 ${pageItems
-        .filter(category => category.type !== 'page_break' && category.type !== 'page-break') // Extra safety filter
-        .map(category =>
-          `<option value="${this.sanitizeValue(category.name)}" data-category-name="${category.name}" data-category-data='${JSON.stringify(category)}'>
-                    ${category.name}
-                    ${category.description ? ` - ${category.description}` : ''}
-                  </option>`
-        ).join('')}
-              </select>
-              
-              ${pageIndex < categoryPages.length - 1 ? `
-                <div class="category-pagination-controls">
-                  ${pageIndex > 0 ? `
-                    <button type="button" class="btn btn-sm btn-secondary pagination-btn prev-btn" 
-                            data-action="prev-category-page" data-page-index="${pageIndex}">
-                      ← Previous
-                    </button>
-                  ` : '<div></div>'}
-                  
-                  <button type="button" class="btn btn-sm btn-primary pagination-btn next-btn" 
-                          data-action="next-category-page" data-page-index="${pageIndex}">
-                    Next Categories →
-                  </button>
-                </div>
-              ` : ''}
-            </div>
-          `).join('')}
+        <select class="step-select category-select" data-step="category" data-step-number="${stepNumber}">
+          <option value="">Choose a category...</option>
+          ${categories.map(category =>
+            `<option value="${this.sanitizeValue(category.name)}" data-category-name="${category.name}" data-category-data="${this.encodeOptionData(category)}">
+              ${category.name}
+              ${category.description ? ` - ${category.description}` : ''}
+            </option>`
+          ).join('')}
+        </select>
+        <div class="inline-cascade-levels"></div>
       </div>
-      
-      <!-- Placeholders for subsequent steps -->
+
       <div class="step-container step-2" style="display:none;"></div>
       <div class="step-container step-3" style="display:none;"></div>
       <div class="step-container step-4" style="display:none;"></div>
       <div class="step-container step-5" style="display:none;"></div>
     `;
-
-    return stepsHTML;
   }
 
-  createDynamicHiddenInput(fieldId, stepName, stepValue, stepData = null) {
+  createDynamicHiddenInput(container, fieldId, stepName, stepValue, stepData = null) {
+    const hiddenContainer = container?.querySelector('.dynamic-hidden-inputs');
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = `${fieldId}_${stepName}`;
@@ -1023,6 +1889,14 @@ class ProgressiveServiceSelector {
 
     if (stepData) {
       input.dataset.stepData = JSON.stringify(stepData);
+    }
+
+    if (hiddenContainer) {
+      const existing = hiddenContainer.querySelector(`input[data-step-name="${stepName}"]`);
+      if (existing) {
+        existing.remove();
+      }
+      hiddenContainer.appendChild(input);
     }
 
     return input;
@@ -1035,10 +1909,10 @@ class ProgressiveServiceSelector {
   getFieldData(fieldId) {
     let fieldData = null;
 
-    // Priority 1: Try to get from window.quotemateFormData
-    if (window.quotemateFormData && window.quotemateFormData.fields) {
-      fieldData = window.quotemateFormData.fields.find(f => f.id === fieldId);
-      console.log(`[QuoteMate] Field data from quotemateFormData for ${fieldId}:`, fieldData);
+    // Priority 1: Try to get from window.quoteMateFormData
+    const formData = window.quoteMateFormData || window.quotemateFormData;
+    if (formData?.fields) {
+      fieldData = formData.fields.find(f => f.id === fieldId);
     }
 
     // Priority 2: Try service-field-container first (most specific)
@@ -1049,7 +1923,6 @@ class ProgressiveServiceSelector {
         if (serviceContainer.dataset.fieldData) {
           try {
             fieldData = JSON.parse(serviceContainer.dataset.fieldData);
-            console.log(`[QuoteMate] Field data from service container for ${fieldId}:`, fieldData);
           } catch (e) {
             console.error(`[QuoteMate] Error parsing field data from service container:`, e);
           }
@@ -1064,7 +1937,6 @@ class ProgressiveServiceSelector {
                 fieldData = { id: fieldId };
               }
               fieldData.enhancedServiceStructure = enhancedStructure;
-              console.log(`[QuoteMate] Enhanced structure from service container for ${fieldId}:`, enhancedStructure);
             }
           } catch (e) {
             console.error(`[QuoteMate] Error parsing enhanced structure:`, e);
@@ -1079,7 +1951,6 @@ class ProgressiveServiceSelector {
       if (fieldElement && fieldElement.dataset.fieldData) {
         try {
           fieldData = JSON.parse(fieldElement.dataset.fieldData);
-          console.log(`[QuoteMate] Field data from generic element for ${fieldId}:`, fieldData);
         } catch (e) {
           console.error(`[QuoteMate] Error parsing field data from generic element:`, e);
         }
@@ -1094,7 +1965,6 @@ class ProgressiveServiceSelector {
           const enhancedStructure = JSON.parse(serviceContainer.dataset.enhancedStructure);
           if (enhancedStructure && enhancedStructure.length > 0) {
             fieldData.enhancedServiceStructure = enhancedStructure;
-            console.log(`[QuoteMate] Added enhanced structure to field data for ${fieldId}`);
           }
         } catch (e) {
           console.error(`[QuoteMate] Error parsing enhanced structure:`, e);
@@ -1135,7 +2005,8 @@ class ProgressiveServiceSelector {
 
 // Auto-initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-  new ProgressiveServiceSelector();
+  const progressive = new ProgressiveServiceSelector();
+  window.quotemateProgressiveSelector = progressive;
 });
 
 // Also initialize if called directly

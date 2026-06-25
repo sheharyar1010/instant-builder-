@@ -75,6 +75,7 @@ $hasMultipleSteps = count($steps) > 1;
                                                 case 'name':
                                                 case 'company':
                                                 case 'address':
+                                                case 'city':
                                                     ?>
                                                     <input type="text"
                                                         id="<?php echo esc_attr($field['id']); ?>"
@@ -403,6 +404,48 @@ $hasMultipleSteps = count($steps) > 1;
                                                             step="1"
                                                             <?php if (!empty($field['required'])) echo 'required'; ?> />
                                                     <?php endif; ?>
+                                                    <?php
+                                                    break;
+
+                                                case 'form_summary':
+                                                    $summary_settings = wp_parse_args($field, [
+                                                        'summaryTitle' => 'Quote Summary',
+                                                        'showSubtotal' => true,
+                                                        'currencyCode' => 'USD',
+                                                        'currencySymbol' => '$',
+                                                        'showQuantity' => true,
+                                                        'showPricingType' => true,
+                                                        'showPath' => true,
+                                                        'serviceDisplayMode' => 'final_only',
+                                                        'showTax' => false,
+                                                        'taxRate' => 0,
+                                                        'taxMode' => 'exclusive',
+                                                        'showDiscount' => false,
+                                                        'discountType' => 'percent',
+                                                        'discountValue' => 0,
+                                                        'showGrandTotal' => true,
+                                                        'submitButtonText' => 'Submit Quote Request',
+                                                        'emptyStateMessage' => 'Complete the steps above to see your quote summary.',
+                                                        'showTermsCheckbox' => false,
+                                                        'termsText' => 'I agree to the terms and conditions.',
+                                                        'termsRequired' => true,
+                                                        'disclaimerText' => '',
+                                                        'layoutStyle' => 'detailed',
+                                                        'showDeliveryTime' => true,
+                                                        'showPrintButton' => true,
+                                                        'showSavingsHighlight' => true,
+                                                    ]);
+                                                    ?>
+                                                    <div class="quotemate-form-summary"
+                                                         data-field-id="<?php echo esc_attr($field['id']); ?>"
+                                                         data-summary-settings="<?php echo esc_attr(wp_json_encode($summary_settings)); ?>">
+                                                        <h3 class="quotemate-form-summary__title"><?php echo esc_html($summary_settings['summaryTitle']); ?></h3>
+                                                        <div class="quotemate-form-summary__body">
+                                                            <div class="quotemate-summary-empty"><?php echo esc_html($summary_settings['emptyStateMessage']); ?></div>
+                                                        </div>
+                                                        <input type="hidden" class="quotemate-form-summary__total-input" name="<?php echo esc_attr($field['id']); ?>" value="0">
+                                                        <input type="hidden" class="quotemate-form-summary__snapshot-input" name="<?php echo esc_attr($field['id']); ?>_snapshot" value="">
+                                                    </div>
                                                     <?php
                                                     break;
 
@@ -1143,6 +1186,8 @@ $hasMultipleSteps = count($steps) > 1;
 }
 </style>
 
+<script type="application/json" id="quotemate-form-fields-json"><?php echo wp_json_encode($fields); ?></script>
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const formWrapper = document.getElementById('quotemate-form-<?php echo esc_attr($form->id); ?>');
@@ -1157,6 +1202,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const hasMultipleSteps = <?php echo $hasMultipleSteps ? 'true' : 'false'; ?>;
 
     function showStep(index) {
+        if (form.classList.contains('unified-multi-step-form')) {
+            return;
+        }
         steps.forEach((step, i) => step.style.display = i === index ? '' : 'none');
         stepIndicators.forEach((indicator, i) => indicator.classList.toggle("active", i === index));
         
@@ -1295,9 +1343,11 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    showStep(currentStep);
-
-
+    setTimeout(() => {
+        if (!form.classList.contains('unified-multi-step-form')) {
+            showStep(currentStep);
+        }
+    }, 0);
 
     // Initialize Progressive Service Selectors
     initializeProgressiveServiceSelectors();
@@ -1390,6 +1440,11 @@ function initializeProgressiveServiceSelectors() {
     const serviceContainers = document.querySelectorAll('.progressive-service-selector');
     
     serviceContainers.forEach(container => {
+        // New progressive-service-selector.js already built .progressive-steps UI
+        if (container.querySelector('.progressive-steps')) {
+            return;
+        }
+
         const fieldId = container.dataset.fieldId;
         const serviceContainer = container.closest('.service-field-container');
         const enhancedStructureData = serviceContainer.dataset.enhancedStructure;
@@ -1410,7 +1465,7 @@ function initializeProgressiveServiceSelectors() {
 
     // Enhanced quantity field handling with tier-based pricing
     document.addEventListener('DOMContentLoaded', function() {
-        const form = document.querySelector('#quotemate-form-<?php echo esc_attr($form_id); ?>');
+        const form = document.querySelector('#quotemate-form-<?php echo esc_attr($form->id); ?>');
         if (!form) return;
 
         // Handle service field changes to show/hide quantity field
@@ -2040,10 +2095,23 @@ function initializeProgressiveServiceSelectors() {
 
 // Initialize conditional logic and calculation engines
 function initializeQuoteMateEngines() {
-    // Prepare form data for both conditional logic and calculations
-    window.quoteMateFormData = {
-        fields: <?php echo json_encode($fields); ?>
-    };
+    let fields = [];
+    const fieldsJsonEl = document.getElementById('quotemate-form-fields-json');
+    if (fieldsJsonEl) {
+        try {
+            fields = JSON.parse(fieldsJsonEl.textContent || '[]');
+        } catch (e) {
+            console.error('[QuoteMate] Could not parse form fields JSON:', e);
+        }
+    }
+
+    window.quoteMateFormData = { fields };
+
+    document.dispatchEvent(new CustomEvent('quotemate-form-data-ready'));
+
+    if (window.quotemateProgressiveSelector && !window.quotemateUnifiedSteps) {
+        window.quotemateProgressiveSelector.initUnifiedSteps();
+    }
 
     let initialized = false;
 

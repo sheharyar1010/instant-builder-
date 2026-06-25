@@ -1,0 +1,1 @@
+{"imports":{"@wordpress/interactivity":"http://localhost/quotebuilder/wp-includes/js/dist/script-modules/interactivity/index.min.js?ver=efaa5193bbad9c60ffd1"}}

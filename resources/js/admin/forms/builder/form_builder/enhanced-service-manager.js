@@ -165,18 +165,6 @@ export class EnhancedServiceManager {
         this.addSiblingService(siblingPath);
       }
 
-      if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-add-sibling-page-break]')) {
-        const button = e.target.closest('[data-add-sibling-page-break]');
-        const siblingPath = button.dataset.siblingPath;
-        this.addSiblingPageBreak(siblingPath);
-      }
-
-      if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-add-page-break-under-parent]')) {
-        const button = e.target.closest('[data-add-page-break-under-parent]');
-        const parentPath = button.dataset.parentPath;
-        this.addPageBreakToParent(parentPath);
-      }
-
       if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-remove-service]')) {
         const button = e.target.closest('[data-remove-service]');
         const servicePath = button.dataset.servicePath;
@@ -277,6 +265,8 @@ export class EnhancedServiceManager {
     if (!fieldData.enhancedServiceStructure) {
       fieldData.enhancedServiceStructure = [];
     }
+
+    fieldData.enhancedServiceStructure = this.stripLegacyPageBreaks(fieldData.enhancedServiceStructure);
 
     // If there are no categories yet, start with a single empty row
     if (fieldData.enhancedServiceStructure.length === 0) {
@@ -381,17 +371,6 @@ export class EnhancedServiceManager {
     const addRowParentPath = isChildView ? parentPath : '';
 
     return topLevelWithPaths.map(({ service, path: servicePath }) => {
-      if (service.type === 'page_break') {
-        return `
-          <div class="service-flat-row service-flat-row--page-break" data-service-path="${servicePath}">
-            <div class="service-page-break-indicator">PAGE BREAK</div>
-            <button type="button" class="btn-icon btn-delete" data-remove-service data-service-path="${servicePath}" title="Delete page break">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-            </button>
-          </div>
-        `;
-      }
-
       const name = (service.name || '').replace(/"/g, '&quot;');
       const price = service.basePrice ?? service.price ?? '';
 
@@ -571,20 +550,6 @@ export class EnhancedServiceManager {
                   ↳ Service
                 </button>
               `}
-              
-
-              ${!isLastSibling ? `
-              <button type="button" class="btn btn-sm btn-page-break" 
-                      data-add-sibling-page-break 
-                      data-sibling-path="${servicePath}"
-                      title="Add Page Break (will split categories into pages)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="2 2"></line>
-                </svg>
-                ＋ Page Break
-              </button>
-              ` : ''}
               
               <button type="button" class="btn btn-sm btn-danger" 
                       data-remove-service 
@@ -1566,6 +1531,8 @@ export class EnhancedServiceManager {
       } else if (field === 'optionsLabel') {
         // Save this category's dropdown label (for its options) on the item
         service.optionsLabel = input.value.trim();
+      } else if (field === 'pageBreakBeforeOptions') {
+        service.pageBreakBeforeOptions = input.checked;
       } else {
         service[field] = input.value;
       }
@@ -1619,6 +1586,8 @@ export class EnhancedServiceManager {
       if (parent) {
         const labelInput = document.querySelector(`.enhanced-service-structure-container input[data-field="optionsLabel"]`);
         if (labelInput) parent.optionsLabel = labelInput.value.trim();
+        const pageBreakInput = document.querySelector(`.enhanced-service-structure-container input[data-field="pageBreakBeforeOptions"]`);
+        if (pageBreakInput) parent.pageBreakBeforeOptions = pageBreakInput.checked;
         // Sync every child option row (name, price type, price) from DOM so sub-category prices save
         (parent.children || []).forEach((_, index) => {
           this.syncRowDataFromDOM(`${this.currentViewParentPath}.${index}`);
@@ -1633,6 +1602,8 @@ export class EnhancedServiceManager {
       this.showNotification('Please add at least one service or category.', 'error');
       return;
     }
+
+    fieldData.enhancedServiceStructure = this.stripLegacyPageBreaks(fieldData.enhancedServiceStructure);
 
     // Ensure the field data is properly updated in the main form data
     const mainFieldData = this.formBuilder.formData.fields.find(f => f.id === this.currentFieldId);
@@ -1666,61 +1637,26 @@ export class EnhancedServiceManager {
     this.showNotification('Enhanced service configuration saved!', 'success');
   }
 
-  addSiblingPageBreak(siblingPath) {
-    const fieldData = this.getFieldData(this.currentFieldId);
-
-    if (!fieldData.enhancedServiceStructure) {
-      fieldData.enhancedServiceStructure = [];
+  stripLegacyPageBreaks(items) {
+    if (!Array.isArray(items)) {
+      return items;
     }
 
-    const newPageBreak = {
-      type: 'page_break'
-    };
-
-    if (siblingPath === '' || siblingPath.indexOf('.') === -1) {
-      this.showNotification('Page breaks are only allowed inside child levels.', 'error');
-      return;
-    } else {
-      const parentPathParts = siblingPath.split('.');
-      const siblingIndex = parseInt(parentPathParts.pop());
-      const parentPath = parentPathParts.join('.');
-
-      const parent = this.getServiceByPath(fieldData.enhancedServiceStructure, parentPath);
-      if (parent && parent.children) {
-        parent.children.splice(siblingIndex + 1, 0, newPageBreak);
-      }
-    }
-
-    this.refreshModal(fieldData);
-  }
-
-  addPageBreakToParent(parentPath) {
-    const fieldData = this.getFieldData(this.currentFieldId);
-
-    if (!fieldData.enhancedServiceStructure) {
-      fieldData.enhancedServiceStructure = [];
-    }
-
-    if (!parentPath) {
-      this.showNotification('Page breaks are only allowed inside child levels.', 'error');
-      return;
-    }
-
-    const parent = this.getServiceByPath(fieldData.enhancedServiceStructure, parentPath);
-    if (!parent) {
-      this.showNotification('Could not find target parent for page break.', 'error');
-      return;
-    }
-
-    if (!parent.children) {
-      parent.children = [];
-    }
-
-    parent.children.push({ type: 'page_break' });
-    this.refreshModal(fieldData);
+    return items
+      .filter(item => item?.type !== 'page_break' && item?.type !== 'page-break')
+      .map(item => {
+        if (item?.children?.length) {
+          return { ...item, children: this.stripLegacyPageBreaks(item.children) };
+        }
+        return item;
+      });
   }
 
   refreshModal(fieldData) {
+    if (fieldData?.enhancedServiceStructure) {
+      fieldData.enhancedServiceStructure = this.stripLegacyPageBreaks(fieldData.enhancedServiceStructure);
+    }
+
     // Toggle child-options view styling on modal body
     const modalBody = document.querySelector('.enhanced-service-modal-body');
     if (modalBody) {
@@ -1737,6 +1673,7 @@ export class EnhancedServiceManager {
       if (this.currentViewParentPath !== '') {
         const parent = this.getServiceByPath(fieldData.enhancedServiceStructure, this.currentViewParentPath);
         const childLabel = (parent?.optionsLabel || '').replace(/"/g, '&quot;');
+        const pageBreakBefore = parent?.pageBreakBeforeOptions ? 'checked' : '';
         const children = parent?.children || [];
         const childrenWithPaths = children
           .map((service, index) => ({ service, path: `${this.currentViewParentPath}.${index}` }));
@@ -1761,22 +1698,29 @@ export class EnhancedServiceManager {
             ${nextButtonHtml}
           </div>
           <div class="service-options-label-field">
-            <label>Label</label>
             <div class="service-options-label-field-row">
-              <input
-                type="text"
-                class="service-input service-label-input"
-                placeholder="e.g Model, Type, Size"
-                value="${childLabel}"
-                data-field="optionsLabel"
-                data-service-path="${this.currentViewParentPath}">
-              <button
-                type="button"
-                class="btn btn-primary"
-                data-add-page-break-under-parent
-                data-parent-path="${this.currentViewParentPath}">
-                Add Page Break
-              </button>
+              <div class="service-options-label-input-wrap">
+                <label for="service-options-label-input">Label</label>
+                <input
+                  id="service-options-label-input"
+                  type="text"
+                  class="service-input service-label-input"
+                  placeholder="e.g Model, Type, Size"
+                  value="${childLabel}"
+                  data-field="optionsLabel"
+                  data-service-path="${this.currentViewParentPath}">
+              </div>
+              <label class="service-page-break-toggle-card" title="Show this dropdown on a new page after the previous selection">
+                <input
+                  type="checkbox"
+                  data-field="pageBreakBeforeOptions"
+                  data-service-path="${this.currentViewParentPath}"
+                  ${pageBreakBefore}>
+                <span class="service-page-break-toggle-card__content">
+                  <span class="service-page-break-toggle-card__title">Page break</span>
+                  <span class="service-page-break-toggle-card__hint">Show this dropdown on a new page</span>
+                </span>
+              </label>
             </div>
           </div>
           <div class="service-options-view-rows">

@@ -1,4 +1,65 @@
 export class FieldProperties {
+  static FORM_SUMMARY_CURRENCIES = [
+    { code: 'USD', symbol: '$', name: 'US Dollar' },
+    { code: 'EUR', symbol: '€', name: 'Euro' },
+    { code: 'GBP', symbol: '£', name: 'British Pound' },
+    { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+    { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
+    { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+    { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc' },
+    { code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
+    { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+    { code: 'PKR', symbol: '₨', name: 'Pakistani Rupee' },
+    { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham' },
+    { code: 'SAR', symbol: '﷼', name: 'Saudi Riyal' },
+    { code: 'QAR', symbol: 'QR', name: 'Qatari Riyal' },
+    { code: 'KWD', symbol: 'KD', name: 'Kuwaiti Dinar' },
+    { code: 'BHD', symbol: 'BD', name: 'Bahraini Dinar' },
+    { code: 'OMR', symbol: 'OMR', name: 'Omani Rial' },
+    { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' },
+    { code: 'HKD', symbol: 'HK$', name: 'Hong Kong Dollar' },
+    { code: 'NZD', symbol: 'NZ$', name: 'New Zealand Dollar' },
+    { code: 'ZAR', symbol: 'R', name: 'South African Rand' },
+    { code: 'SEK', symbol: 'kr', name: 'Swedish Krona' },
+    { code: 'NOK', symbol: 'kr', name: 'Norwegian Krone' },
+    { code: 'DKK', symbol: 'kr', name: 'Danish Krone' },
+    { code: 'PLN', symbol: 'zł', name: 'Polish Zloty' },
+    { code: 'CZK', symbol: 'Kč', name: 'Czech Koruna' },
+    { code: 'HUF', symbol: 'Ft', name: 'Hungarian Forint' },
+    { code: 'RON', symbol: 'lei', name: 'Romanian Leu' },
+    { code: 'TRY', symbol: '₺', name: 'Turkish Lira' },
+    { code: 'RUB', symbol: '₽', name: 'Russian Ruble' },
+    { code: 'BRL', symbol: 'R$', name: 'Brazilian Real' },
+    { code: 'MXN', symbol: 'MX$', name: 'Mexican Peso' },
+    { code: 'ARS', symbol: 'AR$', name: 'Argentine Peso' },
+    { code: 'CLP', symbol: 'CLP$', name: 'Chilean Peso' },
+    { code: 'COP', symbol: 'COL$', name: 'Colombian Peso' },
+    { code: 'KRW', symbol: '₩', name: 'South Korean Won' },
+    { code: 'THB', symbol: '฿', name: 'Thai Baht' },
+    { code: 'MYR', symbol: 'RM', name: 'Malaysian Ringgit' },
+    { code: 'IDR', symbol: 'Rp', name: 'Indonesian Rupiah' },
+    { code: 'PHP', symbol: '₱', name: 'Philippine Peso' },
+    { code: 'VND', symbol: '₫', name: 'Vietnamese Dong' },
+    { code: 'EGP', symbol: 'E£', name: 'Egyptian Pound' },
+    { code: 'NGN', symbol: '₦', name: 'Nigerian Naira' },
+    { code: 'KES', symbol: 'KSh', name: 'Kenyan Shilling' },
+    { code: 'ILS', symbol: '₪', name: 'Israeli Shekel' },
+    { code: 'TWD', symbol: 'NT$', name: 'Taiwan Dollar' },
+  ];
+
+  static getCurrencyByCode(code) {
+    return FieldProperties.FORM_SUMMARY_CURRENCIES.find((c) => c.code === code) || null;
+  }
+
+  static resolveCurrencyCode(fieldData) {
+    if (fieldData?.currencyCode) {
+      return fieldData.currencyCode;
+    }
+    const symbol = fieldData?.currencySymbol || '$';
+    const match = FieldProperties.FORM_SUMMARY_CURRENCIES.find((c) => c.symbol === symbol);
+    return match?.code || 'USD';
+  }
+
   constructor(formBuilder) {
     this.formBuilder = formBuilder;
   }
@@ -6,9 +67,9 @@ export class FieldProperties {
   showProperties(fieldElement) {
     const propertiesContent = document.querySelector(".quotemate-form-builder__properties-content");
     const advanceContent = document.querySelector(".quotemate-form-builder__advance-properties-content");
-    const fieldType = fieldElement.dataset.fieldType;
     const fieldId = fieldElement.dataset.fieldId;
     const fieldData = this.formBuilder.formData.fields.find((f) => f.id === fieldId);
+    const fieldType = fieldElement.dataset.fieldType || fieldData?.type;
 
     // General tab content
     const propertiesHtml = this.generatePropertiesHtml(fieldType, fieldId);
@@ -87,7 +148,7 @@ export class FieldProperties {
     }
 
     // Only show required toggle for input fields
-    if (!['page_break', 'section_break', 'quote_total', 'html', 'divider'].includes(fieldType)) {
+    if (!['page_break', 'section_break', 'quote_total', 'form_summary', 'html', 'divider'].includes(fieldType)) {
       const isRequired = fieldData && fieldData.required;
       baseHtml += `
         <div class="quotemate-form-properties__section quotemate-form-properties__section--toggle">
@@ -140,7 +201,7 @@ export class FieldProperties {
 
     // Hide Label - for fields with labels (not in field-type block: choice, file, service)
     const fieldsWithHideLabelInBlock = ['text', 'name', 'company', 'email', 'phone', 'address', 'city', 'state_province', 'zip_postal', 'project_title', 'project_location', 'project_description', 'textarea', 'quote_notes', 'quantity', 'area_size', 'start_date'];
-    if (!['quote_total', 'html'].includes(fieldType) && !fieldsWithHideLabelInBlock.includes(fieldType)) {
+    if (!['quote_total', 'form_summary', 'html'].includes(fieldType) && !fieldsWithHideLabelInBlock.includes(fieldType)) {
       advanceHtml += this.advanceSectionToggle(
         'Hide Label',
         'Hide the field label from display',
@@ -561,7 +622,7 @@ export class FieldProperties {
 
   generateStylePropertiesHtml(fieldType, fieldData, fieldId) {
     // No style options for structural fields
-    if (['page_break', 'section_break', 'divider', 'quote_total'].includes(fieldType)) {
+    if (['page_break', 'section_break', 'divider', 'quote_total', 'form_summary'].includes(fieldType)) {
       return '<div class="quotemate-form-properties quotemate-form-properties--style"><p class="quotemate-form-builder__advance-placeholder">No style options for this field type.</p></div>';
     }
 
@@ -699,7 +760,7 @@ export class FieldProperties {
                 <input type="checkbox" ${
                   fieldData && fieldData.show_tax ? "checked" : ""
                 } data-property="show_tax" data-field-id="${fieldId}">
-                Show Tax Calculation
+                Apply tax on quote total
               </label>
             </div>
             
@@ -710,7 +771,9 @@ export class FieldProperties {
                   <label class="quotemate-form-properties__label">Tax Rate (%)</label>
                   <input type="number" class="quotemate-form-field__input" 
                          value="${fieldData.tax_rate || 0}" min="0" max="100" step="0.1"
+                         placeholder="e.g. 15"
                          data-property="tax_rate" data-field-id="${fieldId}">
+                  <p class="quotemate-form-properties__hint">Percentage added on top of the service subtotal.</p>
                 </div>
               `
                 : ""
@@ -726,6 +789,10 @@ export class FieldProperties {
             </div>
           </div>
         `;
+        break;
+
+      case "form_summary":
+        html = this.generateFormSummaryPropertiesHtml(fieldData, fieldId);
         break;
 
       case "page_break":
@@ -1469,5 +1536,187 @@ export class FieldProperties {
       // Update rule connectors
       this.updateRuleConnectors(fieldId);
     }
+  }
+
+  generateFormSummaryPropertiesHtml(fieldData, fieldId) {
+    const d = (key, fallback = '') =>
+      fieldData && fieldData[key] !== undefined && fieldData[key] !== null
+        ? fieldData[key]
+        : fallback;
+    const isOn = (key) => {
+      const val = d(key, false);
+      return val === true || val === 1 || val === '1' || val === 'true';
+    };
+    const checked = (key) => (isOn(key) ? 'checked' : '');
+    const sel = (key, value) => (d(key, '') === value ? 'selected' : '');
+    const currencyCode = FieldProperties.resolveCurrencyCode(fieldData);
+    const currencySymbol = FieldProperties.getCurrencyByCode(currencyCode)?.symbol || d('currencySymbol', '$');
+    const discountIsFixed = d('discountType', 'percent') === 'fixed';
+
+    const currencyOptions = FieldProperties.FORM_SUMMARY_CURRENCIES.map(
+      (currency) =>
+        `<option value="${currency.code}" ${currencyCode === currency.code ? 'selected' : ''}>${currency.code} (${currency.symbol}) — ${currency.name}</option>`
+    ).join('');
+
+    return `
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__label">Summary Title</label>
+        <input type="text" class="quotemate-form-field__input" value="${d('summaryTitle', 'Quote Summary')}"
+          data-property="summaryTitle" data-field-id="${fieldId}">
+      </div>
+
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__label">Currency</label>
+        <select class="quotemate-form-field__input" data-property="currencyCode" data-field-id="${fieldId}">
+          ${currencyOptions}
+        </select>
+        <p class="quotemate-form-properties__hint">Display symbol: <strong>${currencySymbol}</strong></p>
+      </div>
+
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__label">Layout Style</label>
+        <select class="quotemate-form-field__input" data-property="layoutStyle" data-field-id="${fieldId}">
+          <option value="detailed" ${sel('layoutStyle', 'detailed')}>Detailed table</option>
+          <option value="compact" ${sel('layoutStyle', 'compact')}>Compact list</option>
+          <option value="card" ${sel('layoutStyle', 'card')}>Card layout</option>
+        </select>
+      </div>
+
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__label">Service Lines Display</label>
+        <select class="quotemate-form-field__input" data-property="serviceDisplayMode" data-field-id="${fieldId}">
+          <option value="final_only" ${sel('serviceDisplayMode', 'final_only')}>Final selection only</option>
+          <option value="all_levels" ${sel('serviceDisplayMode', 'all_levels')}>All levels with prices</option>
+        </select>
+      </div>
+
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__checkbox">
+          <input type="checkbox" ${checked('showSubtotal')} data-property="showSubtotal" data-field-id="${fieldId}">
+          Show subtotal
+        </label>
+      </div>
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__checkbox">
+          <input type="checkbox" ${checked('showGrandTotal')} data-property="showGrandTotal" data-field-id="${fieldId}">
+          Show grand total
+        </label>
+      </div>
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__checkbox">
+          <input type="checkbox" ${checked('showQuantity')} data-property="showQuantity" data-field-id="${fieldId}">
+          Show quantity
+        </label>
+      </div>
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__checkbox">
+          <input type="checkbox" ${checked('showPricingType')} data-property="showPricingType" data-field-id="${fieldId}">
+          Show pricing type
+        </label>
+      </div>
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__checkbox">
+          <input type="checkbox" ${checked('showPath')} data-property="showPath" data-field-id="${fieldId}">
+          Show selection path
+        </label>
+      </div>
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__checkbox">
+          <input type="checkbox" ${checked('showDeliveryTime')} data-property="showDeliveryTime" data-field-id="${fieldId}">
+          Show delivery time
+        </label>
+      </div>
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__checkbox">
+          <input type="checkbox" ${checked('showSavingsHighlight')} data-property="showSavingsHighlight" data-field-id="${fieldId}">
+          Highlight savings
+        </label>
+      </div>
+
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__label">Tax</label>
+        <label class="quotemate-form-properties__checkbox">
+          <input type="checkbox" ${checked('showTax')} data-property="showTax" data-field-id="${fieldId}">
+          Apply tax on quote total
+        </label>
+      </div>
+      ${isOn('showTax') ? `
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__label">Tax Rate (%)</label>
+        <input type="number" class="quotemate-form-field__input" min="0" max="100" step="0.1"
+          value="${d('taxRate', 0)}" data-property="taxRate" data-field-id="${fieldId}"
+          placeholder="e.g. 15">
+        <p class="quotemate-form-properties__hint">Percentage applied to the quote base (subtotal after discount).</p>
+      </div>
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__label">Tax Calculation</label>
+        <select class="quotemate-form-field__input" data-property="taxMode" data-field-id="${fieldId}">
+          <option value="exclusive" ${sel('taxMode', 'exclusive')}>Exclusive — add tax on top of subtotal</option>
+          <option value="inclusive" ${sel('taxMode', 'inclusive')}>Inclusive — tax already included in line prices</option>
+        </select>
+      </div>` : ''}
+
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__checkbox">
+          <input type="checkbox" ${checked('showDiscount')} data-property="showDiscount" data-field-id="${fieldId}">
+          Show discount
+        </label>
+      </div>
+      ${isOn('showDiscount') ? `
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__label">Discount Type</label>
+        <select class="quotemate-form-field__input" data-property="discountType" data-field-id="${fieldId}">
+          <option value="percent" ${sel('discountType', 'percent')}>Percentage (%)</option>
+          <option value="fixed" ${sel('discountType', 'fixed')}>Fixed amount</option>
+        </select>
+      </div>
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__label">Discount Value ${discountIsFixed ? `(${currencySymbol})` : '(%)'}</label>
+        <input type="number" class="quotemate-form-field__input" min="0" step="0.01"
+          value="${d('discountValue', 0)}" data-property="discountValue" data-field-id="${fieldId}"
+          placeholder="${discountIsFixed ? 'e.g. 50' : 'e.g. 10'}">
+      </div>` : ''}
+
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__label">Submit Button Text</label>
+        <input type="text" class="quotemate-form-field__input" value="${d('submitButtonText', 'Submit Quote Request')}"
+          data-property="submitButtonText" data-field-id="${fieldId}">
+      </div>
+
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__label">Empty State Message</label>
+        <textarea class="quotemate-form-field__input" rows="2" data-property="emptyStateMessage" data-field-id="${fieldId}">${d('emptyStateMessage', 'Complete the steps above to see your quote summary.')}</textarea>
+      </div>
+
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__checkbox">
+          <input type="checkbox" ${checked('showTermsCheckbox')} data-property="showTermsCheckbox" data-field-id="${fieldId}">
+          Show terms checkbox
+        </label>
+      </div>
+      ${isOn('showTermsCheckbox') ? `
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__label">Terms Text</label>
+        <textarea class="quotemate-form-field__input" rows="2" data-property="termsText" data-field-id="${fieldId}">${d('termsText', 'I agree to the terms and conditions.')}</textarea>
+      </div>
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__checkbox">
+          <input type="checkbox" ${checked('termsRequired')} data-property="termsRequired" data-field-id="${fieldId}">
+          Terms required before submit
+        </label>
+      </div>` : ''}
+
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__label">Disclaimer Footer Text</label>
+        <textarea class="quotemate-form-field__input" rows="3" data-property="disclaimerText" data-field-id="${fieldId}">${d('disclaimerText', '')}</textarea>
+      </div>
+
+      <div class="quotemate-form-properties__subsection">
+        <label class="quotemate-form-properties__checkbox">
+          <input type="checkbox" ${checked('showPrintButton')} data-property="showPrintButton" data-field-id="${fieldId}">
+          Show print / PDF button
+        </label>
+      </div>
+    `;
   }
 }

@@ -261,6 +261,10 @@ if (!window.Quotemate["admin_forms_builder_form_builder_main"].quotemate_form_da
                                 <span class="quotemate-form-builder__field-icon">➕</span>
                                 <span class="quotemate-form-builder__field-label">Add-ons</span>
                             </div>
+                            <div class="quotemate-form-builder__field-item" data-field-type="form_summary" draggable="true">
+                                <span class="quotemate-form-builder__field-icon">📋</span>
+                                <span class="quotemate-form-builder__field-label">Form Summary</span>
+                            </div>
                             <div class="quotemate-form-builder__field-item" data-field-type="quote_total" draggable="true">
                                 <span class="quotemate-form-builder__field-icon">💵</span>
                                 <span class="quotemate-form-builder__field-label">Quote Total</span>

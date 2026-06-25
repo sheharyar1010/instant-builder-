@@ -428,3 +428,123 @@ body:not(.wp-admin) .step-container:not(.active) {
   opacity: 1;
   transform: none;
 }
+
+.quotemate-frontend-form .inline-cascade-levels,
+body:not(.wp-admin) .inline-cascade-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.quotemate-frontend-form .inline-cascade-level,
+body:not(.wp-admin) .inline-cascade-level {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quotemate-frontend-form .inline-cascade-level .step-label,
+body:not(.wp-admin) .inline-cascade-level .step-label {
+  margin-bottom: 0;
+}
+
+/* Internal page-break navigation — hidden when form-level step UI is present */
+.quotemate-frontend-form:has(.step-progress) .progressive-selector-navigation,
+.quotemate-frontend-form.multi-step-form .progressive-selector-navigation,
+.quotemate-frontend-form.unified-multi-step-form .progressive-selector-navigation,
+body:not(.wp-admin) .multi-step-form .progressive-selector-navigation,
+body:not(.wp-admin) .unified-multi-step-form .progressive-selector-navigation {
+  display: none !important;
+}
+
+/* Post-service fields (e.g. Company) share a PHP form-step with Service — keep hidden until unified steps reveal them */
+.unified-multi-step-form .form-group.unified-post-service-field[data-unified-hidden="1"] {
+  display: none !important;
+}
+
+.quotemate-frontend-form .progressive-selector-navigation,
+body:not(.wp-admin) .progressive-selector-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+.quotemate-frontend-form .progressive-nav-indicator,
+body:not(.wp-admin) .progressive-nav-indicator {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+.quotemate-frontend-form .progressive-selector-navigation .btn,
+body:not(.wp-admin) .progressive-selector-navigation .btn {
+  min-width: 120px;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.quotemate-frontend-form .progressive-selector-navigation .btn-secondary,
+body:not(.wp-admin) .progressive-selector-navigation .btn-secondary {
+  background: #6c757d;
+  color: #fff;
+}
+
+.quotemate-frontend-form .progressive-selector-navigation .btn-primary,
+body:not(.wp-admin) .progressive-selector-navigation .btn-primary {
+  background: #007cba;
+  color: #fff;
+}
+
+.quotemate-frontend-form .progressive-pagination-controls,
+body:not(.wp-admin) .progressive-pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.quotemate-frontend-form .progressive-page-indicator,
+body:not(.wp-admin) .progressive-page-indicator {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+.quotemate-frontend-form .progressive-pagination-controls .btn,
+body:not(.wp-admin) .progressive-pagination-controls .btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.quotemate-frontend-form .progressive-pagination-controls .btn-secondary,
+body:not(.wp-admin) .progressive-pagination-controls .btn-secondary {
+  background: #6c757d;
+  color: #fff;
+}
+
+.quotemate-frontend-form .progressive-pagination-controls .btn-primary,
+body:not(.wp-admin) .progressive-pagination-controls .btn-primary {
+  background: #007cba;
+  color: #fff;
+}
+
+.quotemate-frontend-form .progressive-pagination-spacer,
+body:not(.wp-admin) .progressive-pagination-spacer {
+  min-width: 90px;
+}

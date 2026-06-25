@@ -331,7 +331,13 @@ class FormsController
         }
 
         // Sanitize boolean properties (Advance tab + Style layout linked)
-        $bool_props = ['hideLabel', 'readOnly', 'show_tax', 'show_discount', 'styleMarginLinked', 'stylePaddingLinked', 'styleBorderRadiusLinked'];
+        $bool_props = [
+            'hideLabel', 'readOnly', 'show_tax', 'show_discount',
+            'styleMarginLinked', 'stylePaddingLinked', 'styleBorderRadiusLinked',
+            'showSubtotal', 'showGrandTotal', 'showQuantity', 'showPricingType', 'showPath',
+            'showDeliveryTime', 'showSavingsHighlight', 'showTax', 'showDiscount',
+            'showTermsCheckbox', 'termsRequired', 'showPrintButton',
+        ];
         foreach ($bool_props as $prop) {
             if (isset($field[$prop])) {
                 $sanitized[$prop] = (bool) $field[$prop];
@@ -341,6 +347,36 @@ class FormsController
         // Sanitize numeric properties
         if (isset($field['tax_rate'])) {
             $sanitized['tax_rate'] = is_numeric($field['tax_rate']) ? (float) $field['tax_rate'] : 0;
+        }
+        if (isset($field['taxRate'])) {
+            $sanitized['taxRate'] = is_numeric($field['taxRate']) ? (float) $field['taxRate'] : 0;
+        }
+        if (isset($field['discountValue'])) {
+            $sanitized['discountValue'] = is_numeric($field['discountValue']) ? (float) $field['discountValue'] : 0;
+        }
+
+        // Form Summary text/select settings
+        $summary_text_props = [
+            'summaryTitle', 'currencyCode', 'currencySymbol', 'layoutStyle', 'serviceDisplayMode',
+            'taxMode', 'discountType', 'submitButtonText', 'emptyStateMessage', 'termsText', 'disclaimerText',
+        ];
+        foreach ($summary_text_props as $prop) {
+            if (isset($field[$prop])) {
+                $sanitized[$prop] = sanitize_text_field($field[$prop]);
+            }
+        }
+
+        if (isset($field['taxMode']) && !in_array($field['taxMode'], ['exclusive', 'inclusive'], true)) {
+            $sanitized['taxMode'] = 'exclusive';
+        }
+        if (isset($field['discountType']) && !in_array($field['discountType'], ['percent', 'fixed'], true)) {
+            $sanitized['discountType'] = 'percent';
+        }
+        if (isset($field['layoutStyle']) && !in_array($field['layoutStyle'], ['detailed', 'compact', 'card'], true)) {
+            $sanitized['layoutStyle'] = 'detailed';
+        }
+        if (isset($field['serviceDisplayMode']) && !in_array($field['serviceDisplayMode'], ['final_only', 'all_levels'], true)) {
+            $sanitized['serviceDisplayMode'] = 'final_only';
         }
 
         // Sanitize html_content (allows limited HTML)
@@ -487,6 +523,10 @@ class FormsController
             // Label for this item's options dropdown (e.g. "models", "type")
             if (isset($item['optionsLabel'])) {
                 $sanitized_item['optionsLabel'] = sanitize_text_field($item['optionsLabel']);
+            }
+
+            if (isset($item['pageBreakBeforeOptions'])) {
+                $sanitized_item['pageBreakBeforeOptions'] = (bool) $item['pageBreakBeforeOptions'];
             }
 
             // Handle service-specific properties
