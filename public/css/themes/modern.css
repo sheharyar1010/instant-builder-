@@ -1,0 +1,325 @@
+/* Modern — dot progress line (matches sample: line through dots, labels below) */
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .form-header {
+    background: transparent !important;
+    color: var(--qm-text-color, #1e293b);
+    padding: 1.5rem 0 0.25rem;
+    margin-bottom: 0;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .form-title {
+    color: var(--qm-text-color, #1e293b);
+    text-shadow: none;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .form-description {
+    color: var(--qm-text-muted, #64748b);
+    opacity: 1;
+}
+
+/* ── Dot progress track ── */
+.quotemate-form-wrapper[data-qm-theme="modern"] .step-progress,
+.quotemate-form-wrapper[data-qm-theme="modern"] .unified-step-progress,
+.service-cascade-step-progress {
+    position: relative;
+    margin-bottom: 2.25rem;
+    padding: 0 0.125rem;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .progress-bar {
+    position: absolute;
+    top: 5px;
+    left: 6px;
+    right: 6px;
+    height: 2px;
+    margin: 0;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .progress-fill {
+    height: 100%;
+    background: var(--qm-button-color, #2563eb) !important;
+    background-image: none !important;
+    border-radius: 999px;
+    transition: width 0.35s ease;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .step-indicators {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.125rem;
+    margin-top: 0;
+    flex-direction: row;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .step-indicator {
+    flex: 1 1 0;
+    min-width: 0;
+    opacity: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+}
+
+/* Dots (hide numeric step text) */
+.quotemate-form-wrapper[data-qm-theme="modern"] .step-progress .step-indicator > .step-number,
+.quotemate-form-wrapper[data-qm-theme="modern"] .unified-step-progress,
+.service-cascade-step-progress .step-indicator > .step-number {
+    display: block !important;
+    width: 12px;
+    height: 12px;
+    min-width: 12px;
+    padding: 0;
+    margin: 0;
+    border-radius: 50%;
+    font-size: 0 !important;
+    line-height: 0;
+    color: transparent !important;
+    background: #e2e8f0;
+    border: none;
+    box-shadow: none;
+    flex-shrink: 0;
+    transition: background-color 0.25s ease;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .step-indicator.active .step-number,
+.quotemate-form-wrapper[data-qm-theme="modern"] .step-indicator.completed .step-number {
+    background: var(--qm-button-color, #2563eb);
+    transform: none;
+    box-shadow: none;
+}
+
+/* Labels below dots */
+.quotemate-form-wrapper[data-qm-theme="modern"] .step-label {
+    margin-top: 0.625rem;
+    font-size: 0.6875rem;
+    line-height: 1.3;
+    font-weight: 400;
+    color: #94a3b8;
+    text-align: center;
+    max-width: 100%;
+    padding: 0 2px;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .step-indicator.active .step-label,
+.quotemate-form-wrapper[data-qm-theme="modern"] .step-indicator.completed .step-label {
+    color: #1e293b;
+    font-weight: 700;
+}
+
+/* ── Form content (flat — card styling only on minimal theme) ── */
+.quotemate-form-wrapper[data-qm-theme="modern"] .form-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 28rem;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .form-step {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    padding: 2rem 2rem 0;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .form-step.single-step {
+    padding: 2rem 2rem 0;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .section-title {
+    text-align: center;
+    border-bottom: none;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+/* Navigation pinned to card bottom (sample layout) */
+.quotemate-form-wrapper[data-qm-theme="modern"] .form-navigation,
+.quotemate-form-wrapper[data-qm-theme="modern"] .unified-form-navigation {
+    margin-top: auto;
+    margin-bottom: 0;
+    padding: 2rem 2rem 2.5rem;
+    border-top: none;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .form-navigation .btn-primary,
+.quotemate-form-wrapper[data-qm-theme="modern"] .unified-form-navigation .btn-primary,
+.quotemate-form-wrapper[data-qm-theme="modern"] .form-navigation .submit-btn,
+.quotemate-form-wrapper[data-qm-theme="modern"] .unified-form-navigation .submit-btn {
+    border-radius: 8px;
+    padding: 0.9rem 3rem;
+    min-width: 10rem;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .form-navigation .btn-secondary,
+.quotemate-form-wrapper[data-qm-theme="modern"] .unified-form-navigation .btn-secondary {
+    background: var(--qm-secondary-btn-bg, #faf8f4);
+    color: var(--qm-secondary-btn-text, #1a1a1a);
+    border: 1px solid var(--qm-secondary-btn-border, #e8e4dc);
+    box-shadow: none;
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 0.85rem 2.5rem;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .btn-primary {
+    border-radius: 8px;
+    padding: 0.85rem 2.5rem;
+}
+
+.quotemate-form-wrapper[data-qm-theme="modern"] .btn-secondary {
+    background: var(--qm-secondary-btn-bg, #faf8f4);
+    color: var(--qm-secondary-btn-text, #1a1a1a);
+    border: 1px solid var(--qm-secondary-btn-border, #e8e4dc);
+    box-shadow: none;
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 0.85rem 2.5rem;
+}
+
+/* Admin builder live preview */
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .step-progress,
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .unified-step-progress,
+.service-cascade-step-progress {
+    position: relative;
+    margin-bottom: 2.25rem;
+    padding: 0 0.125rem;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .progress-bar {
+    position: absolute;
+    top: 5px;
+    left: 6px;
+    right: 6px;
+    height: 2px;
+    margin: 0;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .progress-fill {
+    height: 100%;
+    background: var(--qm-button-color, #2563eb) !important;
+    background-image: none !important;
+    border-radius: 999px;
+    transition: width 0.35s ease;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .step-indicators {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.125rem;
+    flex-direction: row;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .step-indicator {
+    flex: 1 1 0;
+    min-width: 0;
+    opacity: 1;
+    flex-direction: column;
+    align-items: center;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .step-number {
+    width: 12px !important;
+    height: 12px !important;
+    min-width: 12px !important;
+    font-size: 0 !important;
+    color: transparent !important;
+    background: #e2e8f0;
+    box-shadow: none;
+    border: none;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .step-indicator.active .step-number,
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .step-indicator.completed .step-number {
+    background: var(--qm-button-color, #2563eb);
+    transform: none;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .step-label {
+    margin-top: 0.625rem;
+    font-size: 0.6875rem;
+    line-height: 1.3;
+    font-weight: 400;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .step-indicator.active .step-label,
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .step-indicator.completed .step-label {
+    color: #1e293b;
+    font-weight: 700;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .form-content,
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .quotemate-form-builder__form-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 28rem;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .form-navigation,
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .quotemate-form-builder__form-footer {
+    margin-top: auto;
+    margin-bottom: 0;
+    padding: 2rem 2rem 2.5rem;
+    border-top: none;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .form-navigation .btn-primary,
+.quotemate-form-builder__form-preview[data-qm-theme="modern"] .quotemate-form-builder__submit-btn {
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
+    padding: 0.9rem 3rem;
+    min-width: 10rem;
+}
+
+@media (max-width: 768px) {
+    .quotemate-form-wrapper[data-qm-theme="modern"] .step-indicators,
+    .quotemate-form-builder__form-preview[data-qm-theme="modern"] .step-indicators {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 0.5rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .quotemate-form-wrapper[data-qm-theme="modern"] .step-indicators::-webkit-scrollbar,
+    .quotemate-form-builder__form-preview[data-qm-theme="modern"] .step-indicators::-webkit-scrollbar {
+        display: none;
+    }
+
+    .quotemate-form-wrapper[data-qm-theme="modern"] .step-indicator,
+    .quotemate-form-builder__form-preview[data-qm-theme="modern"] .step-indicator {
+        flex: 0 0 auto;
+        min-width: 4.5rem;
+    }
+
+    .quotemate-form-wrapper[data-qm-theme="modern"] .step-label,
+    .quotemate-form-builder__form-preview[data-qm-theme="modern"] .step-label {
+        font-size: 0.625rem;
+    }
+}

@@ -1,0 +1,138 @@
+/* Numbered — top circles with underline accent */
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] {
+    --qm-numbered-accent: #ff7600;
+    --qm-numbered-active: #1a1a1a;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .form-header {
+    background: transparent !important;
+    color: var(--qm-text-color, #1a1a1a);
+    padding: 1.5rem 0 0.5rem;
+    margin-bottom: 0;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .form-title {
+    color: var(--qm-text-color, #1a1a1a);
+    text-shadow: none;
+    font-size: 2rem;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .form-description {
+    color: var(--qm-text-muted, #6c757d);
+    opacity: 1;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progress-bar {
+    display: none;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicators,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicators {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: none;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator {
+    opacity: 1;
+    flex: 1;
+    max-width: 140px;
+}
+
+/* Pending steps */
+.quotemate-form-wrapper[data-qm-theme="numbered"] .step-progress .step-number,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .unified-step-progress .step-number,
+.service-cascade-step-progress .step-number,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-number {
+    width: 36px;
+    height: 36px;
+    background: #e9ecef;
+    color: #6c757d;
+    box-shadow: none !important;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/* Current step — black circle, white number */
+.quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator.active .step-number,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator.active .step-number {
+    background: var(--qm-numbered-active, #1a1a1a) !important;
+    color: #fff !important;
+    box-shadow: none !important;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .step-label,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-label {
+    font-size: 0.8rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 3px solid transparent;
+    margin-top: 0.25rem;
+    color: #6c757d;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator.active .step-label,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator.active .step-label {
+    color: var(--qm-numbered-active, #1a1a1a);
+    border-bottom-color: var(--qm-numbered-accent, #ff7600);
+    font-weight: 600;
+}
+
+/* Completed steps — orange circle with white tick */
+.quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator.completed:not(.active) .step-number,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator.completed:not(.active) .step-number {
+    background: var(--qm-numbered-accent, #ff7600) !important;
+    color: transparent !important;
+    font-size: 0 !important;
+    position: relative;
+    box-shadow: none !important;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator.completed:not(.active) .step-number::before,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator.completed:not(.active) .step-number::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 6px;
+    height: 10px;
+    border: solid #ffffff;
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, -58%) rotate(45deg);
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator.completed .step-label,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator.completed .step-label {
+    color: var(--qm-numbered-accent, #ff7600);
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .btn-primary {
+    border-radius: 6px;
+    min-width: 140px;
+    justify-content: center;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .form-navigation {
+    justify-content: center;
+    gap: 1.25rem;
+    border-top: none;
+    padding-top: 1rem;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .form-navigation.nav-has-prev {
+    justify-content: center;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .btn-secondary {
+    background: var(--qm-secondary-btn-bg, #faf8f4);
+    color: var(--qm-secondary-btn-text, #1a1a1a);
+    border: 1px solid var(--qm-secondary-btn-border, #e8e4dc);
+    box-shadow: none;
+    font-weight: 700;
+    border-radius: 6px;
+}

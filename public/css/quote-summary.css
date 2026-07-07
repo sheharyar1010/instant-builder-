@@ -32,6 +32,7 @@
   border-collapse: collapse;
   margin-bottom: 20px;
   font-size: 14px;
+  table-layout: fixed;
 }
 
 .quotemate-summary-table th,
@@ -50,6 +51,37 @@
 
 .quotemate-summary-amount {
   font-weight: 600;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.quotemate-summary-table th.quotemate-summary-amount {
+  text-align: right;
+}
+
+.quotemate-summary-table__name {
+  width: auto;
+}
+
+.quotemate-summary-table__qty {
+  width: 72px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.quotemate-summary-table__type {
+  width: 96px;
+  white-space: nowrap;
+}
+
+.quotemate-summary-table th.quotemate-summary-amount,
+.quotemate-summary-table td.quotemate-summary-amount {
+  width: 112px;
+}
+
+.quotemate-summary-line__meta {
+  color: #6b7280;
+  font-size: 13px;
   white-space: nowrap;
 }
 
@@ -72,9 +104,48 @@
 .quotemate-summary-lines--compact .quotemate-summary-line {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   padding: 10px 0;
   border-bottom: 1px solid #e5e7eb;
+}
+
+.quotemate-summary-line--pricing {
+  flex-wrap: wrap;
+}
+
+.quotemate-summary-line__details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.quotemate-summary-per-breakdown {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.quotemate-summary-per-breakdown__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.quotemate-summary-per-breakdown__label {
+  color: #6b7280;
+}
+
+.quotemate-summary-per-breakdown__value {
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.quotemate-summary-per-breakdown__row--total .quotemate-summary-per-breakdown__value {
+  color: var(--qm-button-color, #2563eb);
 }
 
 .quotemate-summary-cards {
@@ -93,7 +164,6 @@
 
 .quotemate-summary-card__title {
   font-size: 12px;
-  text-transform: uppercase;
   color: #6b7280;
   margin-bottom: 4px;
 }
@@ -124,7 +194,7 @@
   font-size: 18px;
   font-weight: 700;
   margin-top: 12px;
-  color: #111827;
+  color: var(--qm-button-color, #2563eb);
 }
 
 .quotemate-summary-totals {
@@ -154,7 +224,8 @@
   font-weight: 800;
   padding-top: 12px;
   margin-top: 8px;
-  border-top: 2px solid #111827;
+  border-top: 2px solid color-mix(in srgb, var(--qm-button-color, #2563eb) 25%, #e5e7eb);
+  color: var(--qm-button-color, #2563eb);
 }
 
 .quotemate-summary-terms {

@@ -65,6 +65,9 @@ export class FormSaver {
           formData.append("form_fields", fieldsJson);
 
           // Sync layout from DOM so row/column positions are current, then save layout
+          if (this.formBuilder.syncRowsOrderFromDOM && typeof this.formBuilder.syncRowsOrderFromDOM === 'function') {
+            this.formBuilder.syncRowsOrderFromDOM();
+          }
           if (this.formBuilder.syncLayoutFromDOM && typeof this.formBuilder.syncLayoutFromDOM === 'function') {
             this.formBuilder.syncLayoutFromDOM();
           }

@@ -270,6 +270,60 @@
             padding: 0;
         }
 
+        .qm-theme-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.75rem;
+        }
+
+        @media (max-width: 900px) {
+            .qm-theme-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .qm-theme-option {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            text-align: left;
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .qm-theme-option:hover {
+            border-color: #3b82f6;
+        }
+
+        .qm-theme-option--active {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 1px #3b82f6;
+            background: #eff6ff;
+        }
+
+        .qm-theme-option__swatch {
+            width: 100%;
+            height: 40px;
+            border-radius: 6px;
+        }
+
+        .qm-theme-option__name {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .qm-theme-option__desc {
+            font-size: 0.75rem;
+            line-height: 1.35;
+            color: #64748b;
+        }
+
         .radio-group {
             display: flex;
             gap: 1rem;
@@ -590,6 +644,45 @@ Best regards,
 
                 <!-- Design Settings -->
                 <div class="tab-content" id="design">
+                    <?php
+                    $form_themes = \Dawnsol\Quotemate\Helpers\ThemeHelper::get_all();
+                    $saved_theme_id = \Dawnsol\Quotemate\Helpers\ThemeHelper::THEME_CLASSIC;
+                    if (!empty($data['form']->settings)) {
+                        $saved_settings = json_decode($data['form']->settings, true);
+                        if (!empty($saved_settings['design']['themeId'])) {
+                            $saved_theme_id = \Dawnsol\Quotemate\Helpers\ThemeHelper::sanitize_id($saved_settings['design']['themeId']);
+                        }
+                    }
+                    ?>
+                    <div class="settings-section">
+                        <h3>Form Theme</h3>
+                        <p class="form-hint" style="margin: 0 0 1rem; font-size: 0.875rem; color: #64748b;">Layout and navigation style. Switching theme resets colors to that theme's defaults.</p>
+                        <div class="qm-theme-grid">
+                            <?php foreach ($form_themes as $theme) :
+                                $theme_design = \Dawnsol\Quotemate\Helpers\ThemeHelper::get_default_design($theme['id']);
+                                $accent = $theme_design['buttonColor'];
+                                $accent_end = $theme_design['buttonColorEnd'] ?? $accent;
+                                $is_active = $theme['id'] === $saved_theme_id;
+                                $swatch_style = ($theme_design['buttonStyle'] ?? 'solid') === 'gradient'
+                                    ? 'background: linear-gradient(135deg, ' . esc_attr($accent) . ' 0%, ' . esc_attr($accent_end) . ' 100%);'
+                                    : 'background: ' . esc_attr($accent) . ';';
+                            ?>
+                            <button
+                                type="button"
+                                class="qm-theme-option<?= $is_active ? ' qm-theme-option--active' : '' ?>"
+                                data-theme-id="<?= esc_attr($theme['id']) ?>"
+                                aria-pressed="<?= $is_active ? 'true' : 'false' ?>"
+                            >
+                                <span class="qm-theme-option__swatch" style="<?= esc_attr($swatch_style) ?>"></span>
+                                <span class="qm-theme-option__name"><?= esc_html($theme['name']) ?></span>
+                                <span class="qm-theme-option__desc"><?= esc_html($theme['description']) ?></span>
+                            </button>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
                     <div class="settings-section">
                         <h3>Form Colors</h3>
                         <div class="color-picker-group">
@@ -598,24 +691,79 @@ Best regards,
                                 <label class="form-label">Form Background</label>
                             </div>
                             <div class="color-picker">
-                                <input type="color" class="color-input" id="headerColor" value="#1e293b">
-                                <label class="form-label">Header Color</label>
-                            </div>
-                            <div class="color-picker">
                                 <input type="color" class="color-input" id="labelColor" value="#374151">
                                 <label class="form-label">Label Color</label>
                             </div>
                             <div class="color-picker">
-                                <input type="color" class="color-input" id="buttonColor" value="#3b82f6">
-                                <label class="form-label">Button Color</label>
-                            </div>
-                            <div class="color-picker">
                                 <input type="color" class="color-input" id="borderColor" value="#d1d5db">
-                                <label class="form-label">Border Color</label>
+                                <label class="form-label">Input Border Color</label>
                             </div>
                             <div class="color-picker">
                                 <input type="color" class="color-input" id="focusColor" value="#3b82f6">
                                 <label class="form-label">Focus Color</label>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label class="form-label">Form Outer Border Width</label>
+                            <input type="range" class="form-input" id="formBorderWidth" min="0" max="8" step="1" value="0">
+                            <span id="formBorderWidthValue">0px</span>
+                            <p class="form-hint" style="margin: 0.5rem 0 0; font-size: 0.875rem; color: #64748b;">Set to 0 to hide the outer form border.</p>
+                        </div>
+                        <div class="color-picker-group" style="margin-top: 1rem;">
+                            <div class="color-picker">
+                                <input type="color" class="color-input" id="formBorderColor" value="#e5e7eb">
+                                <label class="form-label">Form Outer Border Color</label>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label class="form-label">Form Corner Radius</label>
+                            <input type="range" class="form-input" id="formBorderRadius" min="0" max="32" step="1" value="12">
+                            <span id="formBorderRadiusValue">12px</span>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="settings-section">
+                        <h3>Header</h3>
+                        <div class="form-group">
+                            <label class="form-label">Header Style</label>
+                            <select class="form-select" id="headerStyle">
+                                <option value="gradient">Gradient</option>
+                                <option value="solid">Single Color</option>
+                            </select>
+                        </div>
+                        <div class="color-picker-group">
+                            <div class="color-picker">
+                                <input type="color" class="color-input" id="headerColor" value="#667eea">
+                                <label class="form-label" id="headerColorLabel">Primary Color</label>
+                            </div>
+                            <div class="color-picker" id="headerColorEndWrap">
+                                <input type="color" class="color-input" id="headerColorEnd" value="#764ba2">
+                                <label class="form-label">Gradient End Color</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="settings-section">
+                        <h3>Buttons &amp; Progress</h3>
+                        <div class="form-group">
+                            <label class="form-label">Button Style</label>
+                            <select class="form-select" id="buttonStyle">
+                                <option value="gradient">Gradient</option>
+                                <option value="solid">Single Color</option>
+                            </select>
+                        </div>
+                        <div class="color-picker-group">
+                            <div class="color-picker">
+                                <input type="color" class="color-input" id="buttonColor" value="#667eea">
+                                <label class="form-label" id="buttonColorLabel">Primary Color</label>
+                            </div>
+                            <div class="color-picker" id="buttonColorEndWrap">
+                                <input type="color" class="color-input" id="buttonColorEnd" value="#764ba2">
+                                <label class="form-label">Gradient End Color</label>
                             </div>
                         </div>
                     </div>

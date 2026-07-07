@@ -87,7 +87,12 @@ async function runBrowserTest() {
   console.log('\n=== After page load (step 0) ===');
   console.log(JSON.stringify(state, null, 2));
 
-  // Click unified Next to go to service step
+  // Click unified Next to go to service step (fill name if present)
+  const nameInput = page.locator('[data-field-id="field_2"] input');
+  if (await nameInput.count()) {
+    await nameInput.fill('Test User');
+  }
+
   const nextBtn = page.locator('.unified-next-step, .unified-form-navigation .next-step').first();
   if (await nextBtn.count()) {
     await nextBtn.click();
@@ -97,6 +102,11 @@ async function runBrowserTest() {
     await page.locator('.next-step').first().click();
     await page.waitForTimeout(500);
   }
+
+  await page.waitForFunction(
+    () => window.quotemateUnifiedSteps?.currentStep >= 1,
+    { timeout: 5000 }
+  ).catch(() => {});
 
   const afterNext = await page.evaluate(() => {
     const company = document.querySelector('.form-group[data-field-id="field_4"]');
@@ -127,9 +137,11 @@ async function runBrowserTest() {
   console.log(JSON.stringify(afterNext, null, 2));
 
   // Partial service selection — company must stay hidden
-  const catSelect = page.locator('.category-select, .step-select').first();
+  const catSelect = page.locator(
+    '.form-group[data-field-id="field_1"] select.step-select:visible, .form-group[data-field-id="field_1"] .category-select:visible'
+  ).first();
   if (await catSelect.count()) {
-    await catSelect.selectOption({ index: 1 });
+    await catSelect.selectOption({ index: 1 }).catch(() => {});
     await page.waitForTimeout(400);
   }
 

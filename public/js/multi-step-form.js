@@ -62,11 +62,8 @@ class MultiStepForm {
 
         // Update indicators
         this.indicators.forEach((indicator, i) => {
-            if (i <= index) {
-                indicator.classList.add('active');
-            } else {
-                indicator.classList.remove('active');
-            }
+            indicator.classList.toggle('active', i === index);
+            indicator.classList.toggle('completed', i < index);
         });
 
         // Update progress bar

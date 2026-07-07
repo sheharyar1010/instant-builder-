@@ -1,0 +1,21 @@
+/* Classic — default gradient header + top progress bar (base styles in form-view.php) */
+
+.quotemate-form-wrapper[data-qm-theme="classic"] .form-header {
+    border-radius: 12px;
+}
+
+.quotemate-form-wrapper[data-qm-theme="classic"] .form-content {
+    margin-top: 0;
+}
+
+.quotemate-form-wrapper[data-qm-theme="classic"] .form-navigation {
+    justify-content: center;
+}
+
+.quotemate-form-wrapper[data-qm-theme="classic"] .btn-secondary {
+    background: var(--qm-secondary-btn-bg, #faf8f4);
+    color: var(--qm-secondary-btn-text, #1a1a1a);
+    border: 1px solid var(--qm-secondary-btn-border, #e8e4dc);
+    box-shadow: none;
+    font-weight: 700;
+}

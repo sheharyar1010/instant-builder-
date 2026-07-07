@@ -1,3 +1,14 @@
+import {
+  DESIGN_DEFAULTS,
+  THEME_PRESETS,
+  applyDesignCssVars,
+  applyDesignToBuilderCanvas,
+  buildDesignCssVars,
+  getThemePreset,
+  syncBuilderLivePreview,
+  syncBuilderStepProgress,
+} from "./design-vars.js";
+
 class FormSettingsManager {
     constructor() {
         // Initialize with default settings
@@ -30,16 +41,7 @@ class FormSettingsManager {
                 validationMessage: "Please fill in all required fields correctly.",
             },
             design: {
-                formBgColor: "#ffffff",
-                headerColor: "#1e293b",
-                labelColor: "#374151",
-                buttonColor: "#3b82f6",
-                borderColor: "#d1d5db",
-                focusColor: "#3b82f6",
-                fontFamily: "system",
-                fontSize: 16,
-                formWidth: "container",
-                fieldSpacing: 1.5,
+                ...DESIGN_DEFAULTS,
             },
             advanced: {
                 customCss: "",
@@ -54,23 +56,52 @@ class FormSettingsManager {
         this.init();
     }
 
+    parseSettingsValue(settings) {
+        if (!settings) {
+            return {};
+        }
+        if (typeof settings === 'string') {
+            try {
+                return JSON.parse(settings);
+            } catch (error) {
+                console.warn('Failed to parse settings JSON:', error);
+                return {};
+            }
+        }
+        if (typeof settings === 'object') {
+            return settings;
+        }
+        return {};
+    }
+
+    normalizeFormBuilderSettings() {
+        if (!window.quotemateFormBuilder?.formData) {
+            return {};
+        }
+
+        const parsed = this.parseSettingsValue(window.quotemateFormBuilder.formData.settings);
+        window.quotemateFormBuilder.formData.settings = parsed;
+        return parsed;
+    }
+
+    syncFormBuilderDesign(design) {
+        if (!window.quotemateFormBuilder?.formData) {
+            return;
+        }
+
+        const settings = this.normalizeFormBuilderSettings();
+        settings.design = {
+            ...(settings.design || {}),
+            ...design,
+        };
+        window.quotemateFormBuilder.formData.settings = settings;
+    }
+
     loadSettingsFromFormData() {
         try {
-            // Try to get settings from the global form data
             if (window.quotemateFormBuilder?.formData?.settings) {
-                const savedSettings = window.quotemateFormBuilder.formData.settings;
-                
-                // If settings is a string, try to parse it
-                if (typeof savedSettings === 'string') {
-                    try {
-                        const parsedSettings = JSON.parse(savedSettings);
-                        this.settings = this.mergeSettings(this.settings, parsedSettings);
-                    } catch (e) {
-                        console.warn('Failed to parse saved settings:', e);
-                    }
-                } else if (typeof savedSettings === 'object') {
-                    this.settings = this.mergeSettings(this.settings, savedSettings);
-                }
+                const savedSettings = this.normalizeFormBuilderSettings();
+                this.settings = this.mergeSettings(this.settings, savedSettings);
             }
 
             // Try to get basic form info from form data
@@ -92,7 +123,15 @@ class FormSettingsManager {
         // Merge each section
         for (const section in savedSettings) {
             if (merged[section] && typeof savedSettings[section] === 'object') {
-                merged[section] = { ...merged[section], ...savedSettings[section] };
+                if (section === 'design') {
+                    merged[section] = {
+                        ...DESIGN_DEFAULTS,
+                        ...merged[section],
+                        ...savedSettings[section],
+                    };
+                } else {
+                    merged[section] = { ...merged[section], ...savedSettings[section] };
+                }
             }
         }
         
@@ -106,11 +145,13 @@ class FormSettingsManager {
           this.bindEvents();
           this.loadSettings();
           this.updatePreview();
+          this.updateDesignPreview();
         });
       } else {
         this.bindEvents();
         this.loadSettings();
         this.updatePreview();
+        this.updateDesignPreview();
       }
     }
   
@@ -179,6 +220,32 @@ class FormSettingsManager {
           this.updateDesignPreview();
         });
       }
+
+      const headerStyle = this.getElement("headerStyle");
+      if (headerStyle) {
+        headerStyle.addEventListener("change", () => {
+          this.toggleGradientFields();
+          this.updateDesignPreview();
+        });
+      }
+
+      const buttonStyle = this.getElement("buttonStyle");
+      if (buttonStyle) {
+        buttonStyle.addEventListener("change", () => {
+          this.toggleGradientFields();
+          this.updateDesignPreview();
+        });
+      }
+
+      const fontFamily = this.getElement("fontFamily");
+      if (fontFamily) {
+        fontFamily.addEventListener("change", () => this.updateDesignPreview());
+      }
+
+      const formWidth = this.getElement("formWidth");
+      if (formWidth) {
+        formWidth.addEventListener("change", () => this.updateDesignPreview());
+      }
   
       // Field spacing slider
       const fieldSpacing = this.getElement("fieldSpacing");
@@ -191,10 +258,44 @@ class FormSettingsManager {
           this.updateDesignPreview();
         });
       }
+
+      const formBorderWidth = this.getElement("formBorderWidth");
+      if (formBorderWidth) {
+        formBorderWidth.addEventListener("input", (e) => {
+          const formBorderWidthValue = this.getElement("formBorderWidthValue");
+          if (formBorderWidthValue) {
+            formBorderWidthValue.textContent = e.target.value + "px";
+          }
+          this.updateDesignPreview();
+        });
+      }
+
+      const formBorderRadius = this.getElement("formBorderRadius");
+      if (formBorderRadius) {
+        formBorderRadius.addEventListener("input", (e) => {
+          const formBorderRadiusValue = this.getElement("formBorderRadiusValue");
+          if (formBorderRadiusValue) {
+            formBorderRadiusValue.textContent = e.target.value + "px";
+          }
+          this.updateDesignPreview();
+        });
+      }
+
+      document.querySelectorAll(".qm-theme-option").forEach((option) => {
+        option.addEventListener("click", () => {
+          const themeId = option.dataset.themeId;
+          if (themeId) {
+            this.applyThemePreset(themeId);
+          }
+        });
+      });
   
       // Color inputs
       document.querySelectorAll(".color-input").forEach((input) => {
         input.addEventListener("input", () => {
+          this.updateDesignPreview();
+        });
+        input.addEventListener("change", () => {
           this.updateDesignPreview();
         });
       });
@@ -353,25 +454,228 @@ class FormSettingsManager {
       // Load design settings
       const formBgColor = this.getElement("formBgColor");
       if (formBgColor) formBgColor.value = this.settings.design.formBgColor;
-  
+
+      const headerStyle = this.getElement("headerStyle");
+      if (headerStyle) headerStyle.value = this.settings.design.headerStyle || "gradient";
+
       const headerColor = this.getElement("headerColor");
       if (headerColor) headerColor.value = this.settings.design.headerColor;
-  
+
+      const headerColorEnd = this.getElement("headerColorEnd");
+      if (headerColorEnd) headerColorEnd.value = this.settings.design.headerColorEnd || "#764ba2";
+
+      const buttonStyle = this.getElement("buttonStyle");
+      if (buttonStyle) buttonStyle.value = this.settings.design.buttonStyle || "gradient";
+
       const labelColor = this.getElement("labelColor");
       if (labelColor) labelColor.value = this.settings.design.labelColor;
-  
+
       const buttonColor = this.getElement("buttonColor");
       if (buttonColor) buttonColor.value = this.settings.design.buttonColor;
-  
+
+      const buttonColorEnd = this.getElement("buttonColorEnd");
+      if (buttonColorEnd) buttonColorEnd.value = this.settings.design.buttonColorEnd || "#764ba2";
+
+      const borderColor = this.getElement("borderColor");
+      if (borderColor) borderColor.value = this.settings.design.borderColor;
+
+      const formBorderColor = this.getElement("formBorderColor");
+      if (formBorderColor) formBorderColor.value = this.settings.design.formBorderColor || "#e5e7eb";
+
+      const formBorderWidth = this.getElement("formBorderWidth");
+      if (formBorderWidth) {
+        formBorderWidth.value = this.settings.design.formBorderWidth ?? 0;
+        const formBorderWidthValue = this.getElement("formBorderWidthValue");
+        if (formBorderWidthValue) {
+          formBorderWidthValue.textContent = (this.settings.design.formBorderWidth ?? 0) + "px";
+        }
+      }
+
+      const formBorderRadius = this.getElement("formBorderRadius");
+      if (formBorderRadius) {
+        formBorderRadius.value = this.settings.design.formBorderRadius ?? 12;
+        const formBorderRadiusValue = this.getElement("formBorderRadiusValue");
+        if (formBorderRadiusValue) {
+          formBorderRadiusValue.textContent = (this.settings.design.formBorderRadius ?? 12) + "px";
+        }
+      }
+
+      const focusColor = this.getElement("focusColor");
+      if (focusColor) focusColor.value = this.settings.design.focusColor;
+
+      const fontFamily = this.getElement("fontFamily");
+      if (fontFamily) fontFamily.value = this.settings.design.fontFamily || "system";
+
+      const formWidth = this.getElement("formWidth");
+      if (formWidth) formWidth.value = this.settings.design.formWidth || "container";
+
+      const fieldSpacing = this.getElement("fieldSpacing");
+      if (fieldSpacing) {
+        fieldSpacing.value = this.settings.design.fieldSpacing;
+        const fieldSpacingValue = this.getElement("fieldSpacingValue");
+        if (fieldSpacingValue) fieldSpacingValue.textContent = this.settings.design.fieldSpacing + "rem";
+      }
+
       const fontSize = this.getElement("fontSize");
       if (fontSize) {
         fontSize.value = this.settings.design.fontSize;
         const fontSizeValue = this.getElement("fontSizeValue");
         if (fontSizeValue) fontSizeValue.textContent = this.settings.design.fontSize + "px";
       }
-  
+
+      this.syncThemeOptionUI(this.settings.design.themeId || "classic");
+
+      this.toggleGradientFields();
       this.toggleAfterSubmissionFields();
       this.updateDesignPreview();
+    }
+
+    toggleGradientFields() {
+      const headerStyle = this.getElement("headerStyle")?.value || "gradient";
+      const buttonStyle = this.getElement("buttonStyle")?.value || "gradient";
+      const headerEndWrap = this.getElement("headerColorEndWrap");
+      const buttonEndWrap = this.getElement("buttonColorEndWrap");
+      const headerColorLabel = this.getElement("headerColorLabel");
+      const buttonColorLabel = this.getElement("buttonColorLabel");
+
+      if (headerEndWrap) {
+        headerEndWrap.style.display = headerStyle === "gradient" ? "" : "none";
+      }
+      if (buttonEndWrap) {
+        buttonEndWrap.style.display = buttonStyle === "gradient" ? "" : "none";
+      }
+      if (headerColorLabel) {
+        headerColorLabel.textContent = headerStyle === "gradient" ? "Gradient Start" : "Header Color";
+      }
+      if (buttonColorLabel) {
+        buttonColorLabel.textContent = buttonStyle === "gradient" ? "Gradient Start" : "Button Color";
+      }
+    }
+
+    syncThemeOptionUI(themeId) {
+      document.querySelectorAll(".qm-theme-option").forEach((option) => {
+        const isActive = option.dataset.themeId === themeId;
+        option.classList.toggle("qm-theme-option--active", isActive);
+        option.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+    }
+
+    applyThemePreset(themeId) {
+      const currentThemeId = this.settings.design?.themeId || "classic";
+      if (themeId === currentThemeId) {
+        return;
+      }
+
+      const preset = getThemePreset(themeId);
+      if (!preset) {
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "Switching theme will reset colors to that theme's defaults. Continue?"
+      );
+      if (!confirmed) {
+        this.syncThemeOptionUI(currentThemeId);
+        return;
+      }
+
+      const design = {
+        ...this.settings.design,
+        ...preset,
+        themeId,
+        fontFamily: this.settings.design.fontFamily || DESIGN_DEFAULTS.fontFamily,
+        fontSize: this.settings.design.fontSize || DESIGN_DEFAULTS.fontSize,
+        formWidth: this.settings.design.formWidth || DESIGN_DEFAULTS.formWidth,
+        fieldSpacing: this.settings.design.fieldSpacing || DESIGN_DEFAULTS.fieldSpacing,
+      };
+
+      this.settings.design = design;
+      this.populateDesignFields(design);
+      this.syncThemeOptionUI(themeId);
+      this.toggleGradientFields();
+      this.updateDesignPreview();
+    }
+
+    populateDesignFields(design) {
+      const fieldMap = {
+        formBgColor: "formBgColor",
+        headerStyle: "headerStyle",
+        headerColor: "headerColor",
+        headerColorEnd: "headerColorEnd",
+        buttonStyle: "buttonStyle",
+        labelColor: "labelColor",
+        buttonColor: "buttonColor",
+        buttonColorEnd: "buttonColorEnd",
+        borderColor: "borderColor",
+        formBorderColor: "formBorderColor",
+        focusColor: "focusColor",
+        fontFamily: "fontFamily",
+        formWidth: "formWidth",
+      };
+
+      Object.entries(fieldMap).forEach(([key, elementId]) => {
+        const element = this.getElement(elementId);
+        if (element && design[key] !== undefined) {
+          element.value = design[key];
+        }
+      });
+
+      const formBorderWidth = this.getElement("formBorderWidth");
+      if (formBorderWidth && design.formBorderWidth !== undefined) {
+        formBorderWidth.value = design.formBorderWidth;
+        const valueEl = this.getElement("formBorderWidthValue");
+        if (valueEl) valueEl.textContent = design.formBorderWidth + "px";
+      }
+
+      const formBorderRadius = this.getElement("formBorderRadius");
+      if (formBorderRadius && design.formBorderRadius !== undefined) {
+        formBorderRadius.value = design.formBorderRadius;
+        const valueEl = this.getElement("formBorderRadiusValue");
+        if (valueEl) valueEl.textContent = design.formBorderRadius + "px";
+      }
+
+      const fieldSpacing = this.getElement("fieldSpacing");
+      if (fieldSpacing && design.fieldSpacing !== undefined) {
+        fieldSpacing.value = design.fieldSpacing;
+        const valueEl = this.getElement("fieldSpacingValue");
+        if (valueEl) valueEl.textContent = design.fieldSpacing + "rem";
+      }
+
+      const fontSize = this.getElement("fontSize");
+      if (fontSize && design.fontSize !== undefined) {
+        fontSize.value = design.fontSize;
+        const valueEl = this.getElement("fontSizeValue");
+        if (valueEl) valueEl.textContent = design.fontSize + "px";
+      }
+    }
+
+    getCurrentDesignSettings() {
+      const activeTheme = document.querySelector(".qm-theme-option--active");
+      const themeId =
+        activeTheme?.dataset.themeId ||
+        this.settings.design.themeId ||
+        DESIGN_DEFAULTS.themeId;
+
+      return {
+        themeId,
+        formBgColor: this.getElement("formBgColor")?.value || this.settings.design.formBgColor,
+        headerStyle: this.getElement("headerStyle")?.value || this.settings.design.headerStyle,
+        headerColor: this.getElement("headerColor")?.value || this.settings.design.headerColor,
+        headerColorEnd: this.getElement("headerColorEnd")?.value || this.settings.design.headerColorEnd,
+        buttonStyle: this.getElement("buttonStyle")?.value || this.settings.design.buttonStyle,
+        labelColor: this.getElement("labelColor")?.value || this.settings.design.labelColor,
+        buttonColor: this.getElement("buttonColor")?.value || this.settings.design.buttonColor,
+        buttonColorEnd: this.getElement("buttonColorEnd")?.value || this.settings.design.buttonColorEnd,
+        borderColor: this.getElement("borderColor")?.value || this.settings.design.borderColor,
+        formBorderColor: this.getElement("formBorderColor")?.value || this.settings.design.formBorderColor,
+        formBorderWidth: parseInt(this.getElement("formBorderWidth")?.value, 10) ?? this.settings.design.formBorderWidth ?? 0,
+        formBorderRadius: parseInt(this.getElement("formBorderRadius")?.value, 10) ?? this.settings.design.formBorderRadius ?? 12,
+        focusColor: this.getElement("focusColor")?.value || this.settings.design.focusColor,
+        fontFamily: this.getElement("fontFamily")?.value || this.settings.design.fontFamily,
+        fontSize: parseInt(this.getElement("fontSize")?.value, 10) || this.settings.design.fontSize,
+        formWidth: this.getElement("formWidth")?.value || this.settings.design.formWidth,
+        fieldSpacing: parseFloat(this.getElement("fieldSpacing")?.value) || this.settings.design.fieldSpacing,
+      };
     }
   
     updatePreview() {
@@ -384,7 +688,17 @@ class FormSettingsManager {
       if (previewDescription) {
         previewDescription.textContent = this.settings.general.formDescription;
       }
-  
+
+      const builderTitle = document.querySelector(".quotemate-form-builder__form-title");
+      if (builderTitle) {
+        builderTitle.textContent = this.settings.general.formTitle;
+      }
+
+      const builderDescription = document.querySelector(".quotemate-form-builder__form-description");
+      if (builderDescription) {
+        builderDescription.textContent = this.settings.general.formDescription;
+      }
+
       const formTitleInput = this.queryElement(".form-title-input");
       if (formTitleInput) {
         formTitleInput.value = this.settings.general.formName;
@@ -392,50 +706,42 @@ class FormSettingsManager {
     }
   
     updateDesignPreview() {
+      const design = this.getCurrentDesignSettings();
+      const vars = buildDesignCssVars(design);
+
       const preview = this.getElement("designPreview");
-      if (!preview) return;
-  
-      const formBgColor = this.getElement("formBgColor");
-      const headerColor = this.getElement("headerColor");
-      const labelColor = this.getElement("labelColor");
-      const buttonColor = this.getElement("buttonColor");
-      const borderColor = this.getElement("borderColor");
-      const fontSize = this.getElement("fontSize");
-  
-      if (formBgColor) preview.style.backgroundColor = formBgColor.value;
-      if (fontSize) preview.style.fontSize = fontSize.value + "px";
-  
-      const title = preview.querySelector("h3");
-      if (title && headerColor) title.style.color = headerColor.value;
-  
-      const labels = preview.querySelectorAll("label");
-      if (labelColor) {
-        labels.forEach((label) => {
-          label.style.color = labelColor.value;
+      if (preview) {
+        applyDesignCssVars(preview, design);
+
+        const title = preview.querySelector("h3");
+        if (title) title.style.color = vars["--qm-label-color"];
+
+        preview.querySelectorAll("label").forEach((label) => {
+          label.style.color = vars["--qm-label-color"];
         });
-      }
-  
-      const inputs = preview.querySelectorAll("input");
-      if (borderColor) {
-        inputs.forEach((input) => {
-          input.style.borderColor = borderColor.value;
+
+        preview.querySelectorAll("input").forEach((input) => {
+          input.style.borderColor = vars["--qm-border-color"];
         });
+
+        const button = preview.querySelector("button");
+        if (button) {
+          button.style.background = vars["--qm-button-bg"];
+          button.style.color = vars["--qm-button-text"];
+        }
       }
-  
-      const button = preview.querySelector("button");
-      if (button && buttonColor) button.style.backgroundColor = buttonColor.value;
-  
-      // Update main form preview
-      const mainPreview = this.getElement("formPreview");
-      if (mainPreview) {
-        if (formBgColor) mainPreview.style.backgroundColor = formBgColor.value;
-        if (fontSize) mainPreview.style.fontSize = fontSize.value + "px";
-  
-        const mainTitle = this.getElement("previewTitle");
-        const mainDescription = this.getElement("previewDescription");
-        if (mainTitle && headerColor) mainTitle.style.color = headerColor.value;
-        if (mainDescription && labelColor) mainDescription.style.color = labelColor.value;
-      }
+
+      applyDesignToBuilderCanvas(design);
+
+      const fieldList = window.formBuilder?.formData?.fields ?? [];
+      syncBuilderStepProgress(fieldList, 0, design);
+
+      this.settings.design = {
+        ...(this.settings.design || {}),
+        ...design,
+      };
+
+      this.syncFormBuilderDesign(design);
     }
   
     saveSettings() {
@@ -480,12 +786,20 @@ class FormSettingsManager {
 
           if (data.success) {
               this.showNotification(data.data?.message || "Settings saved successfully!", "success");
-              this.closeModal();
 
-              // Update settings if returned from server
               if (data.data?.settings) {
-                  this.updateSettings(data.data.settings);
+                  const savedSettings = this.parseSettingsValue(data.data.settings);
+                  this.settings = this.mergeSettings(this.settings, savedSettings);
+                  if (window.quotemateFormBuilder?.formData) {
+                      window.quotemateFormBuilder.formData.settings = this.mergeSettings(
+                          this.normalizeFormBuilderSettings(),
+                          savedSettings
+                      );
+                  }
               }
+
+              this.updateDesignPreview();
+              this.closeModal();
           } else {
               this.showNotification(
                   "Error: " + (data.data || "Failed to save settings"),
@@ -540,11 +854,22 @@ class FormSettingsManager {
   
       // Design settings
       this.settings.design = {
+        themeId:
+          document.querySelector(".qm-theme-option--active")?.dataset.themeId ||
+          this.settings.design.themeId ||
+          DESIGN_DEFAULTS.themeId,
         formBgColor: this.getElement("formBgColor")?.value || this.settings.design.formBgColor,
+        headerStyle: this.getElement("headerStyle")?.value || this.settings.design.headerStyle,
         headerColor: this.getElement("headerColor")?.value || this.settings.design.headerColor,
+        headerColorEnd: this.getElement("headerColorEnd")?.value || this.settings.design.headerColorEnd,
+        buttonStyle: this.getElement("buttonStyle")?.value || this.settings.design.buttonStyle,
         labelColor: this.getElement("labelColor")?.value || this.settings.design.labelColor,
         buttonColor: this.getElement("buttonColor")?.value || this.settings.design.buttonColor,
+        buttonColorEnd: this.getElement("buttonColorEnd")?.value || this.settings.design.buttonColorEnd,
         borderColor: this.getElement("borderColor")?.value || this.settings.design.borderColor,
+        formBorderColor: this.getElement("formBorderColor")?.value || this.settings.design.formBorderColor,
+        formBorderWidth: parseInt(this.getElement("formBorderWidth")?.value, 10) ?? this.settings.design.formBorderWidth ?? 0,
+        formBorderRadius: parseInt(this.getElement("formBorderRadius")?.value, 10) ?? this.settings.design.formBorderRadius ?? 12,
         focusColor: this.getElement("focusColor")?.value || this.settings.design.focusColor,
         fontFamily: this.getElement("fontFamily")?.value || this.settings.design.fontFamily,
         fontSize: parseInt(this.getElement("fontSize")?.value) || this.settings.design.fontSize,
@@ -623,17 +948,33 @@ class FormSettingsManager {
   
     // Method to update settings from external source
     updateSettings(newSettings) {
-      this.settings = {
-        ...this.settings,
-        ...newSettings,
-      };
+      const parsedSettings = this.parseSettingsValue(newSettings);
+      this.settings = this.mergeSettings(this.settings, parsedSettings);
+
+      if (window.quotemateFormBuilder?.formData) {
+        window.quotemateFormBuilder.formData.settings = this.parseSettingsValue(
+          window.quotemateFormBuilder.formData.settings
+        );
+        window.quotemateFormBuilder.formData.settings = this.mergeSettings(
+          window.quotemateFormBuilder.formData.settings,
+          parsedSettings
+        );
+      }
+
       this.loadSettings();
       this.updatePreview();
+      this.updateDesignPreview();
     }
   }
-  
-  // Make sure the class is available globally
+
   window.FormSettingsManager = FormSettingsManager;
+  window.QuotemateDesign = {
+    applyToBuilder: applyDesignToBuilderCanvas,
+    buildCssVars: buildDesignCssVars,
+    themePresets: THEME_PRESETS,
+    getThemePreset,
+    syncLivePreview: syncBuilderLivePreview,
+  };
   
   // Initialize the settings manager when DOM is loaded
   document.addEventListener("DOMContentLoaded", function () {

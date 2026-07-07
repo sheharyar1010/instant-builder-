@@ -1,0 +1,75 @@
+/* Previous button — light outline style (all themes) */
+
+/* Navigation button order: primary (Continue/Submit) left, Previous right */
+.quotemate-form-wrapper .quotemate-form-nav-button-group {
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+}
+
+.quotemate-form-wrapper .quotemate-form-nav-button-group .btn-primary,
+.quotemate-form-wrapper .quotemate-form-nav-button-group .submit-btn,
+.quotemate-form-wrapper .quotemate-form-nav-button-group .unified-next-step {
+    order: 1;
+}
+
+.quotemate-form-wrapper .quotemate-form-nav-button-group .btn-secondary,
+.quotemate-form-wrapper .quotemate-form-nav-button-group .unified-prev-step {
+    order: 2;
+}
+
+.quotemate-form-wrapper .form-navigation,
+.quotemate-form-wrapper .unified-form-navigation,
+.quotemate-form-builder__form-preview .form-navigation {
+    display: flex;
+}
+
+.quotemate-form-wrapper .form-navigation .btn-primary,
+.quotemate-form-wrapper .form-navigation .submit-btn,
+.quotemate-form-wrapper .unified-form-navigation .btn-primary,
+.quotemate-form-wrapper .unified-form-navigation .submit-btn,
+.quotemate-form-builder__form-preview .form-navigation .btn-primary,
+.quotemate-form-builder__form-preview .form-navigation .submit-btn {
+    order: 1;
+}
+
+.quotemate-form-wrapper .form-navigation .btn-secondary.prev-step,
+.quotemate-form-wrapper .form-navigation .btn-secondary.unified-prev-step,
+.quotemate-form-wrapper .unified-form-navigation .btn-secondary,
+.quotemate-form-builder__form-preview .form-navigation .btn-secondary {
+    order: 2;
+}
+
+.quotemate-form-wrapper .form-navigation .btn-secondary,
+.quotemate-form-wrapper .unified-form-navigation .btn-secondary,
+.quotemate-form-wrapper .btn-secondary.prev-step,
+.quotemate-form-wrapper .btn-secondary.unified-prev-step,
+.quotemate-form-builder__form-preview .form-navigation .btn-secondary,
+.quotemate-frontend-form .progressive-selector-navigation .btn-secondary,
+.quotemate-frontend-form .progressive-pagination-controls .btn-secondary,
+body:not(.wp-admin) .progressive-selector-navigation .btn-secondary,
+body:not(.wp-admin) .progressive-pagination-controls .btn-secondary {
+    background: var(--qm-secondary-btn-bg, #faf8f4);
+    color: var(--qm-secondary-btn-text, #1a1a1a);
+    border: 1px solid var(--qm-secondary-btn-border, #e8e4dc);
+    box-shadow: none;
+    font-weight: 700;
+    min-width: 120px;
+    justify-content: center;
+}
+
+.quotemate-form-wrapper .form-navigation .btn-secondary:hover:not(:disabled),
+.quotemate-form-wrapper .unified-form-navigation .btn-secondary:hover:not(:disabled),
+.quotemate-form-wrapper .btn-secondary.prev-step:hover:not(:disabled),
+.quotemate-form-wrapper .btn-secondary.unified-prev-step:hover:not(:disabled),
+.quotemate-form-builder__form-preview .form-navigation .btn-secondary:hover:not(:disabled),
+.quotemate-frontend-form .progressive-selector-navigation .btn-secondary:hover:not(:disabled),
+.quotemate-frontend-form .progressive-pagination-controls .btn-secondary:hover:not(:disabled),
+body:not(.wp-admin) .progressive-selector-navigation .btn-secondary:hover:not(:disabled),
+body:not(.wp-admin) .progressive-pagination-controls .btn-secondary:hover:not(:disabled) {
+    background: var(--qm-secondary-btn-hover, #f0ebe3);
+    color: var(--qm-secondary-btn-text, #1a1a1a);
+    border-color: var(--qm-secondary-btn-border, #e8e4dc);
+    transform: none;
+}

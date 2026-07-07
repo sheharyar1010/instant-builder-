@@ -1,3 +1,6 @@
+import { resolveHeadingLevel, getHeadingAlignClass } from './design-vars.js';
+import { formatHeadingText } from './heading-format.js';
+
 export class FormPreview {
     constructor(formBuilder) {
       this.formBuilder = formBuilder;
@@ -237,6 +240,24 @@ export class FormPreview {
             return `
               <div class="quotemate-form-preview__html">
                 ${field.html_content || ''}
+              </div>
+            `;
+
+          case 'heading': {
+            const tag = resolveHeadingLevel(field.heading_level);
+            const alignClass = getHeadingAlignClass(field.heading_align);
+            const headingHtml = formatHeadingText(field.label || 'Heading');
+            return `
+              <div class="quotemate-form-preview__heading">
+                <${tag} class="quotemate-form-field__heading quotemate-form-field__heading--${tag} ${alignClass}">${headingHtml}</${tag}>
+              </div>
+            `;
+          }
+
+          case 'paragraph':
+            return `
+              <div class="quotemate-form-preview__paragraph">
+                <p>${field.paragraph_content || field.label || ''}</p>
               </div>
             `;
           

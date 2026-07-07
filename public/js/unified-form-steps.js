@@ -15,8 +15,14 @@ class UnifiedFormSteps {
     if (!this.form) return;
 
     this.fields = this.getFormFields();
-    const plan = UnifiedFormSteps.buildStepPlan(this.fields);
+    const pageMeta = UnifiedFormSteps.buildFormPageMeta(this.fields);
+    this.formPageStepCount = pageMeta.pageCount;
+    this.formStepLabels = pageMeta.labels;
+    this.fieldIdToPage = pageMeta.fieldIdToPage;
+
+    const plan = UnifiedFormSteps.buildStepPlan(this.fields, this.fieldIdToPage);
     this.steps = plan.steps;
+    this.baseSteps = JSON.parse(JSON.stringify(plan.steps));
     this.postServiceFields = plan.postServiceFields;
     this.serviceFieldId = plan.serviceFieldId;
     this.postServiceIndex = 0;
@@ -116,6 +122,376 @@ class UnifiedFormSteps {
 
   static isPageBreak(item) {
     return item?.type === 'page_break' || item?.type === 'page-break';
+  }
+
+  static STEP_LABEL_FIRST = 'Getting Started';
+  static STEP_LABEL_LAST = 'Final Quote';
+  static STEP_LABEL_SKIP_TYPES = new Set(['page_break', 'page-break', 'section_break', 'html', 'divider']);
+
+  static formatStepLabel(text) {
+    if (window.QuoteMateTextFormat?.formatDisplayName) {
+      return window.QuoteMateTextFormat.formatDisplayName(text);
+    }
+    return String(text ?? '').trim();
+  }
+
+  static groupFieldsIntoPages(fields) {
+    const pages = [];
+    let current = [];
+
+    for (const field of fields || []) {
+      if (UnifiedFormSteps.isPageBreak(field)) {
+        if (current.length) {
+          pages.push(current);
+          current = [];
+        }
+        continue;
+      }
+      current.push(field);
+    }
+
+    if (current.length || !pages.length) {
+      pages.push(current);
+    }
+
+    return pages;
+  }
+
+  static getFirstFieldLabelForPage(pageFields) {
+    for (const field of pageFields || []) {
+      if (UnifiedFormSteps.STEP_LABEL_SKIP_TYPES.has(field?.type)) {
+        continue;
+      }
+
+      const label = (field?.label || '').trim();
+      if (label) {
+        return label;
+      }
+    }
+
+    return null;
+  }
+
+  static getPageBreaksInOrder(fields) {
+    return (fields || []).filter((field) => UnifiedFormSteps.isPageBreak(field));
+  }
+
+  static buildStepLabelsFromPages(pages, pageBreaks = []) {
+    const pageCount = Math.max(1, pages.length);
+
+    return pages.map((pageFields, index) => {
+      if (index === 0) {
+        return UnifiedFormSteps.STEP_LABEL_FIRST;
+      }
+      if (index === pageCount - 1) {
+        return UnifiedFormSteps.STEP_LABEL_LAST;
+      }
+      const customTitle = String(pageBreaks[index - 1]?.step_title || '').trim();
+      if (customTitle) {
+        return customTitle;
+      }
+      return UnifiedFormSteps.formatStepLabel(
+        UnifiedFormSteps.getFirstFieldLabelForPage(pageFields)
+      ) || `Step ${index + 1}`;
+    });
+  }
+
+  static buildFormPageMeta(fields) {
+    const pages = UnifiedFormSteps.groupFieldsIntoPages(fields);
+    const pageBreaks = UnifiedFormSteps.getPageBreaksInOrder(fields);
+    const labels = UnifiedFormSteps.buildStepLabelsFromPages(pages, pageBreaks);
+    const fieldIdToPage = new Map();
+
+    pages.forEach((pageFields, pageIndex) => {
+      pageFields.forEach((field) => {
+        if (field?.id) {
+          fieldIdToPage.set(field.id, pageIndex);
+        }
+      });
+    });
+
+    return {
+      pageCount: Math.max(1, labels.length),
+      labels,
+      fieldIdToPage,
+    };
+  }
+
+  static resolvePageBreakAlign(align) {
+    const value = String(align || 'center').toLowerCase();
+    return ['left', 'center', 'right'].includes(value) ? value : 'center';
+  }
+
+  static getPageBreakNavAlignClass(align) {
+    return `quotemate-form-navigation--align-${UnifiedFormSteps.resolvePageBreakAlign(align)}`;
+  }
+
+  static getPageBreakAfterFormPage(fields, pageIndex) {
+    let currentPage = 0;
+    for (const field of fields || []) {
+      if (!UnifiedFormSteps.isPageBreak(field)) {
+        continue;
+      }
+      if (currentPage === pageIndex) {
+        return field;
+      }
+      currentPage++;
+    }
+    return null;
+  }
+
+  static resolvePageBreakButtonBackground(pageBreak) {
+    const custom = pageBreak?.page_break_button_color;
+    if (custom && /^#[0-9A-Fa-f]{3,8}$/i.test(String(custom).trim())) {
+      return String(custom).trim();
+    }
+
+    const wrapper = document.querySelector('.quotemate-form-wrapper');
+    if (wrapper) {
+      const styles = getComputedStyle(wrapper);
+      const buttonBg = styles.getPropertyValue('--qm-button-bg').trim();
+      if (buttonBg) {
+        return buttonBg;
+      }
+      const buttonColor = styles.getPropertyValue('--qm-button-color').trim();
+      if (buttonColor) {
+        return buttonColor;
+      }
+    }
+
+    return '';
+  }
+
+  static getPageBreakIndex(fields, pageBreakField) {
+    if (!pageBreakField?.id) {
+      return 0;
+    }
+    let index = 0;
+    for (const field of fields || []) {
+      if (!UnifiedFormSteps.isPageBreak(field)) {
+        continue;
+      }
+      if (field.id === pageBreakField.id) {
+        return index;
+      }
+      index++;
+    }
+    return 0;
+  }
+
+  static resolvePageBreakPrevButtonBackground(pageBreak) {
+    const custom = pageBreak?.page_break_prev_button_color;
+    if (custom && /^#[0-9A-Fa-f]{3,8}$/i.test(String(custom).trim())) {
+      return String(custom).trim();
+    }
+
+    const wrapper = document.querySelector('.quotemate-form-wrapper');
+    if (wrapper) {
+      const styles = getComputedStyle(wrapper);
+      const secondaryBg = styles.getPropertyValue('--qm-secondary-btn-bg').trim();
+      if (secondaryBg) {
+        return secondaryBg;
+      }
+    }
+
+    return '#faf8f4';
+  }
+
+  static getPageBreakButtonSpacingStyle(pageBreak, variant = 'next') {
+    const marginPrefix = variant === 'prev' ? 'stylePrevMargin' : 'styleMargin';
+    const paddingPrefix = variant === 'prev' ? 'stylePrevPadding' : 'stylePadding';
+    const toCss = (val, unit) => {
+      if (val === '' || val == null) return '';
+      const num = String(val).replace(/[^\d.-]/g, '');
+      return num !== '' ? `${num}${unit || 'px'}` : '';
+    };
+    const styles = [];
+    const marginUnit = pageBreak?.[`${marginPrefix}Unit`] || 'px';
+    const paddingUnit = pageBreak?.[`${paddingPrefix}Unit`] || 'px';
+    ['Top', 'Right', 'Bottom', 'Left'].forEach((side) => {
+      const marginVal = toCss(pageBreak?.[`${marginPrefix}${side}`], marginUnit);
+      if (marginVal) styles.push(`margin-${side.toLowerCase()}:${marginVal}`);
+      const paddingVal = toCss(pageBreak?.[`${paddingPrefix}${side}`], paddingUnit);
+      if (paddingVal) styles.push(`padding-${side.toLowerCase()}:${paddingVal}`);
+    });
+    return styles.join(';');
+  }
+
+  static mapAlignToJustify(align) {
+    const value = UnifiedFormSteps.resolvePageBreakAlign(align);
+    if (value === 'left') return 'start';
+    if (value === 'right') return 'end';
+    return 'center';
+  }
+
+  static shouldShowPageBreakPrevious(pageBreak) {
+    const value = pageBreak?.show_previous_button;
+    if (value === false || value === 'false' || value === 0 || value === '0') {
+      return false;
+    }
+    return true;
+  }
+
+  applyPageBreakNavigationSettings(pageBreak, showNext, showPrev = false) {
+    const nav = this.navEl || this.form?.querySelector('.unified-form-navigation');
+    if (!nav) {
+      return;
+    }
+
+    ['left', 'center', 'right'].forEach((align) => {
+      nav.classList.remove(`quotemate-form-navigation--align-${align}`);
+    });
+
+    const activePageBreak = showNext ? pageBreak : null;
+    const hasNavRow = !!activePageBreak && UnifiedFormSteps.getPageBreakIndex(this.fields, activePageBreak) > 0;
+    const showPrevButton = hasNavRow && showPrev && UnifiedFormSteps.shouldShowPageBreakPrevious(activePageBreak);
+    nav.classList.toggle('quotemate-form-navigation--has-page-break', !!activePageBreak);
+    nav.classList.toggle('quotemate-form-navigation--dual', hasNavRow);
+    nav.classList.toggle('quotemate-form-navigation--prev-hidden', hasNavRow && !showPrevButton);
+
+    if (activePageBreak && hasNavRow) {
+      const align = UnifiedFormSteps.resolvePageBreakAlign(activePageBreak.page_break_align);
+      nav.classList.add(`quotemate-form-navigation--align-${align}`);
+    } else if (activePageBreak && !hasNavRow) {
+      const align = UnifiedFormSteps.resolvePageBreakAlign(activePageBreak.page_break_align);
+      nav.classList.add(`quotemate-form-navigation--align-${align}`);
+    }
+
+    if (activePageBreak) {
+      const marginUnit = activePageBreak.styleMarginUnit || 'px';
+      const paddingUnit = activePageBreak.stylePaddingUnit || 'px';
+      const toCss = (val, unit) => {
+        if (val === '' || val == null) return '';
+        const num = String(val).replace(/[^\d.-]/g, '');
+        return num !== '' ? `${num}${unit || 'px'}` : '';
+      };
+      const spacingMap = [
+        ['styleMarginTop', 'marginTop', marginUnit],
+        ['styleMarginRight', 'marginRight', marginUnit],
+        ['styleMarginBottom', 'marginBottom', marginUnit],
+        ['styleMarginLeft', 'marginLeft', marginUnit],
+        ['stylePaddingTop', 'paddingTop', paddingUnit],
+        ['stylePaddingRight', 'paddingRight', paddingUnit],
+        ['stylePaddingBottom', 'paddingBottom', paddingUnit],
+        ['stylePaddingLeft', 'paddingLeft', paddingUnit],
+      ];
+      spacingMap.forEach(([sourceKey, cssKey, unit]) => {
+        const value = toCss(activePageBreak[sourceKey], unit);
+        nav.style[cssKey] = value || '';
+      });
+    } else {
+      [
+        'marginTop',
+        'marginRight',
+        'marginBottom',
+        'marginLeft',
+        'paddingTop',
+        'paddingRight',
+        'paddingBottom',
+        'paddingLeft',
+      ].forEach((key) => nav.style.removeProperty(key));
+    }
+
+    const descNodes = nav.querySelectorAll('.quotemate-form-field__page-break-desc');
+    descNodes.forEach((node) => node.remove());
+
+    if (activePageBreak?.page_description) {
+      const desc = document.createElement('p');
+      desc.className = 'quotemate-form-field__page-break-desc';
+      desc.textContent = activePageBreak.page_description;
+      nav.insertBefore(desc, nav.firstChild);
+    }
+    if (hasNavRow && activePageBreak?.page_prev_description) {
+      const prevDesc = document.createElement('p');
+      prevDesc.className = 'quotemate-form-field__page-break-desc quotemate-form-field__page-break-desc--prev';
+      prevDesc.textContent = activePageBreak.page_prev_description;
+      nav.insertBefore(prevDesc, nav.firstChild);
+    }
+
+    const applyButtonSpacing = (button, variant) => {
+      if (!button) return;
+      const spacing = UnifiedFormSteps.getPageBreakButtonSpacingStyle(activePageBreak, variant);
+      ['marginTop', 'marginRight', 'marginBottom', 'marginLeft', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'].forEach((key) => {
+        button.style[key] = '';
+      });
+      if (!spacing) return;
+      spacing.split(';').filter(Boolean).forEach((rule) => {
+        const [prop, val] = rule.split(':');
+        if (!prop || val == null) return;
+        const camel = prop.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+        button.style[camel] = val.trim();
+      });
+    };
+
+    if (this.nextBtn) {
+      if (activePageBreak) {
+        const label = String(activePageBreak.page_title || '').trim() || 'Continue';
+        const btnText = this.nextBtn.querySelector('.btn-text');
+        if (btnText) {
+          btnText.textContent = label;
+        } else {
+          this.nextBtn.textContent = label;
+        }
+        const bg = UnifiedFormSteps.resolvePageBreakButtonBackground(activePageBreak);
+        if (bg) {
+          this.nextBtn.style.background = bg;
+        } else {
+          this.nextBtn.style.removeProperty('background');
+        }
+        applyButtonSpacing(this.nextBtn, 'next');
+      } else {
+        const btnText = this.nextBtn.querySelector('.btn-text');
+        if (btnText) {
+          btnText.textContent = 'Continue';
+        } else {
+          this.nextBtn.textContent = 'Continue';
+        }
+        this.nextBtn.style.removeProperty('background');
+      }
+    }
+
+    if (this.prevBtn) {
+      if (activePageBreak && hasNavRow && showPrevButton) {
+        const label = String(activePageBreak.page_prev_title || '').trim() || 'Previous';
+        this.prevBtn.textContent = label;
+        const bg = UnifiedFormSteps.resolvePageBreakPrevButtonBackground(activePageBreak);
+        if (bg) {
+          this.prevBtn.style.background = bg;
+        } else {
+          this.prevBtn.style.removeProperty('background');
+        }
+        applyButtonSpacing(this.prevBtn, 'prev');
+      } else if (!showPrevButton) {
+        this.prevBtn.textContent = 'Previous';
+        this.prevBtn.style.removeProperty('background');
+        ['marginTop', 'marginRight', 'marginBottom', 'marginLeft', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'].forEach((key) => {
+          this.prevBtn.style[key] = '';
+        });
+      }
+    }
+
+    this.ensureNavigationButtonOrder();
+  }
+
+  static resolveFormPageIndexForTokens(tokens, fieldIdToPage) {
+    for (const token of tokens || []) {
+      if (token.type === 'field' && token.fieldId && fieldIdToPage.has(token.fieldId)) {
+        return fieldIdToPage.get(token.fieldId);
+      }
+
+      if (
+        token.fieldId &&
+        (token.type === 'service_categories' ||
+          token.type === 'service_options_level' ||
+          token.type === 'service_options')
+      ) {
+        if (fieldIdToPage.has(token.fieldId)) {
+          return fieldIdToPage.get(token.fieldId);
+        }
+      }
+    }
+
+    return 0;
   }
 
   static hasPageBreakBefore(node) {
@@ -301,35 +677,52 @@ class UnifiedFormSteps {
     return { tokens, postServiceFields, serviceFieldId: serviceField?.id || null };
   }
 
-  static buildStepsFromTokens(tokens) {
+  static buildStepsFromTokens(tokens, fieldIdToPage = new Map()) {
     const breakCount = tokens.filter((t) => t.type === 'page_break').length;
     if (breakCount === 0) {
-      return tokens.length ? [{ index: 0, tokens: tokens.slice() }] : [];
+      if (!tokens.length) return [];
+      return [
+        {
+          index: 0,
+          tokens: tokens.slice(),
+          formPageIndex: UnifiedFormSteps.resolveFormPageIndexForTokens(tokens, fieldIdToPage),
+        },
+      ];
     }
 
     const steps = [];
     let current = [];
 
+    const pushStep = () => {
+      if (!current.length) return;
+      steps.push({
+        tokens: current.slice(),
+        formPageIndex: UnifiedFormSteps.resolveFormPageIndexForTokens(current, fieldIdToPage),
+      });
+      current = [];
+    };
+
     for (const token of tokens) {
       if (token.type === 'page_break') {
-        steps.push({ tokens: current.slice() });
-        current = [];
+        pushStep();
       } else {
         current.push(token);
       }
     }
 
-    steps.push({ tokens: current });
+    pushStep();
 
     return steps
       .filter((step) => step.tokens.length > 0)
-      .map((step, index) => ({ index, tokens: step.tokens }));
+      .map((step, index) => ({ index, ...step }));
   }
 
-  static buildStepPlan(fields) {
+  static buildStepPlan(fields, fieldIdToPage = null) {
+    const pageMeta = fieldIdToPage ? null : UnifiedFormSteps.buildFormPageMeta(fields);
+    const pageMap = fieldIdToPage || pageMeta.fieldIdToPage;
     const { tokens, postServiceFields, serviceFieldId } = UnifiedFormSteps.linearizeFormFields(fields);
     return {
-      steps: UnifiedFormSteps.buildStepsFromTokens(tokens),
+      steps: UnifiedFormSteps.buildStepsFromTokens(tokens, pageMap),
       postServiceFields,
       serviceFieldId,
     };
@@ -459,6 +852,24 @@ class UnifiedFormSteps {
     this.enforcePostServiceFieldVisibility();
   }
 
+  hideLegacyProgressUI() {
+    this.form.querySelectorAll('.step-progress:not(.unified-step-progress)').forEach((el) => {
+      el.style.display = 'none';
+    });
+  }
+
+  restoreBaseSteps() {
+    if (!this.baseSteps?.length) return;
+    this.steps = JSON.parse(JSON.stringify(this.baseSteps));
+    this.steps.forEach((step, i) => {
+      step.index = i;
+      delete step.dynamic;
+    });
+    this.postServiceIndex = 0;
+    this.hidePostServiceFieldsExcept(new Set());
+    this.rebuildProgressUI();
+  }
+
   flattenFormSteps() {
     this.form.querySelectorAll('.form-step').forEach((step) => {
       step.classList.add('unified-flattened-step');
@@ -471,9 +882,7 @@ class UnifiedFormSteps {
       nav.style.display = 'none';
     });
 
-    this.form.querySelectorAll('.step-progress:not(.unified-step-progress)').forEach((el) => {
-      el.style.display = 'none';
-    });
+    this.hideLegacyProgressUI();
   }
 
   hideLegacyFormNavigation() {
@@ -490,39 +899,241 @@ class UnifiedFormSteps {
     });
   }
 
+  getDisplayFormPageIndex() {
+    const step = this.steps[this.currentStep];
+    if (!step) return 0;
+    if (step.formPageIndex != null) return step.formPageIndex;
+    return UnifiedFormSteps.resolveFormPageIndexForTokens(step.tokens, this.fieldIdToPage);
+  }
+
+  getServiceFormPageIndex() {
+    if (!this.serviceFieldId) return -1;
+    if (this.fieldIdToPage?.has(this.serviceFieldId)) {
+      return this.fieldIdToPage.get(this.serviceFieldId);
+    }
+    return -1;
+  }
+
+  isOnServiceUnifiedStep() {
+    const step = this.steps[this.currentStep];
+    if (!step) return false;
+
+    return step.tokens.some(
+      (token) =>
+        token.type === 'service_categories' ||
+        token.type === 'service_options_level' ||
+        (token.type === 'field' && token.fieldId === this.serviceFieldId)
+    );
+  }
+
+  getServiceCascadeProgress() {
+    if (!this.progressive || !this.serviceFieldId) return null;
+
+    const container = this.progressive.getServiceContainer(this.serviceFieldId);
+    if (!container) return null;
+
+    const navSteps = this.progressive.getCascadeNavigationSteps(container);
+    if (!navSteps.length) return null;
+
+    return {
+      container,
+      labels: navSteps.map((step) => step.label),
+      activeIndex: this.progressive.getCascadeNavigationActiveIndex(container),
+      navSteps,
+    };
+  }
+
+  getMergedActiveIndex(cascade, servicePageIndex) {
+    const formPageIndex = this.getDisplayFormPageIndex();
+    const cascadeCount = cascade.labels.length;
+    const extraSteps = cascadeCount - 1;
+
+    if (formPageIndex < servicePageIndex) {
+      return formPageIndex;
+    }
+
+    if (this.isOnServiceUnifiedStep()) {
+      return servicePageIndex + cascade.activeIndex;
+    }
+
+    if (formPageIndex > servicePageIndex) {
+      return formPageIndex + extraSteps;
+    }
+
+    return servicePageIndex + Math.max(0, cascadeCount - 1);
+  }
+
+  buildMergedProgressLabels(cascadeLabels, servicePageIndex) {
+    const baseLabels = [...(this.formStepLabels || [])];
+    if (servicePageIndex < 0 || !cascadeLabels.length) {
+      return baseLabels;
+    }
+
+    const before = baseLabels.slice(0, servicePageIndex);
+    const after = baseLabels.slice(servicePageIndex + 1);
+    return [...before, ...cascadeLabels, ...after];
+  }
+
+  showServiceStepWithCascade(cascadeNavIndex) {
+    const serviceStepIndex = this.getServiceStepIndex();
+    if (serviceStepIndex < 0) return;
+
+    const container = this.getServiceContainer();
+    const wasOnServiceStep = this.currentStep === serviceStepIndex;
+
+    if (!wasOnServiceStep) {
+      this.showStep(serviceStepIndex);
+    } else if (container) {
+      this.progressive?.ensureServiceContainerVisible(container);
+    }
+
+    if (container && this.progressive) {
+      this.progressive.showPageByNavigationIndex(container, cascadeNavIndex);
+      this.syncCascadeProgressFromService(container);
+      this.updateNavigationButtons();
+    }
+  }
+
+  navigateToProgressIndex(displayIndex) {
+    const state = this.getProgressDisplayState();
+    if (displayIndex > state.activeIndex) return;
+
+    if (state.cascade && state.servicePageIndex >= 0) {
+      const { servicePageIndex, cascade } = state;
+      const cascadeCount = cascade.labels.length;
+      const extraSteps = cascadeCount - 1;
+
+      if (displayIndex < servicePageIndex) {
+        const targetUnified = this.findUnifiedStepIndexForFormPage(displayIndex);
+        if (targetUnified >= 0) this.showStep(targetUnified);
+        return;
+      }
+
+      if (displayIndex >= servicePageIndex && displayIndex < servicePageIndex + cascadeCount) {
+        this.showServiceStepWithCascade(displayIndex - servicePageIndex);
+        return;
+      }
+
+      const formPageIndex = displayIndex - extraSteps;
+      const targetUnified = this.findUnifiedStepIndexForFormPage(formPageIndex);
+      if (targetUnified >= 0) this.showStep(targetUnified);
+      return;
+    }
+
+    if (displayIndex < this.getDisplayFormPageIndex()) {
+      const targetUnified = this.findUnifiedStepIndexForFormPage(displayIndex);
+      if (targetUnified >= 0) this.showStep(targetUnified);
+    }
+  }
+
+  getProgressDisplayState() {
+    const cascade = this.getServiceCascadeProgress();
+    const servicePageIndex = this.getServiceFormPageIndex();
+    const baseLabels = this.formStepLabels || [];
+
+    if (cascade && servicePageIndex >= 0) {
+      const labels = this.buildMergedProgressLabels(cascade.labels, servicePageIndex);
+      const activeIndex = this.getMergedActiveIndex(cascade, servicePageIndex);
+
+      return {
+        displayCount: labels.length,
+        labels,
+        activeIndex,
+        isCascadeMode: true,
+        cascade,
+        servicePageIndex,
+      };
+    }
+
+    return {
+      displayCount: this.formPageStepCount || Math.max(this.steps.length, 1),
+      labels: baseLabels,
+      activeIndex: this.getDisplayFormPageIndex(),
+      isCascadeMode: false,
+      cascade: null,
+      servicePageIndex: -1,
+    };
+  }
+
+  syncCascadeProgressFromService(container) {
+    const state = this.getProgressDisplayState();
+    const progress = this.form.querySelector('.unified-step-progress');
+    const currentCount = progress?.querySelectorAll('.step-indicator').length || 0;
+
+    if (currentCount !== state.displayCount) {
+      this.rebuildProgressUI();
+      return;
+    }
+
+    this.syncStepIndicatorState();
+    container?.closest('form')?.querySelector('.service-cascade-step-progress')?.remove();
+  }
+
+  escapeStepLabel(text) {
+    const formatted = UnifiedFormSteps.formatStepLabel(text);
+    return String(formatted)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  syncStepIndicatorState() {
+    const state = this.getProgressDisplayState();
+
+    this.stepIndicators?.forEach((indicator, i) => {
+      indicator.classList.toggle('active', i === state.activeIndex);
+      indicator.classList.toggle('completed', i < state.activeIndex);
+    });
+
+    if (this.progressFill) {
+      this.progressFill.style.width = `${((state.activeIndex + 1) / state.displayCount) * 100}%`;
+    }
+  }
+
   buildProgressUI() {
     const existing = this.form.querySelector('.unified-step-progress');
     if (existing) existing.remove();
+
+    const state = this.getProgressDisplayState();
+    const { displayCount, labels, activeIndex } = state;
 
     const progress = document.createElement('div');
     progress.className = 'step-progress unified-step-progress';
     progress.innerHTML = `
       <div class="progress-bar">
-        <div class="progress-fill" style="width: ${100 / Math.max(this.steps.length, 1)}%"></div>
+        <div class="progress-fill" style="width: ${((activeIndex + 1) / displayCount) * 100}%"></div>
       </div>
       <div class="step-indicators">
-        ${this.steps
-          .map(
-            (_, i) => `
-          <div class="step-indicator ${i === 0 ? 'active' : ''}" data-step="${i}">
+        ${Array.from({ length: displayCount }, (_, i) => {
+          const classes = ['step-indicator'];
+          if (i === activeIndex) classes.push('active');
+          if (i < activeIndex) classes.push('completed');
+          const label = this.escapeStepLabel(labels[i] || `Step ${i + 1}`);
+          return `
+          <div class="${classes.join(' ')}" data-step="${i}">
             <div class="step-number">${i + 1}</div>
-            <div class="step-label">Step ${i + 1}</div>
-          </div>`
-          )
-          .join('')}
+            <div class="step-label">${label}</div>
+          </div>`;
+        }).join('')}
       </div>
     `;
     this.form.insertBefore(progress, this.form.querySelector('.form-content'));
 
     let nav = this.form.querySelector('.unified-form-navigation');
+    const formContent = this.form.querySelector('.form-content');
     if (!nav) {
       nav = document.createElement('div');
       nav.className = 'form-navigation unified-form-navigation';
       nav.innerHTML = `
-        <button type="button" class="btn btn-secondary unified-prev-step" style="display:none;">← Previous</button>
-        <button type="button" class="btn btn-primary unified-next-step">Next →</button>
+        <button type="button" class="btn btn-primary unified-next-step">Continue</button>
+        <button type="button" class="btn btn-secondary unified-prev-step" style="display:none;">Previous</button>
       `;
-      this.form.appendChild(nav);
+      if (formContent) {
+        formContent.appendChild(nav);
+      } else {
+        this.form.appendChild(nav);
+      }
       this.prevBtn = nav.querySelector('.unified-prev-step');
       this.nextBtn = nav.querySelector('.unified-next-step');
       this.prevBtn?.addEventListener('click', () => this.prevStep());
@@ -535,32 +1146,85 @@ class UnifiedFormSteps {
       });
       if (this.submitBtn && !nav.contains(this.submitBtn)) {
         this.submitBtn.style.display = 'none';
-        nav.appendChild(this.submitBtn);
+        nav.insertBefore(this.submitBtn, this.prevBtn);
       }
+      this.ensureNavigationButtonOrder();
+    } else if (formContent && !formContent.contains(nav)) {
+      formContent.appendChild(nav);
     }
 
     this.progressFill = progress.querySelector('.progress-fill');
     this.stepIndicators = progress.querySelectorAll('.step-indicator');
+    this.navEl = nav;
     this.prevBtn = this.prevBtn || nav.querySelector('.unified-prev-step');
     this.nextBtn = this.nextBtn || nav.querySelector('.unified-next-step');
     this.submitBtn = this.submitBtn || this.form.querySelector('.submit-btn');
+    this.ensureNavigationButtonOrder();
+  }
+
+  /** Next (left) + Previous (right) in one flush group — no gap between buttons */
+  ensureNavigationButtonOrder() {
+    const nav = this.navEl || this.form?.querySelector('.unified-form-navigation');
+    if (!nav) return;
+
+    this.prevBtn = this.prevBtn || nav.querySelector('.unified-prev-step');
+    this.nextBtn = this.nextBtn || nav.querySelector('.unified-next-step');
+    this.submitBtn = this.submitBtn || nav.querySelector('.submit-btn') || this.form?.querySelector('.submit-btn');
+
+    let group = nav.querySelector('.quotemate-form-nav-button-group');
+    if (!group) {
+      group = document.createElement('div');
+      group.className = 'quotemate-form-nav-button-group';
+      nav.appendChild(group);
+    }
+
+    if (this.nextBtn) {
+      group.appendChild(this.nextBtn);
+    }
+    if (this.submitBtn) {
+      group.appendChild(this.submitBtn);
+    }
+    if (this.prevBtn) {
+      group.appendChild(this.prevBtn);
+    }
   }
 
   syncProgressBar() {
+    if (!this.progressFill) {
+      this.progressFill = this.form.querySelector('.unified-step-progress .progress-fill');
+    }
     if (!this.progressFill) return;
-    const width = ((this.currentStep + 1) / Math.max(this.steps.length, 1)) * 100;
-    this.progressFill.style.width = `${width}%`;
+    const state = this.getProgressDisplayState();
+    this.progressFill.style.width = `${((state.activeIndex + 1) / state.displayCount) * 100}%`;
   }
 
   rebuildProgressUI() {
     this.buildProgressUI();
     this.stepIndicators?.forEach((indicator, i) => {
       indicator.addEventListener('click', () => {
-        if (i < this.currentStep) this.showStep(i);
+        this.navigateToProgressIndex(i);
       });
     });
-    this.syncProgressBar();
+    this.syncStepIndicatorState();
     this.updateNavigationButtons();
+  }
+
+  findUnifiedStepIndexForFormPage(formPageIndex) {
+    for (let i = 0; i < this.steps.length; i++) {
+      const stepPage = this.steps[i].formPageIndex != null
+        ? this.steps[i].formPageIndex
+        : UnifiedFormSteps.resolveFormPageIndexForTokens(this.steps[i].tokens, this.fieldIdToPage);
+      if (stepPage === formPageIndex) return i;
+    }
+
+    let best = 0;
+    for (let i = 0; i < this.steps.length; i++) {
+      const stepPage = this.steps[i].formPageIndex != null
+        ? this.steps[i].formPageIndex
+        : UnifiedFormSteps.resolveFormPageIndexForTokens(this.steps[i].tokens, this.fieldIdToPage);
+      if (stepPage <= formPageIndex) best = i;
+    }
+    return best;
   }
 
   bindNavigation() {
@@ -587,7 +1251,7 @@ class UnifiedFormSteps {
 
     this.stepIndicators?.forEach((indicator, i) => {
       indicator.addEventListener('click', () => {
-        if (i < this.currentStep) this.showStep(i);
+        this.navigateToProgressIndex(i);
       });
     });
   }
@@ -733,9 +1397,13 @@ class UnifiedFormSteps {
   }
 
   insertDynamicFormFieldsStep(fieldMetas) {
+    const formPageIndex = fieldMetas.length
+      ? (this.fieldIdToPage.get(fieldMetas[0].fieldId) ?? this.getDisplayFormPageIndex())
+      : this.getDisplayFormPageIndex();
     const newStep = {
       index: this.currentStep + 1,
       dynamic: true,
+      formPageIndex,
       tokens: fieldMetas.map((meta) => ({ type: 'field', fieldId: meta.fieldId })),
     };
 
@@ -842,32 +1510,117 @@ class UnifiedFormSteps {
 
     if (this.hasPendingServiceNavigationOnCurrentStep()) return false;
 
+    if (this.hasAdvanceableInternalInlinePages()) return false;
+
     const serviceContainer = this.getServiceContainer();
     if (serviceContainer && !this.progressive?.isServiceReadyForPostFields(serviceContainer)) {
       return false;
     }
 
-    const lastItem = serviceContainer
-      ? this.progressive.getLastSelectedItem(serviceContainer)
-      : null;
-    const splitAfterService = !!(lastItem && UnifiedFormSteps.hasPageBreakBefore(lastItem));
-
-    if (splitAfterService) {
-      this.insertDynamicFormFieldsStep(group);
-    } else {
-      this.appendFieldsToCurrentStep(group);
-    }
+    this.insertDynamicFormFieldsStep(group);
     this.refreshConditionalLogic();
     return true;
   }
 
+  getServiceStepIndex() {
+    return this.steps.findIndex((step) =>
+      step.tokens?.some((token) => token.type === 'service_categories')
+    );
+  }
+
+  prepareServiceCascadeForReentry() {
+    const container = this.getServiceContainer();
+    if (!container || !this.progressive) return;
+
+    const navSteps = this.progressive.getCascadeNavigationSteps(container);
+    if (!navSteps.length) return;
+
+    this.progressive.clearUnifiedPendingState(container);
+    this.progressive.showPageByNavigationIndex(container, 0);
+  }
+
+  shouldRewindServiceFlow(stepIndex, targetIndex = this.currentStep) {
+    const step = this.steps[stepIndex];
+    if (!step?.tokens?.some((token) => token.type === 'service_categories')) {
+      return false;
+    }
+
+    const postServiceOnServiceStep = step.tokens.some(
+      (token) => token.type === 'field' && this.isPostServiceFieldId(token.fieldId)
+    );
+    if (targetIndex === stepIndex && postServiceOnServiceStep) {
+      return false;
+    }
+
+    if (targetIndex === 0) {
+      return (
+        postServiceOnServiceStep ||
+        this.postServiceIndex > 0 ||
+        this.getShownPostServiceFieldIds().size > 0 ||
+        this.steps.slice(stepIndex + 1).some((s) => s.dynamic)
+      );
+    }
+
+    if (targetIndex <= stepIndex && this.currentStep > stepIndex) {
+      return true;
+    }
+
+    if (targetIndex < stepIndex) {
+      return this.steps.slice(stepIndex + 1).some(
+        (s) =>
+          s.dynamic &&
+          s.tokens.some(
+            (t) =>
+              t.type === 'service_options_level' ||
+              (t.type === 'field' && this.isPostServiceFieldId(t.fieldId))
+          )
+      );
+    }
+
+    return false;
+  }
+
+  rewindServiceFlowFrom(stepIndex) {
+    this.restoreBaseSteps();
+
+    if (this.serviceFieldId) {
+      this.progressive?.resetServiceFieldForReselect(this.serviceFieldId);
+    }
+  }
+
+  ensureUnifiedProgressUI() {
+    if (!this.form.querySelector('.unified-step-progress')) {
+      this.buildProgressUI();
+    }
+    this.hideLegacyProgressUI();
+    this.progressFill = this.form.querySelector('.unified-step-progress .progress-fill');
+    this.stepIndicators = this.form.querySelectorAll('.unified-step-progress .step-indicator');
+  }
+
   showStep(index) {
-    if (index < 0 || index >= this.steps.length) return;
+    if (index < 0) return;
+
+    if (index >= this.steps.length) {
+      if (index === 1 && this.baseSteps?.length > 1) {
+        this.restoreBaseSteps();
+      } else {
+        return;
+      }
+    }
+
+    const serviceStepIndex = this.getServiceStepIndex();
+    const previousStep = this.currentStep;
+
+    if (serviceStepIndex >= 0 && this.shouldRewindServiceFlow(serviceStepIndex, index)) {
+      this.rewindServiceFlowFrom(serviceStepIndex);
+      if (index >= this.steps.length) {
+        index = Math.max(0, this.steps.length - 1);
+      }
+    }
 
     this.currentStep = index;
     const step = this.steps[index];
     const { fieldIds, serviceStates } = this.getFieldGroupsForStep(step);
-    const optionsOnly = this.stepHasOnlyConfiguratorOptions(step);
 
     this.form.querySelectorAll('.form-group').forEach((group) => {
       const fieldId = group.dataset.fieldId;
@@ -884,7 +1637,7 @@ class UnifiedFormSteps {
 
         const label = group.querySelector(':scope > .field-label');
         const desc = group.querySelector(':scope > .field-description');
-        if (isServiceGroup && optionsOnly) {
+        if (isServiceGroup) {
           if (label) label.style.display = 'none';
           if (desc) desc.style.display = 'none';
         } else {
@@ -898,26 +1651,49 @@ class UnifiedFormSteps {
     });
 
     this.form.querySelectorAll('.form-section').forEach((section) => {
-      const hasVisibleGroup = !!section.querySelector('.form-group:not([data-unified-hidden])');
+      const visibleGroups = section.querySelectorAll('.form-group:not([data-unified-hidden])');
+      const hasVisibleGroup = visibleGroups.length > 0;
+      const onlyService =
+        visibleGroups.length === 1 &&
+        visibleGroups[0].querySelector('.progressive-service-selector');
+
       if (hasVisibleGroup) {
         section.style.display = '';
         delete section.dataset.progressiveHidden;
       } else {
         section.style.display = 'none';
       }
+
+      const sectionTitle = section.querySelector(':scope > .section-title');
+      if (sectionTitle) {
+        sectionTitle.style.display = onlyService ? 'none' : '';
+      }
     });
 
     this.progressive?.setUnifiedMode(true);
     this.ensureServiceFieldsForStep(fieldIds, serviceStates);
+
+    if (serviceStepIndex >= 0) {
+      if (index < serviceStepIndex) {
+        this.prepareServiceCascadeForReentry();
+      } else if (index === serviceStepIndex && previousStep < serviceStepIndex) {
+        this.prepareServiceCascadeForReentry();
+      }
+    }
+
     this.syncFormStepContainers();
     this.hideLegacyFormNavigation();
+    this.ensureUnifiedProgressUI();
 
-    this.syncProgressBar();
-
-    this.stepIndicators?.forEach((indicator, i) => {
-      indicator.classList.toggle('active', i === index);
-      indicator.classList.toggle('completed', i < index);
-    });
+    const state = this.getProgressDisplayState();
+    const progress = this.form.querySelector('.unified-step-progress');
+    const currentCount = progress?.querySelectorAll('.step-indicator').length || 0;
+    if (currentCount !== state.displayCount) {
+      this.rebuildProgressUI();
+    } else {
+      this.syncProgressBar();
+      this.syncStepIndicatorState();
+    }
 
     this.enforcePostServiceFieldVisibility();
     this.refreshSummaryFieldsForStep(step);
@@ -946,8 +1722,10 @@ class UnifiedFormSteps {
       }
     });
 
-    const fallback = this.getServiceContainer();
-    if (fallback) containers.add(fallback);
+    if (!containers.size && this.currentStepIncludesService()) {
+      const fallback = this.getServiceContainer();
+      if (fallback) containers.add(fallback);
+    }
 
     return [...containers];
   }
@@ -971,11 +1749,11 @@ class UnifiedFormSteps {
 
     const data = this.progressive.parseOptionData(deepest.options[deepest.selectedIndex]);
     if (data) {
-      return this.progressive.getSelectableItems(data.children).length === 0;
+      return !this.progressive.shouldRenderChildDropdown(data);
     }
 
     const lastItem = this.progressive.getLastSelectedItem(container);
-    return !!lastItem && this.progressive.getSelectableItems(lastItem.children).length === 0;
+    return !!lastItem && !this.progressive.shouldRenderChildDropdown(lastItem);
   }
 
   isServiceReadyForPostFields() {
@@ -1004,6 +1782,11 @@ class UnifiedFormSteps {
 
     const inlineLevel = input.closest('.inline-cascade-level');
     if (inlineLevel && inlineLevel.style.display === 'none') {
+      return false;
+    }
+
+    const inlinePage = input.closest('.inline-cascade-page');
+    if (inlinePage && !inlinePage.classList.contains('active-page')) {
       return false;
     }
 
@@ -1065,6 +1848,16 @@ class UnifiedFormSteps {
     return this.isServiceReadyForPostFields();
   }
 
+  syncNavigationLayout(index, showPrev, showNext, showSubmit) {
+    const nav = this.navEl || this.form.querySelector('.unified-form-navigation');
+    if (!nav) return;
+
+    const hasPrev = showPrev && index > 0;
+    nav.classList.toggle('nav-first-step', !hasPrev);
+    nav.classList.toggle('nav-has-prev', hasPrev);
+    nav.classList.toggle('nav-show-submit', !!showSubmit && !showNext);
+  }
+
   updateNavigationButtons() {
     this.ensurePostServiceFields();
 
@@ -1077,18 +1870,35 @@ class UnifiedFormSteps {
 
     const summaryField = this.getActiveFormSummaryField();
     const pendingPostService = this.hasMorePostServiceFieldsPending();
+    const hasInternalInlinePages = this.hasAdvanceableInternalInlinePages();
+    const hasRetreatableInternal = this.hasRetreatableInternalInlinePages();
     const showNext =
       !summaryField &&
       (!atLastIndex ||
         hasPendingService ||
         hasPendingFormFields ||
         serviceIncomplete ||
-        pendingPostService);
+        pendingPostService ||
+        hasInternalInlinePages);
     let showSubmit =
       !!summaryField || (atLastIndex && !showNext && !pendingPostService);
 
+    const showPrev = index > 0 || hasRetreatableInternal;
+
+    const formPageIndex = this.getDisplayFormPageIndex();
+    const pageBreak = UnifiedFormSteps.getPageBreakAfterFormPage(this.fields, formPageIndex);
+    let showPrevButton = showPrev;
+    if (
+      pageBreak &&
+      UnifiedFormSteps.getPageBreakIndex(this.fields, pageBreak) > 0 &&
+      !UnifiedFormSteps.shouldShowPageBreakPrevious(pageBreak) &&
+      !hasRetreatableInternal
+    ) {
+      showPrevButton = index > 0;
+    }
+
     if (this.prevBtn) {
-      this.prevBtn.style.display = index > 0 ? 'inline-flex' : 'none';
+      this.prevBtn.style.display = showPrevButton ? 'inline-flex' : 'none';
     }
     if (this.nextBtn) {
       this.nextBtn.style.display = showNext ? 'inline-flex' : 'none';
@@ -1096,6 +1906,11 @@ class UnifiedFormSteps {
     if (this.submitBtn) {
       this.submitBtn.style.display = showSubmit ? 'inline-flex' : 'none';
     }
+
+    this.ensureNavigationButtonOrder();
+    this.syncNavigationLayout(index, showPrevButton, showNext, showSubmit);
+
+    this.applyPageBreakNavigationSettings(pageBreak, showNext, showPrevButton);
 
     if (summaryField) {
       this.applySummarySubmitButtonText(summaryField);
@@ -1140,9 +1955,11 @@ class UnifiedFormSteps {
 
   insertDynamicOptionStep(container, internalStep, parentItem) {
     const fieldId = container.dataset.fieldId;
+    const currentFormPage = this.getDisplayFormPageIndex();
     const newStep = {
       index: this.currentStep + 1,
       dynamic: true,
+      formPageIndex: currentFormPage,
       tokens: [
         {
           type: 'service_options_level',
@@ -1160,6 +1977,126 @@ class UnifiedFormSteps {
 
     this.rebuildProgressUI();
     this.showStep(this.currentStep + 1);
+  }
+
+  afterInternalServiceNav(container) {
+    this.syncCascadeProgressFromService(container);
+    this.updateNavigationButtons();
+  }
+
+  hasAdvanceableInternalInlinePages() {
+    return this.getServiceContainersForCurrentStep().some((container) => {
+      const navSteps = this.progressive?.getCascadeNavigationSteps(container) || [];
+      const info = this.progressive?.getActivePageInfo(container);
+      if (!info?.pages?.length) return false;
+
+      if (navSteps.length > 1) {
+        const activeNavIndex = this.progressive.getCascadeNavigationActiveIndex(container);
+        const segmentEnd =
+          activeNavIndex < navSteps.length - 1
+            ? navSteps[activeNavIndex + 1].pageIndex - 1
+            : info.pages.length - 1;
+        return info.pageIndex < segmentEnd || activeNavIndex < navSteps.length - 1;
+      }
+
+      return info.pages.length > 1 && info.pageIndex < info.pages.length - 1;
+    });
+  }
+
+  hasRetreatableInternalInlinePages() {
+    return this.getServiceContainersForCurrentStep().some((container) => {
+      const navSteps = this.progressive?.getCascadeNavigationSteps(container) || [];
+      const info = this.progressive?.getActivePageInfo(container);
+      if (!info?.pages?.length) return false;
+
+      if (navSteps.length > 1) {
+        const activeNavIndex = this.progressive.getCascadeNavigationActiveIndex(container);
+        const segmentStart = navSteps[activeNavIndex]?.pageIndex ?? 0;
+        return info.pageIndex > segmentStart || activeNavIndex > 0;
+      }
+
+      return info.pages.length > 1 && info.pageIndex > 0;
+    });
+  }
+
+  tryServiceInternalNavigation(direction) {
+    const containers = this.getServiceContainersForCurrentStep();
+
+    for (const container of containers) {
+      const navSteps = this.progressive?.getCascadeNavigationSteps(container) || [];
+      const info = this.progressive?.getActivePageInfo(container);
+      if (!info?.pages?.length) continue;
+
+      const activeNavIndex = this.progressive.getCascadeNavigationActiveIndex(container);
+      const pageIndex = info.pageIndex;
+      const pages = info.pages;
+
+      if (navSteps.length > 1) {
+        if (direction === 1) {
+          const segmentEnd =
+            activeNavIndex < navSteps.length - 1
+              ? navSteps[activeNavIndex + 1].pageIndex - 1
+              : pages.length - 1;
+
+          if (pageIndex < segmentEnd) {
+            if (!this.progressive.canAdvanceFromActiveStep(container)) {
+              return 'blocked';
+            }
+            if (this.progressive.navigateActivePage(container, 1)) {
+              this.afterInternalServiceNav(container);
+              return 'handled';
+            }
+          }
+
+          if (activeNavIndex < navSteps.length - 1) {
+            if (!this.progressive.canAdvanceFromActiveStep(container)) {
+              return 'blocked';
+            }
+            if (this.progressive.showPageByNavigationIndex(container, activeNavIndex + 1)) {
+              this.afterInternalServiceNav(container);
+              return 'handled';
+            }
+          }
+        } else if (direction === -1) {
+          const segmentStart = navSteps[activeNavIndex]?.pageIndex ?? 0;
+
+          if (pageIndex > segmentStart) {
+            if (this.progressive.navigateActivePage(container, -1)) {
+              this.afterInternalServiceNav(container);
+              return 'handled';
+            }
+          }
+
+          if (activeNavIndex > 0) {
+            if (this.progressive.showPageByNavigationIndex(container, activeNavIndex - 1)) {
+              this.afterInternalServiceNav(container);
+              return 'handled';
+            }
+          }
+        }
+
+        continue;
+      }
+
+      if (pages.length <= 1) continue;
+
+      if (direction === 1 && pageIndex < pages.length - 1) {
+        if (!this.progressive.canAdvanceFromActiveStep(container)) {
+          return 'blocked';
+        }
+        if (this.progressive.navigateActivePage(container, 1)) {
+          this.afterInternalServiceNav(container);
+          return 'handled';
+        }
+      } else if (direction === -1 && pageIndex > 0) {
+        if (this.progressive.navigateActivePage(container, -1)) {
+          this.afterInternalServiceNav(container);
+          return 'handled';
+        }
+      }
+    }
+
+    return false;
   }
 
   handlePendingServiceNavigation() {
@@ -1187,7 +2124,7 @@ class UnifiedFormSteps {
 
         if (parentItem) {
           const children = this.progressive.getSelectableItems(parentItem.children);
-          const label = (parentItem.optionsLabel || 'Select Option').trim();
+          const label = (parentItem.optionsLabel || 'option').trim();
           this.progressive.renderSeparateLevel(container, internalStep, children, label);
           stepEl = container.querySelector(`.step-container.step-${internalStep}`);
         }
@@ -1296,13 +2233,23 @@ class UnifiedFormSteps {
       this.progressive.ensureServiceContainerVisible(container);
 
       const preserveSelection =
-        hasPostServiceOnStep || this.progressive.isServiceReadyForPostFields(container);
+        hasPostServiceOnStep ||
+        this.progressive.isServiceReadyForPostFields(container) ||
+        this.progressive.hasInProgressCascade(container);
 
       const state = stateByField.get(fieldId);
       if (state && !preserveSelection) {
         this.progressive.applyUnifiedServiceState(state);
       } else if (!state) {
-        this.progressive.showStep(container, 1);
+        const container = this.progressive.getServiceContainer(fieldId);
+        const hasActiveSelection =
+          container?.querySelector('.category-select')?.value ||
+          container?.querySelector('.service-select')?.value ||
+          container?.querySelector('.inline-cascade-level');
+
+        if (!hasActiveSelection) {
+          this.progressive.showStep(container, 1);
+        }
       }
 
       const activeInternal =
@@ -1428,6 +2375,15 @@ class UnifiedFormSteps {
   }
 
   nextStep() {
+    const internalResult = this.tryServiceInternalNavigation(1);
+    if (internalResult === 'blocked') {
+      alert(this.getValidationMessage());
+      return;
+    }
+    if (internalResult === 'handled') {
+      return;
+    }
+
     if (this.hasPendingServiceNavigationOnCurrentStep()) {
       if (!this.validateCurrentStep()) {
         alert(this.getValidationMessage());
@@ -1439,7 +2395,9 @@ class UnifiedFormSteps {
     }
 
     const readyForPostService =
-      this.isServiceReadyForPostFields() && this.ensurePostServiceFields() > 0;
+      this.isServiceReadyForPostFields() &&
+      this.ensurePostServiceFields() > 0 &&
+      !this.hasAdvanceableInternalInlinePages();
 
     if (readyForPostService && this.handlePostServiceFieldTransition()) {
       return;
@@ -1460,10 +2418,46 @@ class UnifiedFormSteps {
 
     if (this.currentStep < this.steps.length - 1) {
       this.showStep(this.currentStep + 1);
+      return;
+    }
+
+    if (this.currentStep === 0 && this.baseSteps?.length > 1 && this.steps.length < this.baseSteps.length) {
+      this.restoreBaseSteps();
+      this.progressive?.resetServiceFieldForReselect(this.serviceFieldId);
+      this.showStep(1);
+      return;
+    }
+
+    if (this.currentStepIncludesService() && !this.isServiceReadyForPostFields()) {
+      alert(this.getValidationMessage());
     }
   }
 
   prevStep() {
+    if (this.currentStepIncludesService()) {
+      const step = this.steps[this.currentStep];
+      const inlinePostService = step?.tokens?.filter(
+        (token) => token.type === 'field' && this.isPostServiceFieldId(token.fieldId)
+      );
+      if (inlinePostService?.length) {
+        step.tokens = step.tokens.filter(
+          (token) => !(token.type === 'field' && this.isPostServiceFieldId(token.fieldId))
+        );
+        this.postServiceIndex = Math.max(0, this.postServiceIndex - inlinePostService.length);
+        if (!step.tokens.some((token) => token.type === 'service_options_level')) {
+          delete step.dynamic;
+        }
+        this.rebuildProgressUI();
+        this.showStep(this.currentStep);
+        return;
+      }
+    }
+
+    const internalResult = this.tryServiceInternalNavigation(-1);
+    if (internalResult === 'handled') {
+      return;
+    }
+
     if (this.currentStep <= 0) return;
 
     const current = this.steps[this.currentStep];

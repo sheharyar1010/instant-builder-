@@ -18,7 +18,7 @@ class TemplateFilter {
 
   bindEvents() {
     this.categoryItems.forEach((item) => {
-      item.addEventListener("click", (e) => {
+      item.addEventListener("click", () => {
         this.onCategoryClick(item);
       });
     });
@@ -82,21 +82,74 @@ class TemplateFilter {
   }
 }
 
+class ThemePicker {
+  constructor(formSelector) {
+    this.form = document.querySelector(formSelector);
+    if (!this.form) return;
+
+    this.themeItems = this.form.querySelectorAll(
+      ".quotemate-form-setup__theme-item"
+    );
+    this.hiddenThemeInput = this.form.querySelector('input[name="theme_id"]');
+    this.selectedThemeId =
+      this.hiddenThemeInput?.value ||
+      this.form.querySelector(
+        ".quotemate-form-setup__theme-item--active"
+      )?.getAttribute("data-theme-id") ||
+      "classic";
+
+    this.bindEvents();
+    this.selectTheme(this.selectedThemeId, false);
+  }
+
+  bindEvents() {
+    this.themeItems.forEach((item) => {
+      item.addEventListener("click", (e) => {
+        e.preventDefault();
+        const themeId = item.getAttribute("data-theme-id");
+        if (themeId) {
+          this.selectTheme(themeId);
+        }
+      });
+    });
+  }
+
+  selectTheme(themeId, focusItem = true) {
+    this.selectedThemeId = themeId;
+
+    if (this.hiddenThemeInput) {
+      this.hiddenThemeInput.value = themeId;
+    }
+
+    this.themeItems.forEach((item) => {
+      const isActive = item.getAttribute("data-theme-id") === themeId;
+      item.classList.toggle(
+        "quotemate-form-setup__theme-item--active",
+        isActive
+      );
+      item.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+
+    if (focusItem) {
+      const activeItem = this.form.querySelector(
+        `.quotemate-form-setup__theme-item[data-theme-id="${themeId}"]`
+      );
+      activeItem?.focus();
+    }
+  }
+
+  getSelectedThemeId() {
+    return this.selectedThemeId;
+  }
+}
+
 class CreateForm {
   constructor(formSelector) {
     this.form = document.querySelector(formSelector);
     if (!this.form) return;
 
-    // Get data with fallback
     this.ajaxData = window.Quotemate?.admin_forms_builder_panels_setup || {};
-    
-    // Debug logging
-    console.log('CreateForm initialized with:', {
-      form: this.form,
-      ajaxData: this.ajaxData,
-      windowQuotemate: window.Quotemate
-    });
-    
+    this.themePicker = new ThemePicker(formSelector);
     this.init();
   }
 
@@ -110,16 +163,6 @@ class CreateForm {
     );
     this.editMode = this.ajaxData.edit_mode;
     this.formIdInput = this.form.querySelector('input[name="form_id"]');
-
-    // Debug logging
-    console.log('CreateForm initialized with:', {
-      form: this.form,
-      ajaxData: this.ajaxData,
-      windowQuotemate: window.Quotemate,
-      nameInput: this.nameInput,
-      templateInputs: this.templateInputs.length,
-      editMode: this.editMode
-    });
 
     this.bindEvents();
   }
@@ -140,51 +183,41 @@ class CreateForm {
         this.submitForm({
           name: this.nameInput.value.trim(),
           template_id: templateId,
+          theme_id: this.themePicker?.getSelectedThemeId() || "classic",
           form_id: this.editMode ? this.formIdInput?.value : null,
         });
       });
     });
   }
 
-  async submitForm({ name, template_id, form_id }) {
+  async submitForm({ name, template_id, theme_id, form_id }) {
     if (!name) {
       alert("Please enter a form name.");
       return;
     }
 
-    // Get AJAX URL with fallback
-    let ajaxUrl = this.ajaxData?.ajaxUrl;
-    if (!ajaxUrl) {
-      // Fallback to WordPress admin-ajax.php
-      ajaxUrl = window.location.origin + '/wp-admin/admin-ajax.php';
+    if (!this.editMode && !theme_id) {
+      alert("Please select a form theme.");
+      return;
     }
 
-    // Get nonce from multiple sources with fallback
+    let ajaxUrl = this.ajaxData?.ajaxUrl;
+    if (!ajaxUrl) {
+      ajaxUrl = window.location.origin + "/wp-admin/admin-ajax.php";
+    }
+
     let nonce = this.ajaxData?.nonce;
-    
-    // Fallback 1: Try to get from hidden input field
+
     if (!nonce) {
       const nonceInput = this.form.querySelector('input[name="nonce"]');
       nonce = nonceInput ? nonceInput.value : null;
     }
-    
-    // Fallback 2: Try to get from window.Quotemate object
+
     if (!nonce && window.Quotemate?.admin_forms_builder_panels_setup?.nonce) {
       nonce = window.Quotemate.admin_forms_builder_panels_setup.nonce;
     }
-    
-    // Debug logging
-    console.log('Form submission data:', {
-      ajaxUrl: ajaxUrl,
-      ajaxData: this.ajaxData,
-      nonce: nonce,
-      name: name,
-      template_id: template_id,
-      form_id: form_id
-    });
-    
+
     if (!nonce) {
-      console.error('Nonce not found! This is a security issue.');
       alert("Security token not found. Please refresh the page and try again.");
       return;
     }
@@ -194,13 +227,12 @@ class CreateForm {
       nonce: nonce,
       name,
       template_id,
+      theme_id: theme_id || "classic",
     };
 
     if (this.editMode && form_id) {
       payload.form_id = form_id;
     }
-
-    console.log('Submitting form with payload:', payload);
 
     try {
       const response = await fetch(ajaxUrl, {

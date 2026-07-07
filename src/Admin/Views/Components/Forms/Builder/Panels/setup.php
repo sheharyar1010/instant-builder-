@@ -1,8 +1,11 @@
 <?php
 
 use Dawnsol\Quotemate\Helpers\AssetHelper;
+use Dawnsol\Quotemate\Helpers\ThemeHelper;
 
 defined('ABSPATH') || exit;
+
+$themes = ThemeHelper::get_all();
 
 // Generate nonce for form creation
 $form_nonce = wp_create_nonce('quotemate_save_form');
@@ -52,10 +55,39 @@ console.log('QuoteMate Setup - Fallback data set:', window.Quotemate.admin_forms
         <?php endif; ?>
         <input type="hidden" name="nonce" value="<?= $form_nonce ?>">
         <input type="hidden" name="template_id">
+        <input type="hidden" name="theme_id" value="<?= esc_attr(ThemeHelper::THEME_CLASSIC) ?>">
     </div>
 
     <div class="quotemate-form-setup__body">
         <div class="quotemate-form-setup__description">
+            <h3 class="quotemate-form-setup__description-title">Choose a Theme</h3>
+            <p class="quotemate-form-setup__description-text">Pick how your form looks and navigates between steps. You can customize colors later in the Design settings.</p>
+        </div>
+
+        <div class="quotemate-form-setup__theme-selection">
+            <?php foreach ($themes as $theme) :
+                $theme_design = ThemeHelper::get_default_design($theme['id']);
+                $accent = $theme_design['buttonColor'];
+                $accent_end = $theme_design['buttonColorEnd'] ?? $accent;
+                $is_classic = $theme['id'] === ThemeHelper::THEME_CLASSIC;
+                $swatch_style = ($theme_design['buttonStyle'] ?? 'solid') === 'gradient'
+                    ? 'background: linear-gradient(135deg, ' . esc_attr($accent) . ' 0%, ' . esc_attr($accent_end) . ' 100%);'
+                    : 'background: ' . esc_attr($accent) . ';';
+            ?>
+            <button
+                type="button"
+                class="quotemate-form-setup__theme-item<?= $is_classic ? ' quotemate-form-setup__theme-item--active' : '' ?>"
+                data-theme-id="<?= esc_attr($theme['id']) ?>"
+                aria-pressed="<?= $is_classic ? 'true' : 'false' ?>"
+            >
+                <span class="quotemate-form-setup__theme-swatch" style="<?= esc_attr($swatch_style) ?>"></span>
+                <span class="quotemate-form-setup__theme-name"><?= esc_html($theme['name']) ?></span>
+                <span class="quotemate-form-setup__theme-desc"><?= esc_html($theme['description']) ?></span>
+            </button>
+            <?php endforeach; ?>
+        </div>
+
+        <div class="quotemate-form-setup__description quotemate-form-setup__description--templates">
             <h3 class="quotemate-form-setup__description-title">Select a Template</h3>
             <p class="quotemate-form-setup__description-text">Choose a template to define how your form will look on your site. You can change it later if needed.</p>
         </div>

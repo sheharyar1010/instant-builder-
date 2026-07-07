@@ -7,6 +7,7 @@ use Dawnsol\Quotemate\Admin\Includes\Tables\FormsListTable;
 use Dawnsol\Quotemate\Helpers\AssetHelper;
 use Dawnsol\Quotemate\Helpers\RequestHelper;
 use Dawnsol\Quotemate\Helpers\SanitizationHelper;
+use Dawnsol\Quotemate\Helpers\ThemeHelper;
 use Dawnsol\Quotemate\Helpers\ViewRenderer;
 use Dawnsol\Quotemate\Traits\Singleton;
 
@@ -78,6 +79,9 @@ class FormsController
         $form_layout_raw = isset($_POST['form_layout']) ? wp_unslash($_POST['form_layout']) : '';
         $form_id = isset($_POST['form_id']) ? intval($_POST['form_id']) : 0;
         $template_id = isset($_POST['template_id']) ? intval($_POST['template_id']) : 0;
+        $theme_id = isset($_POST['theme_id'])
+            ? ThemeHelper::sanitize_id(sanitize_text_field(wp_unslash($_POST['theme_id'])))
+            : ThemeHelper::THEME_CLASSIC;
 
         // Validate form name
         if (empty(trim($form_name))) {
@@ -147,7 +151,16 @@ class FormsController
             
             
         } else {
-           
+            $design_defaults = array_merge(
+                ThemeHelper::get_default_design($theme_id),
+                [
+                    'fontFamily'   => 'system',
+                    'fontSize'     => 16,
+                    'formWidth'    => 'container',
+                    'fieldSpacing' => 1.5,
+                ]
+            );
+
             $create_data = [
                 'name' => $form_name,
                 'template_id' => $template_id, // Use selected template
@@ -156,6 +169,7 @@ class FormsController
                     'title' => $sanitized_form_data['title'] ?? 'Quote Request Form',
                     'description' => $sanitized_form_data['description'] ?? '',
                     'layout' => $this->sanitize_form_layout($form_layout_raw),
+                    'design' => $design_defaults,
                 ]),
                 'fields' => json_encode($sanitized_form_data['fields'] ?? []),
                 'created_at' => current_time('mysql'),
@@ -313,14 +327,20 @@ class FormsController
             'fieldSize', 'inputMask', 'minValue', 'maxValue',
             'acceptTypes', 'maxFileSize',
             'page_title', 'page_description', 'section_title',
+            'page_prev_title', 'page_prev_description',
             'styleLabelColor', 'styleLabelSize', 'styleInputColor', 'styleInputBg',
             'styleBorderWidth', 'styleBorderColor', 'styleBorderRadius', 'stylePadding',
             'styleBorderRadiusTopLeft', 'styleBorderRadiusTopRight', 'styleBorderRadiusBottomRight', 'styleBorderRadiusBottomLeft', 'styleBorderRadiusUnit',
             'styleMarginTop', 'styleMarginRight', 'styleMarginBottom', 'styleMarginLeft', 'styleMarginUnit',
             'stylePaddingTop', 'stylePaddingRight', 'stylePaddingBottom', 'stylePaddingLeft', 'stylePaddingUnit',
+            'stylePrevMarginTop', 'stylePrevMarginRight', 'stylePrevMarginBottom', 'stylePrevMarginLeft', 'stylePrevMarginUnit',
+            'stylePrevPaddingTop', 'stylePrevPaddingRight', 'stylePrevPaddingBottom', 'stylePrevPaddingLeft', 'stylePrevPaddingUnit',
             'styleFontFamily', 'styleFontSize', 'styleFontWeight', 'styleTextTransform', 'styleFontStyle', 'styleTextDecoration',
             'styleLineHeight', 'styleLetterSpacing', 'styleWordSpacing',
             'styleInputFontFamily', 'styleInputFontSize', 'styleInputFontWeight',
+            'heading_level', 'heading_align', 'paragraph_content',
+            'page_break_align', 'page_break_button_color',
+            'page_break_prev_align', 'page_break_prev_button_color',
             // Builder layout helpers (row/column indexes) – used to reconstruct rows on reload
             'rowIndex', 'columnIndex',
         ];
@@ -330,13 +350,76 @@ class FormsController
             }
         }
 
+        if (isset($sanitized['fieldSize'])) {
+            $field_size = sanitize_key($sanitized['fieldSize']);
+            if (in_array($field_size, ['small', 'medium', 'large'], true)) {
+                $sanitized['fieldSize'] = $field_size;
+            } else {
+                unset($sanitized['fieldSize']);
+            }
+        }
+
+        if (($field['type'] ?? '') === 'heading') {
+            if (isset($field['heading_level'])) {
+                $level = sanitize_key($field['heading_level']);
+                $sanitized['heading_level'] = in_array($level, ['h1', 'h2', 'h3', 'h4', 'h5'], true) ? $level : 'h2';
+            }
+            if (isset($field['heading_align'])) {
+                $align = sanitize_key($field['heading_align']);
+                $sanitized['heading_align'] = in_array($align, ['left', 'center', 'right'], true) ? $align : 'center';
+            }
+            if (isset($field['label'])) {
+                $sanitized['label'] = sanitize_textarea_field($field['label']);
+            }
+        }
+
+        if (($field['type'] ?? '') === 'paragraph' && isset($field['paragraph_content'])) {
+            $sanitized['paragraph_content'] = sanitize_textarea_field($field['paragraph_content']);
+        }
+
+        if (($field['type'] ?? '') === 'page_break') {
+            if (isset($field['page_break_align'])) {
+                $align = sanitize_key($field['page_break_align']);
+                $sanitized['page_break_align'] = in_array($align, ['left', 'center', 'right'], true) ? $align : 'center';
+            }
+            if (isset($field['page_break_button_color'])) {
+                $color = trim((string) $field['page_break_button_color']);
+                if ($color === '') {
+                    unset($sanitized['page_break_button_color']);
+                } elseif (preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/', $color)) {
+                    $sanitized['page_break_button_color'] = $color;
+                }
+            }
+            if (isset($field['page_break_prev_align'])) {
+                $align = sanitize_key($field['page_break_prev_align']);
+                $sanitized['page_break_prev_align'] = in_array($align, ['left', 'center', 'right'], true) ? $align : 'center';
+            }
+            if (isset($field['page_break_prev_button_color'])) {
+                $color = trim((string) $field['page_break_prev_button_color']);
+                if ($color === '') {
+                    unset($sanitized['page_break_prev_button_color']);
+                } elseif (preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/', $color)) {
+                    $sanitized['page_break_prev_button_color'] = $color;
+                }
+            }
+            if (isset($field['step_title'])) {
+                $step_title = sanitize_text_field($field['step_title']);
+                if ($step_title !== '') {
+                    $sanitized['step_title'] = $step_title;
+                }
+            }
+        }
+
         // Sanitize boolean properties (Advance tab + Style layout linked)
         $bool_props = [
             'hideLabel', 'readOnly', 'show_tax', 'show_discount',
             'styleMarginLinked', 'stylePaddingLinked', 'styleBorderRadiusLinked',
+            'stylePrevMarginLinked', 'stylePrevPaddingLinked',
+            'show_previous_button',
             'showSubtotal', 'showGrandTotal', 'showQuantity', 'showPricingType', 'showPath',
             'showDeliveryTime', 'showSavingsHighlight', 'showTax', 'showDiscount',
             'showTermsCheckbox', 'termsRequired', 'showPrintButton',
+            'addPrice',
         ];
         foreach ($bool_props as $prop) {
             if (isset($field[$prop])) {
@@ -392,6 +475,17 @@ class FormsController
             }
         }
 
+        if (isset($field['optionPrices']) && is_array($field['optionPrices'])) {
+            $sanitized['optionPrices'] = [];
+            foreach ($field['optionPrices'] as $label => $price) {
+                $clean_label = sanitize_text_field((string) $label);
+                if ($clean_label === '') {
+                    continue;
+                }
+                $sanitized['optionPrices'][$clean_label] = is_numeric($price) ? (float) $price : 0;
+            }
+        }
+
         // Sanitize serviceStructure (legacy 2-level service format)
         if (isset($field['serviceStructure']) && is_array($field['serviceStructure'])) {
             $sanitized['serviceStructure'] = $this->sanitize_service_structure($field['serviceStructure']);
@@ -400,6 +494,18 @@ class FormsController
         // Top-level label for the first dropdown (e.g. "Cars", "House", "Year")
         if (isset($field['serviceStructureLabel'])) {
             $sanitized['serviceStructureLabel'] = sanitize_text_field($field['serviceStructureLabel']);
+        }
+
+        if (isset($field['maxDropdownsPerPageDesktop'])) {
+            $max_dropdowns = (int) $field['maxDropdownsPerPageDesktop'];
+            $sanitized['maxDropdownsPerPageDesktop'] = max(1, min(12, $max_dropdowns));
+        }
+
+        if (isset($field['serviceMaxQuantity'])) {
+            $max_quantity = (int) $field['serviceMaxQuantity'];
+            if ($max_quantity >= 1) {
+                $sanitized['serviceMaxQuantity'] = $max_quantity;
+            }
         }
 
         // Sanitize enhancedServiceStructure (new unlimited nested service format)
@@ -529,42 +635,11 @@ class FormsController
                 $sanitized_item['pageBreakBeforeOptions'] = (bool) $item['pageBreakBeforeOptions'];
             }
 
-            // Handle service-specific properties
-            if ($sanitized_item['type'] === 'service') {
-                $sanitized_item['pricingType'] = isset($item['pricingType']) ? sanitize_key($item['pricingType']) : 'fixed';
-                $sanitized_item['basePrice'] = isset($item['basePrice']) ? (float) $item['basePrice'] : 0;
-
-                // Validate pricing type - now includes custom types
-                $valid_pricing_types = [
-                    'fixed', 'per_page', 'per_hour', 'per_item', 'per_month', 'per_year', 
-                    'per_user', 'per_feature', 'per_backlink', 'per_post', 'per_campaign', 'per_project'
-                ];
-                
-                // Allow custom pricing types (they start with 'custom_')
-                if (!in_array($sanitized_item['pricingType'], $valid_pricing_types) && 
-                    !str_starts_with($sanitized_item['pricingType'], 'custom_')) {
-                    $sanitized_item['pricingType'] = 'fixed';
-                }
-
-                // Optional service properties
-                if (isset($item['description'])) {
-                    $sanitized_item['description'] = sanitize_textarea_field($item['description']);
-                }
-                if (isset($item['minQuantity'])) {
-                    $sanitized_item['minQuantity'] = (int) $item['minQuantity'];
-                }
-                if (isset($item['maxQuantity'])) {
-                    $sanitized_item['maxQuantity'] = (int) $item['maxQuantity'];
-                }
-                if (isset($item['deliveryTime'])) {
-                    $sanitized_item['deliveryTime'] = (int) $item['deliveryTime'];
-                }
-
-                // Handle pricing tiers
-                if (isset($item['pricingTiers']) && is_array($item['pricingTiers'])) {
-                    $sanitized_item['pricingTiers'] = $this->sanitize_pricing_tiers($item['pricingTiers']);
-                }
+            if (isset($item['pageBreakTitle'])) {
+                $sanitized_item['pageBreakTitle'] = sanitize_text_field($item['pageBreakTitle']);
             }
+
+            $this->apply_enhanced_item_pricing_fields($sanitized_item, $item);
 
             // Handle children recursively for unlimited nesting
             if (isset($item['children']) && is_array($item['children']) && count($item['children']) > 0) {
@@ -578,6 +653,53 @@ class FormsController
         }
 
         return $sanitized;
+    }
+
+    /**
+     * Persist pricing on service nodes and priced category leaves (builder allows both).
+     */
+    private function apply_enhanced_item_pricing_fields(array &$sanitized_item, array $item): void
+    {
+        $has_pricing =
+            $sanitized_item['type'] === 'service' ||
+            isset($item['pricingType']) ||
+            isset($item['basePrice']) ||
+            (isset($item['pricingTiers']) && is_array($item['pricingTiers']) && count($item['pricingTiers']) > 0);
+
+        if (!$has_pricing) {
+            return;
+        }
+
+        $sanitized_item['pricingType'] = isset($item['pricingType']) ? sanitize_key($item['pricingType']) : 'fixed';
+        $sanitized_item['basePrice'] = isset($item['basePrice']) ? (float) $item['basePrice'] : 0;
+
+        $valid_pricing_types = [
+            'fixed', 'per_page', 'per_hour', 'per_item', 'per_month', 'per_year',
+            'per_user', 'per_feature', 'per_backlink', 'per_post', 'per_campaign', 'per_project',
+        ];
+
+        if (
+            !in_array($sanitized_item['pricingType'], $valid_pricing_types, true) &&
+            !str_starts_with($sanitized_item['pricingType'], 'custom_')
+        ) {
+            $sanitized_item['pricingType'] = 'fixed';
+        }
+
+        if (isset($item['description'])) {
+            $sanitized_item['description'] = sanitize_textarea_field($item['description']);
+        }
+        if (isset($item['minQuantity'])) {
+            $sanitized_item['minQuantity'] = (int) $item['minQuantity'];
+        }
+        if (isset($item['maxQuantity'])) {
+            $sanitized_item['maxQuantity'] = (int) $item['maxQuantity'];
+        }
+        if (isset($item['deliveryTime'])) {
+            $sanitized_item['deliveryTime'] = (int) $item['deliveryTime'];
+        }
+        if (isset($item['pricingTiers']) && is_array($item['pricingTiers'])) {
+            $sanitized_item['pricingTiers'] = $this->sanitize_pricing_tiers($item['pricingTiers']);
+        }
     }
 
     private function sanitize_pricing_tiers($pricing_tiers)

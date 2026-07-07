@@ -33,16 +33,170 @@ class QuoteSummaryEngine {
     return { ...QuoteSummaryEngine.DEFAULTS, ...(field || {}) };
   }
 
+  static formatDisplayText(text) {
+    if (window.QuoteMateTextFormat?.formatDisplayName) {
+      return window.QuoteMateTextFormat.formatDisplayName(text);
+    }
+    return String(text ?? '').trim();
+  }
+
   static formatMoney(amount, symbol) {
     const n = Number(amount) || 0;
     return `${symbol || '$'}${n.toFixed(2)}`;
   }
 
-  static formatPricingType(type) {
-    if (!type) return 'Fixed';
-    return String(type)
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+  static formatPricingType(type, progressive) {
+    if (progressive?.formatPricingType) {
+      return progressive.formatPricingType(type);
+    }
+    if (!type) return 'Fixed Price';
+    const key = String(type).toLowerCase();
+    const types = {
+      fixed: 'Fixed Price',
+      per_page: 'Per Page',
+      per_hour: 'Per Hour',
+      per_item: 'Per Item',
+      per_month: 'Per Month',
+      per_year: 'Per Year',
+      per_user: 'Per User',
+      per_feature: 'Per Feature',
+      per_backlink: 'Per Backlink',
+      per_post: 'Per Post',
+      per_campaign: 'Per Campaign',
+      per_project: 'Per Project',
+    };
+    if (types[key]) return types[key];
+    if (key.startsWith('custom_')) {
+      return QuoteSummaryEngine.formatDisplayText(key.replace('custom_', '').replace(/_/g, ' '));
+    }
+    if (key.startsWith('per_')) {
+      return `Per ${QuoteSummaryEngine.formatDisplayText(key.slice(4).replace(/_/g, ' '))}`;
+    }
+    return QuoteSummaryEngine.formatDisplayText(type);
+  }
+
+  static formatSummaryPricingType(pricingType, progressive) {
+    if (!pricingType || String(pricingType).toLowerCase() === 'fixed') {
+      return 'Fixed';
+    }
+
+    const key = String(pricingType).toLowerCase();
+    if (key.startsWith('per_')) {
+      return QuoteSummaryEngine.formatDisplayText(key.slice(4).replace(/_/g, ' '));
+    }
+    if (key.startsWith('custom_')) {
+      return QuoteSummaryEngine.formatDisplayText(key.slice(7).replace(/_/g, ' '));
+    }
+
+    const formatted = QuoteSummaryEngine.formatPricingType(pricingType, progressive);
+    if (formatted === 'Fixed Price') return 'Fixed';
+    if (formatted.startsWith('Per ')) {
+      return QuoteSummaryEngine.formatDisplayText(formatted.slice(4));
+    }
+
+    return QuoteSummaryEngine.formatDisplayText(formatted);
+  }
+
+  static formatSummaryQuantity(item, progressive) {
+    if (QuoteSummaryEngine.isSummaryBasePriceRow(item)) {
+      return '—';
+    }
+    if (!QuoteSummaryEngine.isPerPricingType(item.pricingType, progressive)) {
+      return '—';
+    }
+    return String(item.quantity ?? '—');
+  }
+
+  static formatSummaryRowType(item, progressive) {
+    if (QuoteSummaryEngine.isSummaryBasePriceRow(item)) {
+      return 'Fixed';
+    }
+    return QuoteSummaryEngine.formatSummaryPricingType(item.pricingType, progressive);
+  }
+
+  static resolvePricingRowName(levels, serviceData) {
+    if (levels.length > 0) {
+      return levels[levels.length - 1].name;
+    }
+    return QuoteSummaryEngine.formatDisplayText(serviceData?.name || 'Selected Service');
+  }
+
+  static isSummaryBasePriceRow(item) {
+    return !!item.isBasePriceRow || !!item.isChoiceFieldRow;
+  }
+
+  static shouldRenderSummaryRow(item) {
+    if (item.isLeaf === true || item.isBasePriceRow || item.isChoiceFieldRow) {
+      return true;
+    }
+    return (Number(item.lineTotal) || 0) > 0;
+  }
+
+  static isPerPricingType(pricingType, progressive) {
+    if (progressive?.isPerPricingType) {
+      return progressive.isPerPricingType(pricingType);
+    }
+    if (!pricingType || pricingType === 'fixed') return false;
+    const key = String(pricingType).toLowerCase();
+    if (key.startsWith('per_')) return true;
+    return QuoteSummaryEngine.formatPricingType(pricingType, progressive).startsWith('Per ');
+  }
+
+  static getUnitDisplayLabel(pricingType, progressive) {
+    const unit = progressive?.getQuantityUnit?.(pricingType) || 'units';
+    return QuoteSummaryEngine.formatDisplayText(unit);
+  }
+
+  static getPricePerUnitLabel(pricingType, progressive) {
+    const formatted = QuoteSummaryEngine.formatPricingType(pricingType, progressive);
+    return formatted.startsWith('Per ') ? `Price ${formatted}` : 'Price Per Unit';
+  }
+
+  static formatCalculationLabel(quantity, unitPrice, totalPrice) {
+    const qty = Math.max(1, parseInt(quantity, 10) || 1);
+    const unit = Number(unitPrice) || 0;
+    const total = Number(totalPrice) || 0;
+    const formatNum = (n) => {
+      const fixed = n.toFixed(2);
+      return fixed.endsWith('.00') ? String(Math.round(n)) : fixed;
+    };
+    return `${qty} × ${formatNum(unit)} = ${formatNum(total)}`;
+  }
+
+  static buildPerTypeMeta(pricingType, quantity, pricingInfo, progressive) {
+    if (!QuoteSummaryEngine.isPerPricingType(pricingType, progressive)) {
+      return { isPerType: false };
+    }
+
+    const unitPrice = Number(pricingInfo.unitPrice) || 0;
+    const totalPrice = Number(pricingInfo.totalPrice) || 0;
+
+    return {
+      isPerType: true,
+      unitLabel: QuoteSummaryEngine.getUnitDisplayLabel(pricingType, progressive),
+      pricePerUnitLabel: QuoteSummaryEngine.getPricePerUnitLabel(pricingType, progressive),
+      calculationLabel: QuoteSummaryEngine.formatCalculationLabel(quantity, unitPrice, totalPrice),
+    };
+  }
+
+  static renderPerTypeBreakdown(item, sym) {
+    if (!item.isPerType) return '';
+
+    return `
+      <div class="quotemate-summary-per-breakdown">
+        <div class="quotemate-summary-per-breakdown__row">
+          <span class="quotemate-summary-per-breakdown__label">${escapeHtml(item.unitLabel)}</span>
+          <span class="quotemate-summary-per-breakdown__value">${item.quantity}</span>
+        </div>
+        <div class="quotemate-summary-per-breakdown__row">
+          <span class="quotemate-summary-per-breakdown__label">${escapeHtml(item.pricePerUnitLabel)}</span>
+          <span class="quotemate-summary-per-breakdown__value">${QuoteSummaryEngine.formatMoney(item.unitPrice, sym)}</span>
+        </div>
+        <div class="quotemate-summary-per-breakdown__row quotemate-summary-per-breakdown__row--total">
+          <span class="quotemate-summary-per-breakdown__label">Total</span>
+          <span class="quotemate-summary-per-breakdown__value">${escapeHtml(item.calculationLabel)}</span>
+        </div>
+      </div>`;
   }
 
   static getProgressive() {
@@ -78,7 +232,9 @@ class QuoteSummaryEngine {
     if (!tier) return '';
     const min = tier.minQuantity ?? 1;
     const max = tier.maxQuantity;
-    const unit = progressive?.getQuantityUnit?.(pricingType) || 'units';
+    const unit = QuoteSummaryEngine.formatDisplayText(
+      progressive?.getQuantityUnit?.(pricingType) || 'units'
+    );
     if (max) {
       return `${min}–${max} ${unit}`;
     }
@@ -92,7 +248,9 @@ class QuoteSummaryEngine {
       const opt = catSelect.options[catSelect.selectedIndex];
       const data = progressive?.parseOptionData?.(opt) || null;
       levels.push({
-        name: data?.name || opt.textContent?.trim() || catSelect.value,
+        name: QuoteSummaryEngine.formatDisplayText(
+          data?.name || opt.textContent?.trim() || catSelect.value
+        ),
         data,
         depth: 0,
       });
@@ -103,7 +261,9 @@ class QuoteSummaryEngine {
       const opt = select.options[select.selectedIndex];
       const data = progressive?.parseOptionData?.(opt) || null;
       levels.push({
-        name: data?.name || opt.textContent?.trim() || select.value,
+        name: QuoteSummaryEngine.formatDisplayText(
+          data?.name || opt.textContent?.trim() || select.value
+        ),
         data,
         depth: idx + 1,
       });
@@ -112,11 +272,60 @@ class QuoteSummaryEngine {
     return levels;
   }
 
+  static nodeHasPricing(node) {
+    if (!node) return false;
+    const base = parseFloat(node.basePrice) || 0;
+    return !!(node.pricingType && (base > 0 || (node.pricingTiers && node.pricingTiers.length)));
+  }
+
+  static resolvePricedServiceData(container, progressive) {
+    if (progressive?.resolvePricedSelection) {
+      const resolved = progressive.resolvePricedSelection(container);
+      if (resolved) return resolved;
+    }
+
+    const levels = QuoteSummaryEngine.collectPathLevels(container, progressive);
+    for (let i = levels.length - 1; i >= 0; i--) {
+      const node = levels[i].data || {};
+      if (QuoteSummaryEngine.nodeHasPricing(node)) {
+        return { ...node, name: node.name || levels[i].name };
+      }
+    }
+
+    const dynamicInputs = container.querySelectorAll('.dynamic-step-input[data-step-data]');
+    for (let i = dynamicInputs.length - 1; i >= 0; i--) {
+      try {
+        const data = JSON.parse(dynamicInputs[i].dataset.stepData || '{}');
+        if (QuoteSummaryEngine.nodeHasPricing(data)) {
+          return data;
+        }
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    const finalPrice = parseFloat(container.querySelector('.final-price-value')?.value);
+    if (finalPrice > 0) {
+      const last = progressive?.getLastSelectedItem?.(container) || {};
+      return {
+        ...last,
+        name: QuoteSummaryEngine.formatDisplayText(
+          last.name || container.querySelector('.final-service-value')?.value || 'Selected Service'
+        ),
+        pricingType: container.querySelector('.pricing-type-value')?.value || last.pricingType || 'fixed',
+        basePrice: parseFloat(container.querySelector('.base-price-value')?.value) || finalPrice,
+        _resolvedTotalPrice: finalPrice,
+      };
+    }
+
+    return progressive?.getLastSelectedItem?.(container) || {};
+  }
+
   static collectServiceItems(container, fieldData, settings, progressive) {
     if (!container || !progressive) return [];
 
     const fieldId = container.dataset.fieldId || fieldData?.id;
-    const fieldLabel = fieldData?.label || 'Service';
+    const fieldLabel = QuoteSummaryEngine.formatDisplayText(fieldData?.label || 'Service');
     const isComplete = progressive.isServiceReadyForPostFields?.(container);
 
     if (!isComplete) {
@@ -125,16 +334,38 @@ class QuoteSummaryEngine {
 
     const lastItem = progressive.getLastSelectedItem(container);
     const quantity = QuoteSummaryEngine.getQuantity(container, progressive);
-    const serviceData = lastItem || {};
-    const pricingInfo = progressive.calculatePriceWithTiers(serviceData, quantity);
+    const serviceData = QuoteSummaryEngine.resolvePricedServiceData(container, progressive) || lastItem || {};
+    let pricingInfo = progressive.calculatePriceWithTiers(serviceData, quantity);
+    if (
+      serviceData._resolvedTotalPrice != null &&
+      !QuoteSummaryEngine.isPerPricingType(serviceData.pricingType, progressive)
+    ) {
+      pricingInfo = {
+        ...pricingInfo,
+        unitPrice: serviceData._resolvedTotalPrice,
+        totalPrice: serviceData._resolvedTotalPrice,
+      };
+    } else if (serviceData._resolvedTotalPrice != null) {
+      pricingInfo = {
+        ...pricingInfo,
+        totalPrice: serviceData._resolvedTotalPrice,
+      };
+    }
     const pricingType = serviceData.pricingType || 'fixed';
     const levels = QuoteSummaryEngine.collectPathLevels(container, progressive);
     const pathHidden = container.querySelector('.selected-path-value');
     const path =
       pathHidden?.value || levels.map((l) => l.name).join(' → ');
+    const pricingRowName = QuoteSummaryEngine.resolvePricingRowName(levels, serviceData);
     const applicableTier = serviceData.pricingTiers?.length
       ? progressive.findApplicableTier(serviceData.pricingTiers, quantity)
       : null;
+    const perTypeMeta = QuoteSummaryEngine.buildPerTypeMeta(
+      pricingType,
+      quantity,
+      pricingInfo,
+      progressive
+    );
 
     const items = [];
 
@@ -148,12 +379,12 @@ class QuoteSummaryEngine {
         items.push({
           fieldId,
           fieldLabel,
-          name: level.name,
+          name: isLeaf ? pricingRowName : level.name,
           path: levels
             .slice(0, i + 1)
             .map((l) => l.name)
             .join(' → '),
-          pricingType: isLeaf ? pricingType : node.pricingType || 'category',
+          pricingType: isLeaf ? pricingType : 'fixed',
           quantity: isLeaf ? quantity : 1,
           unitPrice: isLeaf ? pricingInfo.unitPrice : nodePrice,
           lineTotal,
@@ -162,6 +393,7 @@ class QuoteSummaryEngine {
             : '',
           deliveryTime: isLeaf ? pricingInfo.deliveryTime || serviceData.deliveryTime : null,
           isLeaf,
+          isBasePriceRow: !isLeaf && nodePrice > 0,
           regularPrice: isLeaf ? parseFloat(serviceData.basePrice) || 0 : nodePrice,
           savings: isLeaf
             ? Math.max(
@@ -171,9 +403,36 @@ class QuoteSummaryEngine {
                   : (parseFloat(serviceData.basePrice) || 0) * quantity) - pricingInfo.totalPrice
               )
             : 0,
+          ...(isLeaf ? perTypeMeta : { isPerType: false }),
         });
       });
     } else {
+      levels.forEach((level, i) => {
+        const isLeafLevel = i === levels.length - 1;
+        if (isLeafLevel) return;
+
+        const nodePrice = parseFloat(level.data?.basePrice) || 0;
+        if (nodePrice <= 0) return;
+
+        items.push({
+          fieldId,
+          fieldLabel,
+          name: level.name,
+          path: '',
+          pricingType: 'fixed',
+          quantity: 1,
+          unitPrice: nodePrice,
+          lineTotal: nodePrice,
+          isLeaf: false,
+          isBasePriceRow: true,
+          tierLabel: '',
+          deliveryTime: null,
+          regularPrice: nodePrice,
+          savings: 0,
+          isPerType: false,
+        });
+      });
+
       const regularTotal =
         pricingType === 'fixed'
           ? parseFloat(serviceData.basePrice) || 0
@@ -183,7 +442,7 @@ class QuoteSummaryEngine {
       items.push({
         fieldId,
         fieldLabel,
-        name: serviceData.name || path.split(' → ').pop() || 'Selected service',
+        name: pricingRowName,
         path: settings.showPath ? path : '',
         pricingType,
         quantity,
@@ -196,8 +455,122 @@ class QuoteSummaryEngine {
         isLeaf: true,
         regularPrice: regularTotal,
         savings,
+        ...perTypeMeta,
       });
     }
+
+    return items;
+  }
+
+  static isAddPriceEnabled(field) {
+    if (!field) return false;
+    const value = field.addPrice;
+    return value === true || value === 1 || value === '1' || value === 'true';
+  }
+
+  static resolveChoiceOptionPrice(field, optionLabel, element) {
+    if (!QuoteSummaryEngine.isAddPriceEnabled(field)) return null;
+
+    const prices = field.optionPrices;
+    if (prices && optionLabel && Object.prototype.hasOwnProperty.call(prices, optionLabel)) {
+      const configured = parseFloat(prices[optionLabel]);
+      if (Number.isFinite(configured)) {
+        return configured;
+      }
+    }
+
+    return QuoteSummaryEngine.parseChoiceOptionPrice(element);
+  }
+
+  static parseChoiceOptionPrice(element) {
+    if (!element || element.dataset.optionPrice === undefined || element.dataset.optionPrice === '') {
+      return null;
+    }
+    const price = parseFloat(element.dataset.optionPrice);
+    return Number.isFinite(price) ? price : null;
+  }
+
+  static getChoiceOptionLabel(element) {
+    if (!element) return '';
+    if (element.dataset.optionLabel) {
+      return String(element.dataset.optionLabel).trim();
+    }
+    if (element.tagName === 'OPTION') {
+      return String(element.textContent || '').trim();
+    }
+    const wrapper = element.closest('.radio-wrapper, .checkbox-wrapper');
+    const label = wrapper?.querySelector('label');
+    return String(label?.textContent || element.value || '').trim();
+  }
+
+  static buildChoiceFieldRow(name, price) {
+    return {
+      name: QuoteSummaryEngine.formatDisplayText(name),
+      quantity: null,
+      pricingType: 'fixed',
+      lineTotal: price,
+      isLeaf: true,
+      isChoiceFieldRow: true,
+    };
+  }
+
+  static collectChoiceFieldItems(form) {
+    const formEl = form || document.querySelector('form.quotemate-form, .quotemate-form, form');
+    if (!formEl) return [];
+
+    const fields = (window.quoteMateFormData?.fields || []).filter(
+      (f) =>
+        QuoteSummaryEngine.isAddPriceEnabled(f) &&
+        ['select', 'radio', 'checkbox'].includes(f.type)
+    );
+    const items = [];
+    const seen = new Set();
+
+    const pushChoiceRow = (field, optionLabel, price) => {
+      const label = String(optionLabel || '').trim();
+      if (!label || price === null || price <= 0) return;
+      const key = `${field.id}\0${label}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      items.push(QuoteSummaryEngine.buildChoiceFieldRow(label, price));
+    };
+
+    fields.forEach((field) => {
+      const group = formEl.querySelector(`.form-group[data-field-id="${field.id}"]`);
+
+      if (field.type === 'select') {
+        const select = group?.querySelector('select') || formEl.querySelector(`#${field.id}`);
+        if (!select || !select.value) return;
+        const option = select.options[select.selectedIndex];
+        const label = QuoteSummaryEngine.getChoiceOptionLabel(option) || select.value;
+        const price = QuoteSummaryEngine.resolveChoiceOptionPrice(field, select.value, option);
+        pushChoiceRow(field, label, price);
+        return;
+      }
+
+      if (field.type === 'radio') {
+        const checked =
+          group?.querySelector('input[type="radio"]:checked') ||
+          formEl.querySelector(`input[type="radio"][name="${field.id}"]:checked`);
+        if (!checked || !checked.value) return;
+        const label = QuoteSummaryEngine.getChoiceOptionLabel(checked) || checked.value;
+        const price = QuoteSummaryEngine.resolveChoiceOptionPrice(field, checked.value, checked);
+        pushChoiceRow(field, label, price);
+        return;
+      }
+
+      if (field.type === 'checkbox') {
+        const checkedInputs = group
+          ? group.querySelectorAll('input[type="checkbox"]:checked')
+          : formEl.querySelectorAll(`input[type="checkbox"][name="${field.id}[]"]:checked`);
+        checkedInputs.forEach((input) => {
+          if (!input.value) return;
+          const label = QuoteSummaryEngine.getChoiceOptionLabel(input) || input.value;
+          const price = QuoteSummaryEngine.resolveChoiceOptionPrice(field, input.value, input);
+          pushChoiceRow(field, label, price);
+        });
+      }
+    });
 
     return items;
   }
@@ -216,12 +589,14 @@ class QuoteSummaryEngine {
       items.push(...QuoteSummaryEngine.collectServiceItems(container, field, settings, progressive));
     });
 
+    items.push(...QuoteSummaryEngine.collectChoiceFieldItems(form));
+
     return items;
   }
 
   static calculateTotals(lineItems, settings) {
     const subtotal = lineItems
-      .filter((item) => item.isLeaf !== false)
+      .filter((item) => item.isLeaf !== false || item.isBasePriceRow || item.isChoiceFieldRow)
       .reduce((sum, item) => sum + (Number(item.lineTotal) || 0), 0);
     const symbol = settings.currencySymbol || '$';
     let tax = 0;
@@ -268,6 +643,7 @@ class QuoteSummaryEngine {
   static renderLineItems(lineItems, settings, totals) {
     const sym = settings.currencySymbol || '$';
     const layout = settings.layoutStyle || 'detailed';
+    const progressive = QuoteSummaryEngine.getProgressive();
 
     if (!lineItems.length) {
       return `<div class="quotemate-summary-empty">${settings.emptyStateMessage || QuoteSummaryEngine.DEFAULTS.emptyStateMessage}</div>`;
@@ -277,13 +653,8 @@ class QuoteSummaryEngine {
       return `
         <ul class="quotemate-summary-lines quotemate-summary-lines--compact">
           ${lineItems
-            .map(
-              (item) => `
-            <li class="quotemate-summary-line">
-              <span class="quotemate-summary-line__name">${escapeHtml(item.name)}</span>
-              <span class="quotemate-summary-line__amount">${QuoteSummaryEngine.formatMoney(item.lineTotal, sym)}</span>
-            </li>`
-            )
+            .filter((item) => QuoteSummaryEngine.shouldRenderSummaryRow(item))
+            .map((item) => QuoteSummaryEngine.renderCompactLine(item, sym, progressive))
             .join('')}
         </ul>`;
     }
@@ -292,7 +663,8 @@ class QuoteSummaryEngine {
       return `
         <div class="quotemate-summary-cards">
           ${lineItems
-            .map((item) => QuoteSummaryEngine.renderItemCard(item, settings, sym))
+            .filter((item) => QuoteSummaryEngine.shouldRenderSummaryRow(item))
+            .map((item) => QuoteSummaryEngine.renderItemCard(item, settings, sym, progressive))
             .join('')}
         </div>`;
     }
@@ -301,48 +673,65 @@ class QuoteSummaryEngine {
       <table class="quotemate-summary-table">
         <thead>
           <tr>
-            <th>Item</th>
-            ${settings.showPath ? '<th>Path</th>' : ''}
-            ${settings.showQuantity ? '<th>Qty</th>' : ''}
-            ${settings.showPricingType ? '<th>Type</th>' : ''}
-            <th>Amount</th>
+            <th class="quotemate-summary-table__name">Name</th>
+            <th class="quotemate-summary-table__qty">Qty</th>
+            <th class="quotemate-summary-table__type">Type</th>
+            <th class="quotemate-summary-amount">Amount</th>
           </tr>
         </thead>
         <tbody>
-          ${lineItems.map((item) => QuoteSummaryEngine.renderTableRow(item, settings, sym)).join('')}
+          ${lineItems
+            .filter((item) => QuoteSummaryEngine.shouldRenderSummaryRow(item))
+            .map((item) => QuoteSummaryEngine.renderSummaryTableRow(item, sym, progressive))
+            .join('')}
         </tbody>
       </table>`;
   }
 
-  static renderItemCard(item, settings, sym) {
+  static renderCompactLine(item, sym, progressive) {
+    const qty = QuoteSummaryEngine.formatSummaryQuantity(item, progressive);
+    const type = QuoteSummaryEngine.formatSummaryRowType(item, progressive);
+    const rowClass = QuoteSummaryEngine.isSummaryBasePriceRow(item)
+      ? 'quotemate-summary-line--base'
+      : 'quotemate-summary-line--pricing';
+
     return `
-      <div class="quotemate-summary-card">
-        <div class="quotemate-summary-card__title">${escapeHtml(item.fieldLabel)}</div>
-        <div class="quotemate-summary-card__name">${escapeHtml(item.name)}</div>
-        ${settings.showPath && item.path ? `<div class="quotemate-summary-card__path">${escapeHtml(item.path)}</div>` : ''}
-        ${settings.showQuantity ? `<div class="quotemate-summary-card__meta">Qty: ${item.quantity}</div>` : ''}
-        ${settings.showPricingType ? `<div class="quotemate-summary-card__meta">${escapeHtml(QuoteSummaryEngine.formatPricingType(item.pricingType))}</div>` : ''}
-        ${item.tierLabel ? `<div class="quotemate-summary-card__tier">Tier: ${escapeHtml(item.tierLabel)}</div>` : ''}
-        ${settings.showDeliveryTime && item.deliveryTime ? `<div class="quotemate-summary-card__delivery">Delivery: ${escapeHtml(String(item.deliveryTime))} days</div>` : ''}
-        ${settings.showSavingsHighlight && item.savings > 0 ? `<div class="quotemate-summary-card__savings">You save ${QuoteSummaryEngine.formatMoney(item.savings, sym)}</div>` : ''}
-        <div class="quotemate-summary-card__total">${QuoteSummaryEngine.formatMoney(item.lineTotal, sym)}</div>
-      </div>`;
+      <li class="quotemate-summary-line ${rowClass}">
+        <span class="quotemate-summary-line__name">${escapeHtml(item.name)}</span>
+        <span class="quotemate-summary-line__meta">${escapeHtml(qty)} · ${escapeHtml(type)}</span>
+        <span class="quotemate-summary-line__amount">${QuoteSummaryEngine.formatMoney(item.lineTotal, sym)}</span>
+      </li>`;
   }
 
-  static renderTableRow(item, settings, sym) {
+  static renderSummaryTableRow(item, sym, progressive) {
+    const qty = QuoteSummaryEngine.formatSummaryQuantity(item, progressive);
+    const type = QuoteSummaryEngine.formatSummaryRowType(item, progressive);
+    const rowClass = QuoteSummaryEngine.isSummaryBasePriceRow(item)
+      ? 'quotemate-summary-table__row--base'
+      : 'quotemate-summary-table__row--pricing';
+
     return `
-      <tr>
-        <td>
-          <strong>${escapeHtml(item.name)}</strong>
-          ${item.tierLabel ? `<br><small class="quotemate-summary-tier">Tier: ${escapeHtml(item.tierLabel)}</small>` : ''}
-          ${settings.showDeliveryTime && item.deliveryTime ? `<br><small>Delivery: ${escapeHtml(String(item.deliveryTime))} days</small>` : ''}
-          ${settings.showSavingsHighlight && item.savings > 0 ? `<br><small class="quotemate-summary-savings">Save ${QuoteSummaryEngine.formatMoney(item.savings, sym)}</small>` : ''}
-        </td>
-        ${settings.showPath ? `<td>${escapeHtml(item.path || '—')}</td>` : ''}
-        ${settings.showQuantity ? `<td>${item.quantity}</td>` : ''}
-        ${settings.showPricingType ? `<td>${escapeHtml(QuoteSummaryEngine.formatPricingType(item.pricingType))}</td>` : ''}
+      <tr class="${rowClass}">
+        <td class="quotemate-summary-table__name">${escapeHtml(item.name)}</td>
+        <td class="quotemate-summary-table__qty">${escapeHtml(qty)}</td>
+        <td class="quotemate-summary-table__type">${escapeHtml(type)}</td>
         <td class="quotemate-summary-amount">${QuoteSummaryEngine.formatMoney(item.lineTotal, sym)}</td>
       </tr>`;
+  }
+
+  static renderItemCard(item, settings, sym, progressive) {
+    const qty = QuoteSummaryEngine.formatSummaryQuantity(item, progressive);
+    const type = QuoteSummaryEngine.formatSummaryRowType(item, progressive);
+    const rowClass = QuoteSummaryEngine.isSummaryBasePriceRow(item)
+      ? 'quotemate-summary-card--base'
+      : 'quotemate-summary-card--pricing';
+
+    return `
+      <div class="quotemate-summary-card ${rowClass}">
+        <div class="quotemate-summary-card__name">${escapeHtml(item.name)}</div>
+        <div class="quotemate-summary-card__meta">Qty: ${escapeHtml(qty)} · ${escapeHtml(type)}</div>
+        <div class="quotemate-summary-card__total">${QuoteSummaryEngine.formatMoney(item.lineTotal, sym)}</div>
+      </div>`;
   }
 
   static renderTotals(totals, settings) {
@@ -549,6 +938,16 @@ window.QuoteSummaryEngine = QuoteSummaryEngine;
 document.addEventListener('quotemateServiceChanged', () => {
   QuoteSummaryEngine.refreshAllVisible();
 });
+
+document.addEventListener('change', (e) => {
+  const target = e.target;
+  if (!target || !target.closest('form')) return;
+  const tag = target.tagName;
+  const type = target.type;
+  if (tag === 'SELECT' || type === 'radio' || type === 'checkbox') {
+    QuoteSummaryEngine.refreshAllVisible();
+  }
+}, true);
 
 document.addEventListener('quotemate-form-data-ready', () => {
   setTimeout(() => QuoteSummaryEngine.refreshAllVisible(), 100);

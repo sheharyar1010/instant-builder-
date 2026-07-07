@@ -1,0 +1,608 @@
+/* Standard form container width and horizontal padding — all themes */
+
+/* Frontend: hide form title/description — step progress is the primary heading */
+body:not(.wp-admin) .quotemate-form-wrapper > .form-header {
+    display: none !important;
+}
+
+.quotemate-form-wrapper {
+    max-width: var(--qm-form-max-width, 1248px);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 40px;
+    padding-right: 40px;
+    box-sizing: border-box;
+}
+
+.quotemate-form-width-full {
+    max-width: 100%;
+}
+
+@media (max-width: 768px) {
+    .quotemate-form-wrapper {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+}
+
+/* Flat layout — no outer background or inner card except minimal theme */
+.quotemate-form-wrapper:not([data-qm-theme="minimal"]),
+.quotemate-form-builder__form-preview:not([data-qm-theme="minimal"]) {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.quotemate-form-wrapper:not([data-qm-theme="minimal"]) .form-content,
+.quotemate-form-builder__form-preview:not([data-qm-theme="minimal"]) .form-content,
+.quotemate-form-builder__form-preview:not([data-qm-theme="minimal"]) .quotemate-form-builder__form-content {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+}
+
+/* Field width grid — frontend section only (admin builder columns stack fields vertically) */
+.quotemate-form-wrapper .section-fields:not(.section-fields--layout),
+.quotemate-form-builder__form-preview .section-fields:not(.section-fields--layout) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.quotemate-form-wrapper .section-fields:not(.section-fields--layout) > .form-group.quotemate-form-field--size-small,
+.quotemate-form-builder__form-preview .section-fields:not(.section-fields--layout) > .form-group.quotemate-form-field--size-small,
+.quotemate-form-wrapper .form-group.quotemate-form-field--size-small,
+.quotemate-form-field.quotemate-form-field--size-small {
+    grid-column: span 1;
+    min-width: 0;
+}
+
+.quotemate-form-wrapper .section-fields:not(.section-fields--layout) > .form-group.quotemate-form-field--size-medium,
+.quotemate-form-builder__form-preview .section-fields:not(.section-fields--layout) > .form-group.quotemate-form-field--size-medium,
+.quotemate-form-wrapper .form-group.quotemate-form-field--size-medium,
+.quotemate-form-field.quotemate-form-field--size-medium {
+    grid-column: span 2;
+    min-width: 0;
+}
+
+.quotemate-form-wrapper .section-fields:not(.section-fields--layout) > .form-group.quotemate-form-field--size-large,
+.quotemate-form-builder__form-preview .section-fields:not(.section-fields--layout) > .form-group.quotemate-form-field--size-large,
+.quotemate-form-wrapper .form-group.quotemate-form-field--size-large,
+.quotemate-form-field.quotemate-form-field--size-large {
+    grid-column: span 3;
+    min-width: 0;
+}
+
+/* Admin builder: stack fields vertically; field size sets width within the column */
+.quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field {
+    align-self: flex-start;
+    max-width: 100%;
+}
+
+.quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field--size-small {
+    width: calc(100% / 3);
+}
+
+.quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field--size-medium {
+    width: calc(200% / 3);
+}
+
+.quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field--size-large {
+    width: 100%;
+}
+
+/* Default vertical spacing between fields (overridden by per-field margin in style attr) */
+.quotemate-form-builder__drop-zone .quotemate-form-builder__column > .quotemate-form-field {
+    margin-bottom: var(--qm-field-spacing, 1.5rem);
+}
+
+.quotemate-form-builder__drop-zone .quotemate-form-builder__column > .quotemate-form-field:last-child {
+    margin-bottom: 0;
+}
+
+.quotemate-form-wrapper .section-fields {
+    gap: 0;
+}
+
+/* Builder row/column layout on frontend (matches admin rows) */
+.quotemate-form-wrapper .section-fields--layout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--qm-field-spacing, 1.5rem);
+}
+
+.quotemate-form-wrapper .quotemate-form-row {
+    display: grid;
+    grid-template-columns: repeat(var(--qm-row-columns, 1), minmax(0, 1fr));
+    gap: 1rem;
+    align-items: start;
+    width: 100%;
+}
+
+.quotemate-form-wrapper .quotemate-form-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--qm-field-spacing, 1.5rem);
+    min-width: 0;
+}
+
+/* Row/column layout: field size sets width within the column (mirrors admin builder) */
+.quotemate-form-wrapper .quotemate-form-column > .form-group,
+.quotemate-form-builder__form-preview .quotemate-form-column > .form-group {
+    align-self: flex-start;
+    max-width: 100%;
+    margin-bottom: 0;
+}
+
+.quotemate-form-wrapper .quotemate-form-column > .form-group.quotemate-form-field--size-small,
+.quotemate-form-builder__form-preview .quotemate-form-column > .form-group.quotemate-form-field--size-small {
+    width: calc(100% / 3);
+}
+
+.quotemate-form-wrapper .quotemate-form-column > .form-group.quotemate-form-field--size-medium,
+.quotemate-form-builder__form-preview .quotemate-form-column > .form-group.quotemate-form-field--size-medium {
+    width: calc(200% / 3);
+}
+
+.quotemate-form-wrapper .quotemate-form-column > .form-group.quotemate-form-field--size-large,
+.quotemate-form-builder__form-preview .quotemate-form-column > .form-group.quotemate-form-field--size-large {
+    width: 100%;
+}
+
+.section-fields--layout .quotemate-form-column > .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.quotemate-form-wrapper .section-fields > .form-group {
+    margin-bottom: var(--qm-field-spacing, 1.5rem);
+}
+
+.quotemate-form-wrapper .section-fields > .form-group:last-child {
+    margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+    .quotemate-form-wrapper .section-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .quotemate-form-wrapper .quotemate-form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .quotemate-form-wrapper .form-group.quotemate-form-field--size-small,
+    .quotemate-form-wrapper .form-group.quotemate-form-field--size-medium,
+    .quotemate-form-wrapper .form-group.quotemate-form-field--size-large {
+        grid-column: span 1;
+    }
+
+    .quotemate-form-wrapper .quotemate-form-column > .form-group.quotemate-form-field--size-small,
+    .quotemate-form-wrapper .quotemate-form-column > .form-group.quotemate-form-field--size-medium,
+    .quotemate-form-wrapper .quotemate-form-column > .form-group.quotemate-form-field--size-large,
+    .quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field--size-small,
+    .quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field--size-medium,
+    .quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field--size-large {
+        width: 100%;
+    }
+}
+
+.quotemate-form-heading__accent,
+.quotemate-form-field__heading .quotemate-form-heading__accent {
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+}
+
+/* Heading format tags help — General tab */
+.quotemate-heading-format-help {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #475569;
+
+  &__title {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+  }
+
+  &__list {
+    margin: 0 0 10px;
+    padding-left: 18px;
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    code {
+      padding: 1px 5px;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #0f172a;
+    }
+  }
+
+  &__example {
+    margin: 0;
+    word-break: break-word;
+
+    code {
+      display: block;
+      margin-top: 4px;
+      padding: 8px 10px;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 11px;
+      color: #0f172a;
+      white-space: pre-wrap;
+    }
+  }
+
+  &__example-label {
+    font-weight: 600;
+    color: #334155;
+  }
+}
+
+/* Heading & paragraph content blocks — shared admin builder + frontend */
+.quotemate-form-heading,
+.quotemate-form-field__heading {
+    margin: 0 0 0.75rem;
+    padding: 0;
+    line-height: 1.25;
+    font-weight: 700;
+    color: var(--qm-text-color, #1a1a1a);
+    font-family: inherit;
+    width: 100%;
+}
+
+.quotemate-form-heading--align-left,
+.quotemate-form-field__heading--align-left {
+    text-align: left;
+}
+
+.quotemate-form-heading--align-center,
+.quotemate-form-field__heading--align-center {
+    text-align: center;
+}
+
+.quotemate-form-heading--align-right,
+.quotemate-form-field__heading--align-right {
+    text-align: right;
+}
+
+/* Page break navigation — button text, color, and alignment on the live form */
+.quotemate-form-wrapper .form-navigation.quotemate-form-navigation--align-left,
+.quotemate-form-wrapper .form-navigation.unified-form-navigation.quotemate-form-navigation--align-left {
+    justify-content: flex-start;
+}
+
+.quotemate-form-wrapper .form-navigation.quotemate-form-navigation--align-center,
+.quotemate-form-wrapper .form-navigation.unified-form-navigation.quotemate-form-navigation--align-center {
+    justify-content: center;
+}
+
+.quotemate-form-wrapper .form-navigation.quotemate-form-navigation--align-right,
+.quotemate-form-wrapper .form-navigation.unified-form-navigation.quotemate-form-navigation--align-right {
+    justify-content: flex-end;
+}
+
+.quotemate-form-wrapper .form-navigation .quotemate-form-field__page-break-desc {
+    flex: 0 0 100%;
+    width: 100%;
+    margin: 0 0 0.75rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+.quotemate-form-wrapper .form-navigation.quotemate-form-navigation--align-left .quotemate-form-field__page-break-desc {
+    text-align: left;
+}
+
+.quotemate-form-wrapper .form-navigation.quotemate-form-navigation--align-center .quotemate-form-field__page-break-desc {
+    text-align: center;
+}
+
+.quotemate-form-wrapper .form-navigation.quotemate-form-navigation--align-right .quotemate-form-field__page-break-desc {
+    text-align: right;
+}
+
+.quotemate-form-wrapper .form-navigation .quotemate-form-field__page-break-desc--prev {
+    text-align: inherit;
+}
+
+.quotemate-form-wrapper .quotemate-form-page-break-nav {
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0;
+    align-items: stretch;
+    width: auto;
+    max-width: 100%;
+}
+
+.quotemate-form-wrapper .quotemate-form-page-break-nav__slot {
+    display: contents;
+}
+
+.quotemate-form-wrapper .quotemate-form-page-break-nav .btn + .btn {
+    margin-left: 0;
+}
+
+.quotemate-form-wrapper .quotemate-form-page-break-nav .next-step:not(:only-child),
+.quotemate-form-wrapper .quotemate-form-page-break-nav .btn-primary.next-step:not(:only-child) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+}
+
+.quotemate-form-wrapper .quotemate-form-page-break-nav .prev-step,
+.quotemate-form-wrapper .quotemate-form-page-break-nav .btn-secondary.prev-step,
+.quotemate-form-wrapper .quotemate-form-field__page-break-actions .prev-step,
+.quotemate-form-wrapper .quotemate-form-field__page-break-actions .btn-secondary.prev-step {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-left: -1px;
+}
+
+.quotemate-form-wrapper .form-navigation.quotemate-form-navigation--dual,
+.quotemate-form-wrapper .form-navigation.unified-form-navigation.quotemate-form-navigation--dual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 0.75rem;
+}
+
+.quotemate-form-wrapper .form-navigation.quotemate-form-navigation--dual.quotemate-form-navigation--align-left,
+.quotemate-form-wrapper .form-navigation.unified-form-navigation.quotemate-form-navigation--dual.quotemate-form-navigation--align-left {
+    align-items: flex-start;
+}
+
+.quotemate-form-wrapper .form-navigation.quotemate-form-navigation--dual.quotemate-form-navigation--align-right,
+.quotemate-form-wrapper .form-navigation.unified-form-navigation.quotemate-form-navigation--dual.quotemate-form-navigation--align-right {
+    align-items: flex-end;
+}
+
+.quotemate-form-wrapper .quotemate-form-nav-button-group {
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0;
+    align-items: stretch;
+    width: auto;
+    max-width: 100%;
+}
+
+.quotemate-form-wrapper .quotemate-form-nav-button-group .btn + .btn {
+    margin-left: 0;
+}
+
+.quotemate-form-wrapper .quotemate-form-nav-button-group .next-step,
+.quotemate-form-wrapper .quotemate-form-nav-button-group .unified-next-step {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+}
+
+.quotemate-form-wrapper .quotemate-form-nav-button-group .prev-step,
+.quotemate-form-wrapper .quotemate-form-nav-button-group .unified-prev-step {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-left: -1px;
+}
+
+.quotemate-form-wrapper .form-navigation.unified-form-navigation.quotemate-form-navigation--dual .quotemate-form-field__page-break-desc {
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .quotemate-form-wrapper .quotemate-form-page-break-nav,
+    .quotemate-form-wrapper .quotemate-form-nav-button-group {
+        display: inline-flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .quotemate-form-wrapper .quotemate-form-page-break-nav .btn,
+    .quotemate-form-wrapper .quotemate-form-nav-button-group .btn {
+        width: 100%;
+        justify-content: center;
+        border-radius: 8px !important;
+    }
+}
+
+.quotemate-form-heading--h1,
+.quotemate-form-field__heading--h1 {
+    font-size: 2.5rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.quotemate-form-heading--h2,
+.quotemate-form-field__heading--h2 {
+    font-size: 2rem;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+}
+
+.quotemate-form-heading--h3,
+.quotemate-form-field__heading--h3 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+}
+
+.quotemate-form-heading--h4,
+.quotemate-form-field__heading--h4 {
+    font-size: 1.25rem;
+    line-height: 1.35;
+    font-weight: 600;
+}
+
+.quotemate-form-heading--h5,
+.quotemate-form-field__heading--h5 {
+    font-size: 1.125rem;
+    line-height: 1.4;
+    font-weight: 600;
+}
+
+.quotemate-form-paragraph,
+.quotemate-form-field__paragraph {
+    margin: 0 0 1rem;
+    line-height: 1.6;
+    color: var(--qm-text-muted, #555555);
+    font-size: 1rem;
+    text-align: center;
+}
+
+.form-group--content-block .field-input {
+    width: 100%;
+}
+
+/* Heading & paragraph — per-field style vars from builder Style tab */
+.form-group[style*="--qm-label-color"] .quotemate-form-heading,
+.form-group[style*="--qm-label-color"] .quotemate-form-field__heading,
+.form-group[style*="--qm-label-color"] .quotemate-form-paragraph,
+.form-group[style*="--qm-label-color"] .quotemate-form-field__paragraph {
+    color: var(--qm-label-color);
+}
+
+.form-group[style*="--qm-label-size"] .quotemate-form-heading,
+.form-group[style*="--qm-label-size"] .quotemate-form-field__heading,
+.form-group[style*="--qm-label-size"] .quotemate-form-paragraph,
+.form-group[style*="--qm-label-size"] .quotemate-form-field__paragraph {
+    font-size: var(--qm-label-size);
+}
+
+.form-group[style*="--qm-label-font-family"] .quotemate-form-heading,
+.form-group[style*="--qm-label-font-family"] .quotemate-form-field__heading,
+.form-group[style*="--qm-label-font-family"] .quotemate-form-paragraph,
+.form-group[style*="--qm-label-font-family"] .quotemate-form-field__paragraph {
+    font-family: var(--qm-label-font-family);
+}
+
+.form-group[style*="--qm-label-font-weight"] .quotemate-form-heading,
+.form-group[style*="--qm-label-font-weight"] .quotemate-form-field__heading,
+.form-group[style*="--qm-label-font-weight"] .quotemate-form-paragraph,
+.form-group[style*="--qm-label-font-weight"] .quotemate-form-field__paragraph {
+    font-weight: var(--qm-label-font-weight);
+}
+
+.form-group[style*="--qm-label-text-transform"] .quotemate-form-heading,
+.form-group[style*="--qm-label-text-transform"] .quotemate-form-field__heading,
+.form-group[style*="--qm-label-text-transform"] .quotemate-form-paragraph,
+.form-group[style*="--qm-label-text-transform"] .quotemate-form-field__paragraph {
+    text-transform: var(--qm-label-text-transform);
+}
+
+.form-group[style*="--qm-label-font-style"] .quotemate-form-heading,
+.form-group[style*="--qm-label-font-style"] .quotemate-form-field__heading,
+.form-group[style*="--qm-label-font-style"] .quotemate-form-paragraph,
+.form-group[style*="--qm-label-font-style"] .quotemate-form-field__paragraph {
+    font-style: var(--qm-label-font-style);
+}
+
+.form-group[style*="--qm-label-text-decoration"] .quotemate-form-heading,
+.form-group[style*="--qm-label-text-decoration"] .quotemate-form-field__heading,
+.form-group[style*="--qm-label-text-decoration"] .quotemate-form-paragraph,
+.form-group[style*="--qm-label-text-decoration"] .quotemate-form-field__paragraph {
+    text-decoration: var(--qm-label-text-decoration);
+}
+
+.form-group[style*="--qm-label-line-height"] .quotemate-form-heading,
+.form-group[style*="--qm-label-line-height"] .quotemate-form-field__heading,
+.form-group[style*="--qm-label-line-height"] .quotemate-form-paragraph,
+.form-group[style*="--qm-label-line-height"] .quotemate-form-field__paragraph {
+    line-height: var(--qm-label-line-height);
+}
+
+.form-group[style*="--qm-label-letter-spacing"] .quotemate-form-heading,
+.form-group[style*="--qm-label-letter-spacing"] .quotemate-form-field__heading,
+.form-group[style*="--qm-label-letter-spacing"] .quotemate-form-paragraph,
+.form-group[style*="--qm-label-letter-spacing"] .quotemate-form-field__paragraph {
+    letter-spacing: var(--qm-label-letter-spacing);
+}
+
+.form-group[style*="--qm-label-word-spacing"] .quotemate-form-heading,
+.form-group[style*="--qm-label-word-spacing"] .quotemate-form-field__heading,
+.form-group[style*="--qm-label-word-spacing"] .quotemate-form-paragraph,
+.form-group[style*="--qm-label-word-spacing"] .quotemate-form-field__paragraph {
+    word-spacing: var(--qm-label-word-spacing);
+}
+
+.form-group[style*="--qm-input-color"] .quotemate-form-heading,
+.form-group[style*="--qm-input-color"] .quotemate-form-field__heading,
+.form-group[style*="--qm-input-color"] .quotemate-form-paragraph,
+.form-group[style*="--qm-input-color"] .quotemate-form-field__paragraph {
+    color: var(--qm-input-color);
+}
+
+.form-group[style*="--qm-input-font-family"] .quotemate-form-heading,
+.form-group[style*="--qm-input-font-family"] .quotemate-form-field__heading,
+.form-group[style*="--qm-input-font-family"] .quotemate-form-paragraph,
+.form-group[style*="--qm-input-font-family"] .quotemate-form-field__paragraph {
+    font-family: var(--qm-input-font-family);
+}
+
+.form-group[style*="--qm-input-font-size"] .quotemate-form-heading,
+.form-group[style*="--qm-input-font-size"] .quotemate-form-field__heading,
+.form-group[style*="--qm-input-font-size"] .quotemate-form-paragraph,
+.form-group[style*="--qm-input-font-size"] .quotemate-form-field__paragraph {
+    font-size: var(--qm-input-font-size);
+}
+
+.form-group[style*="--qm-input-font-weight"] .quotemate-form-heading,
+.form-group[style*="--qm-input-font-weight"] .quotemate-form-field__heading,
+.form-group[style*="--qm-input-font-weight"] .quotemate-form-paragraph,
+.form-group[style*="--qm-input-font-weight"] .quotemate-form-field__paragraph {
+    font-weight: var(--qm-input-font-weight);
+}
+
+.form-group[style*="--qm-input-bg"] .quotemate-form-heading,
+.form-group[style*="--qm-input-bg"] .quotemate-form-field__heading,
+.form-group[style*="--qm-input-bg"] .quotemate-form-paragraph,
+.form-group[style*="--qm-input-bg"] .quotemate-form-field__paragraph {
+    background-color: var(--qm-input-bg);
+}
+
+.form-group[style*="--qm-border-width"] .quotemate-form-heading,
+.form-group[style*="--qm-border-width"] .quotemate-form-field__heading,
+.form-group[style*="--qm-border-width"] .quotemate-form-paragraph,
+.form-group[style*="--qm-border-width"] .quotemate-form-field__paragraph {
+    border-style: solid;
+    border-width: var(--qm-border-width);
+}
+
+.form-group[style*="--qm-border-color"] .quotemate-form-heading,
+.form-group[style*="--qm-border-color"] .quotemate-form-field__heading,
+.form-group[style*="--qm-border-color"] .quotemate-form-paragraph,
+.form-group[style*="--qm-border-color"] .quotemate-form-field__paragraph {
+    border-color: var(--qm-border-color);
+}
+
+.form-group[style*="--qm-border-radius-tl"] .quotemate-form-heading,
+.form-group[style*="--qm-border-radius-tl"] .quotemate-form-field__heading,
+.form-group[style*="--qm-border-radius-tl"] .quotemate-form-paragraph,
+.form-group[style*="--qm-border-radius-tl"] .quotemate-form-field__paragraph {
+    border-top-left-radius: var(--qm-border-radius-tl);
+    border-top-right-radius: var(--qm-border-radius-tr);
+    border-bottom-right-radius: var(--qm-border-radius-br);
+    border-bottom-left-radius: var(--qm-border-radius-bl);
+}
+
+.form-group[style*="--qm-input-padding"] .quotemate-form-heading,
+.form-group[style*="--qm-input-padding"] .quotemate-form-field__heading,
+.form-group[style*="--qm-input-padding"] .quotemate-form-paragraph,
+.form-group[style*="--qm-input-padding"] .quotemate-form-field__paragraph {
+    padding: var(--qm-input-padding);
+}

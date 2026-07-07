@@ -1,3 +1,6 @@
+import { HEADING_LEVELS, getDefaultPageBreakButtonColor, getDefaultPageBreakPrevButtonColor } from './design-vars.js';
+import { HEADING_FORMAT_TAGS_HTML } from './heading-format.js';
+
 export class FieldProperties {
   static FORM_SUMMARY_CURRENCIES = [
     { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -64,7 +67,78 @@ export class FieldProperties {
     this.formBuilder = formBuilder;
   }
 
+  getPageBreakIndex(fieldId) {
+    if (this.formBuilder?.getPageBreakIndex) {
+      return this.formBuilder.getPageBreakIndex(fieldId);
+    }
+    let index = 0;
+    for (const field of this.formBuilder.formData.fields || []) {
+      if (field?.type === 'page_break') {
+        if (field.id === fieldId) {
+          return index;
+        }
+        index++;
+      }
+    }
+    return 0;
+  }
+
+  buildPageBreakAlignOptions(selectedAlign) {
+    return [
+      { value: 'left', label: 'Left' },
+      { value: 'center', label: 'Center' },
+      { value: 'right', label: 'Right' },
+    ].map((opt) => `<option value="${opt.value}" ${selectedAlign === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('');
+  }
+
+  generatePageBreakButtonSection(title, hint, fieldData, fieldId, config) {
+    const {
+      textProperty,
+      textDefault,
+      textPlaceholder,
+      colorProperty,
+      defaultColor,
+      alignProperty,
+      descriptionProperty,
+      descriptionLabel,
+    } = config;
+
+    return `
+      <div class="quotemate-form-properties__section quotemate-form-properties__section--page-break-buttons">
+        <p class="quotemate-form-properties__section-heading">${title}</p>
+        ${hint ? `<p class="quotemate-form-properties__hint">${hint}</p>` : ''}
+        <div class="quotemate-form-properties__section">
+          <label class="quotemate-form-properties__label">Button Text <span class="quotemate-form-properties__label-icon" title="Label shown on the button">?</span></label>
+          <input type="text" class="quotemate-form-field__input" value="${fieldData?.[textProperty] || textDefault}" placeholder="${textPlaceholder}" data-property="${textProperty}" data-field-id="${fieldId}">
+        </div>
+        ${this.advanceSectionColor(
+          'Button Color',
+          'Button background color (leave empty to use the default theme color)',
+          fieldData?.[colorProperty] || '',
+          colorProperty,
+          fieldId,
+          defaultColor
+        )}
+        <div class="quotemate-form-properties__section">
+          <label class="quotemate-form-properties__label">Alignment <span class="quotemate-form-properties__label-icon" title="Horizontal alignment of this button">?</span></label>
+          <select class="quotemate-form-field__input quotemate-form-field__select" data-property="${alignProperty}" data-field-id="${fieldId}">
+            ${this.buildPageBreakAlignOptions(fieldData?.[alignProperty] || 'center')}
+          </select>
+        </div>
+        ${descriptionProperty ? `
+        <div class="quotemate-form-properties__section">
+          <label class="quotemate-form-properties__label">${descriptionLabel} <span class="quotemate-form-properties__label-icon" title="Optional helper text for this button">?</span></label>
+          <textarea class="quotemate-form-field__input" rows="2" placeholder="Optional description" data-property="${descriptionProperty}" data-field-id="${fieldId}">${fieldData?.[descriptionProperty] || ''}</textarea>
+        </div>` : ''}
+      </div>
+    `;
+  }
+
   showProperties(fieldElement) {
+    if (this.formBuilder?.syncPropertiesFromPanel) {
+      this.formBuilder.syncPropertiesFromPanel();
+    }
+
     const propertiesContent = document.querySelector(".quotemate-form-builder__properties-content");
     const advanceContent = document.querySelector(".quotemate-form-builder__advance-properties-content");
     const fieldId = fieldElement.dataset.fieldId;
@@ -121,6 +195,131 @@ export class FieldProperties {
     const fieldTypeLabel = this.formBuilder.getFieldLabel ? this.formBuilder.getFieldLabel(fieldType) : fieldType.replace(/_/g, " ");
     const fieldTypeTitle = `${fieldTypeLabel} (ID #${(fieldId || "").replace("field_", "")})`;
 
+    if (fieldType === 'heading') {
+      const level = fieldData?.heading_level || 'h2';
+      const align = fieldData?.heading_align || 'center';
+      const headingText = String(fieldData?.label ?? 'Heading')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      const levelOptions = HEADING_LEVELS.map((tag) => {
+        const label = tag.toUpperCase();
+        return `<option value="${tag}" ${level === tag ? 'selected' : ''}>${label}</option>`;
+      }).join('');
+      const alignOptions = [
+        { value: 'left', label: 'Left' },
+        { value: 'center', label: 'Center' },
+        { value: 'right', label: 'Right' },
+      ].map((opt) => `<option value="${opt.value}" ${align === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('');
+      return `
+        <div class="quotemate-form-properties">
+          <div class="quotemate-form-properties__field-type-title">${fieldTypeTitle}</div>
+          ${HEADING_FORMAT_TAGS_HTML}
+          <div class="quotemate-form-properties__section">
+            <label class="quotemate-form-properties__label">Heading Text <span class="quotemate-form-properties__label-icon" title="Use formatting tags below for line breaks and colored text">?</span></label>
+            <textarea class="quotemate-form-field__input" rows="4" placeholder="Heading" data-property="label" data-field-id="${fieldId}">${headingText}</textarea>
+          </div>
+          <div class="quotemate-form-properties__section">
+            <label class="quotemate-form-properties__label">Heading Level <span class="quotemate-form-properties__label-icon" title="HTML heading tag (H1–H5)">?</span></label>
+            <select class="quotemate-form-field__input quotemate-form-field__select" data-property="heading_level" data-field-id="${fieldId}">
+              ${levelOptions}
+            </select>
+          </div>
+          <div class="quotemate-form-properties__section">
+            <label class="quotemate-form-properties__label">Alignment <span class="quotemate-form-properties__label-icon" title="Horizontal alignment of the heading text">?</span></label>
+            <select class="quotemate-form-field__input quotemate-form-field__select" data-property="heading_align" data-field-id="${fieldId}">
+              ${alignOptions}
+            </select>
+          </div>
+        </div>
+      `;
+    }
+
+    if (fieldType === 'paragraph') {
+      return `
+        <div class="quotemate-form-properties">
+          <div class="quotemate-form-properties__field-type-title">${fieldTypeTitle}</div>
+          <div class="quotemate-form-properties__section">
+            <label class="quotemate-form-properties__label">Paragraph Content <span class="quotemate-form-properties__label-icon" title="Text displayed on the form">?</span></label>
+            <textarea class="quotemate-form-field__input" rows="5" placeholder="Enter paragraph text" data-property="paragraph_content" data-field-id="${fieldId}">${fieldData?.paragraph_content || ''}</textarea>
+          </div>
+        </div>
+      `;
+    }
+
+    if (fieldType === 'page_break') {
+      const pageBreakIndex = this.getPageBreakIndex(fieldId);
+      const hasPreviousButton = pageBreakIndex > 0;
+      const defaultNextColor = getDefaultPageBreakButtonColor();
+      const defaultPrevColor = getDefaultPageBreakPrevButtonColor();
+
+      const nextSection = this.generatePageBreakButtonSection(
+        hasPreviousButton ? 'Next Button' : 'Button',
+        hasPreviousButton ? 'Controls the button that moves users to the next page.' : 'The first page break only shows a Next button.',
+        fieldData,
+        fieldId,
+        {
+          textProperty: 'page_title',
+          textDefault: 'Next Page',
+          textPlaceholder: 'Next Page',
+          colorProperty: 'page_break_button_color',
+          defaultColor: defaultNextColor,
+          alignProperty: 'page_break_align',
+          descriptionProperty: 'page_description',
+          descriptionLabel: 'Description',
+        }
+      );
+
+      const previousSection = hasPreviousButton
+        ? `
+          ${this.advanceSectionToggle(
+            'Show Previous Button',
+            'Display the Previous button on the right for this step. The Next button always stays on the left.',
+            fieldData?.show_previous_button !== false && fieldData?.show_previous_button !== 'false',
+            'show_previous_button',
+            fieldId
+          )}
+          ${this.generatePageBreakButtonSection(
+            'Previous Button',
+            'Controls the button on the right that moves users back to the previous page.',
+            fieldData,
+            fieldId,
+            {
+              textProperty: 'page_prev_title',
+              textDefault: 'Previous',
+              textPlaceholder: 'Previous',
+              colorProperty: 'page_break_prev_button_color',
+              defaultColor: defaultPrevColor,
+              alignProperty: 'page_break_prev_align',
+              descriptionProperty: 'page_prev_description',
+              descriptionLabel: 'Description',
+            }
+          )}
+        `
+        : '';
+
+      return `
+        <div class="quotemate-form-properties">
+          <div class="quotemate-form-properties__field-type-title">${fieldTypeTitle}</div>
+          <div class="quotemate-form-properties__section">
+            <label class="quotemate-form-properties__label">Step Title <span class="quotemate-form-properties__label-icon" title="Optional title for the next step in the progress bar">?</span></label>
+            <input
+              type="text"
+              class="quotemate-form-field__input"
+              value="${fieldData?.step_title || ''}"
+              placeholder="e.g. Project Details"
+              data-property="step_title"
+              data-field-id="${fieldId}"
+            >
+            <p class="quotemate-form-properties__hint">Optional. Labels the next step created by this page break. Leave empty to use the first field label after this break.</p>
+          </div>
+          ${nextSection}
+          ${previousSection}
+          <p class="quotemate-form-properties__hint">Use the <strong>Style</strong> tab to set margin and padding for each button.</p>
+        </div>
+      `;
+    }
+
     // Base properties common to all fields
     let baseHtml = `
       <div class="quotemate-form-properties">
@@ -136,7 +335,7 @@ export class FieldProperties {
     `;
 
     // Only show description for non-structural fields
-    if (!['page_break', 'section_break', 'divider'].includes(fieldType)) {
+    if (!['page_break', 'section_break', 'divider', 'heading', 'paragraph'].includes(fieldType)) {
       baseHtml += `
         <div class="quotemate-form-properties__section">
           <label class="quotemate-form-properties__label">Description <span class="quotemate-form-properties__label-icon" title="Optional helper text">?</span></label>
@@ -148,7 +347,7 @@ export class FieldProperties {
     }
 
     // Only show required toggle for input fields
-    if (!['page_break', 'section_break', 'quote_total', 'form_summary', 'html', 'divider'].includes(fieldType)) {
+    if (!['page_break', 'section_break', 'quote_total', 'form_summary', 'html', 'heading', 'paragraph', 'divider'].includes(fieldType)) {
       const isRequired = fieldData && fieldData.required;
       baseHtml += `
         <div class="quotemate-form-properties__section quotemate-form-properties__section--toggle">
@@ -163,6 +362,16 @@ export class FieldProperties {
       `;
     }
 
+    if (['select', 'radio', 'checkbox'].includes(fieldType)) {
+      baseHtml += this.advanceSectionToggle(
+        'Add Price',
+        'Add a fixed price to each option in this field',
+        !!fieldData?.addPrice,
+        'addPrice',
+        fieldId
+      );
+    }
+
     // Field type specific properties
     baseHtml += this.generateTypeSpecificProperties(
       fieldType,
@@ -174,11 +383,45 @@ export class FieldProperties {
     return baseHtml;
   }
 
+  /**
+   * Margin + padding controls — used in Advance tab (all fields) and Style > Layout.
+   */
+  generateFieldSpacingSection(fieldData, fieldId, options = {}) {
+    const heading = options.heading || 'Field spacing';
+    const hint = options.hint || 'Margin sets the gap between this field and others. Padding adds space inside the field box.';
+    const marginPrefix = options.marginPrefix;
+    const paddingPrefix = options.paddingPrefix;
+    const marginOptions = marginPrefix ? { prefix: marginPrefix, label: 'Margin' } : undefined;
+    const paddingOptions = paddingPrefix ? { prefix: paddingPrefix, label: 'Padding' } : undefined;
+
+    return `
+      <div class="quotemate-form-properties__section quotemate-form-properties__section--spacing">
+        <p class="quotemate-form-properties__section-heading">${heading}</p>
+        <p class="quotemate-form-properties__hint">${hint}</p>
+        ${this.generateStyleLayoutBlock('margin', fieldData, fieldId, marginOptions)}
+        ${this.generateStyleLayoutBlock('padding', fieldData, fieldId, paddingOptions)}
+      </div>
+    `;
+  }
+
   generateAdvancePropertiesHtml(fieldType, fieldData, fieldId) {
     let advanceHtml = '<div class="quotemate-form-properties quotemate-form-properties--advance">';
 
+    if (fieldType === 'page_break') {
+      // Margin/padding for page break buttons live on the Style tab only (avoids duplicate controls).
+    } else {
+      advanceHtml += this.generateFieldSpacingSection(fieldData, fieldId);
+    }
+
     if (['page_break', 'section_break', 'divider'].includes(fieldType)) {
-      advanceHtml += '<p class="quotemate-form-builder__advance-placeholder">No advanced options for this field type.</p>';
+      advanceHtml += this.advanceSectionInput(
+        'CSS Classes',
+        'Custom CSS class(es) for this field',
+        fieldData?.cssClass || '',
+        'cssClass',
+        fieldId,
+        'custom-class'
+      );
       advanceHtml += '</div>';
       return advanceHtml;
     }
@@ -201,7 +444,7 @@ export class FieldProperties {
 
     // Hide Label - for fields with labels (not in field-type block: choice, file, service)
     const fieldsWithHideLabelInBlock = ['text', 'name', 'company', 'email', 'phone', 'address', 'city', 'state_province', 'zip_postal', 'project_title', 'project_location', 'project_description', 'textarea', 'quote_notes', 'quantity', 'area_size', 'start_date'];
-    if (!['quote_total', 'form_summary', 'html'].includes(fieldType) && !fieldsWithHideLabelInBlock.includes(fieldType)) {
+    if (!['quote_total', 'form_summary', 'html', 'heading', 'paragraph'].includes(fieldType) && !fieldsWithHideLabelInBlock.includes(fieldType)) {
       advanceHtml += this.advanceSectionToggle(
         'Hide Label',
         'Hide the field label from display',
@@ -462,9 +705,9 @@ export class FieldProperties {
   /**
    * Build a Layout block (Margin or Padding) with unit selector, link toggle, and 4 inputs (Top, Right, Bottom, Left).
    */
-  generateStyleLayoutBlock(kind, fieldData, fieldId) {
-    const label = kind === 'margin' ? 'Margin' : 'Padding';
-    const prefix = kind === 'margin' ? 'styleMargin' : 'stylePadding';
+  generateStyleLayoutBlock(kind, fieldData, fieldId, options = null) {
+    const label = options?.label || (kind === 'margin' ? 'Margin' : 'Padding');
+    const prefix = options?.prefix || (kind === 'margin' ? 'styleMargin' : 'stylePadding');
     const linked = fieldData?.[prefix + 'Linked'] === true || fieldData?.[prefix + 'Linked'] === 'true';
     const unit = fieldData?.[prefix + 'Unit'] || 'px';
     const sides = ['Top', 'Right', 'Bottom', 'Left'];
@@ -569,6 +812,40 @@ export class FieldProperties {
   getControlStyleLabels(fieldType) {
     const dropdownTypes = ['select', 'project_type', 'project_category', 'service_type', 'completion_timeline', 'budget_range', 'unit_type', 'material_type', 'urgency_level', 'service', 'service_options'];
     const optionListTypes = ['radio', 'checkbox', 'additional_options', 'addons'];
+    if (fieldType === 'heading') {
+      return {
+        sectionTitle: 'Heading Typography',
+        textColorLabel: 'Heading text color',
+        textColorTitle: 'Text color for the heading',
+        backgroundLabel: 'Heading background',
+        backgroundTitle: 'Background color for the heading',
+        fontFamilyLabel: 'Heading font family',
+        fontFamilyTitle: 'Font family for heading text',
+        fontSizeLabel: 'Heading font size',
+        fontSizeTitle: 'Font size for heading text (e.g. 14px)',
+        fontWeightLabel: 'Heading font weight',
+        fontWeightTitle: 'Font weight for heading text',
+        paddingLabel: 'Heading padding',
+        paddingTitle: 'Padding around the heading (e.g. 10px)',
+      };
+    }
+    if (fieldType === 'paragraph') {
+      return {
+        sectionTitle: 'Paragraph Typography',
+        textColorLabel: 'Paragraph text color',
+        textColorTitle: 'Text color for the paragraph',
+        backgroundLabel: 'Paragraph background',
+        backgroundTitle: 'Background color for the paragraph',
+        fontFamilyLabel: 'Paragraph font family',
+        fontFamilyTitle: 'Font family for paragraph text',
+        fontSizeLabel: 'Paragraph font size',
+        fontSizeTitle: 'Font size for paragraph text (e.g. 14px)',
+        fontWeightLabel: 'Paragraph font weight',
+        fontWeightTitle: 'Font weight for paragraph text',
+        paddingLabel: 'Paragraph padding',
+        paddingTitle: 'Padding around the paragraph (e.g. 10px)',
+      };
+    }
     if (dropdownTypes.includes(fieldType)) {
       return {
         sectionTitle: 'Dropdown Typography',
@@ -621,9 +898,31 @@ export class FieldProperties {
   }
 
   generateStylePropertiesHtml(fieldType, fieldData, fieldId) {
-    // No style options for structural fields
-    if (['page_break', 'section_break', 'divider', 'quote_total', 'form_summary'].includes(fieldType)) {
+    const layoutOnlyTypes = ['page_break', 'section_break', 'divider'];
+    const noStyleTypes = ['quote_total', 'form_summary'];
+
+    if (noStyleTypes.includes(fieldType)) {
       return '<div class="quotemate-form-properties quotemate-form-properties--style"><p class="quotemate-form-builder__advance-placeholder">No style options for this field type.</p></div>';
+    }
+
+    if (layoutOnlyTypes.includes(fieldType)) {
+      const hasPreviousButton = fieldType === 'page_break' && this.getPageBreakIndex(fieldId) > 0;
+      let layoutContent = '<div class="quotemate-form-properties__section quotemate-style-layout-section">';
+      if (hasPreviousButton) {
+        layoutContent += '<p class="quotemate-form-properties__section-heading">Next button spacing</p>';
+      }
+      layoutContent += this.generateStyleLayoutBlock('margin', fieldData, fieldId);
+      layoutContent += this.generateStyleLayoutBlock('padding', fieldData, fieldId);
+      if (hasPreviousButton) {
+        layoutContent += '<p class="quotemate-form-properties__section-heading">Previous button spacing</p>';
+        layoutContent += this.generateStyleLayoutBlock('margin', fieldData, fieldId, { prefix: 'stylePrevMargin', label: 'Margin' });
+        layoutContent += this.generateStyleLayoutBlock('padding', fieldData, fieldId, { prefix: 'stylePrevPadding', label: 'Padding' });
+      }
+      layoutContent += '</div>';
+      return '<div class="quotemate-form-properties quotemate-form-properties--style">' +
+        '<p class="quotemate-form-properties__hint">Adjust margin and padding for each page break button.</p>' +
+        layoutContent +
+        '</div>';
     }
 
     const controlLabels = this.getControlStyleLabels(fieldType);
@@ -663,6 +962,36 @@ export class FieldProperties {
     return html;
   }
 
+  generateStandardChoicesSection(fieldData, fieldId) {
+    const options = fieldData?.options || [];
+    const addPrice = !!fieldData?.addPrice;
+    const optionPrices = fieldData?.optionPrices || {};
+
+    return `
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__label">Choices</label>
+        <div class="quotemate-form-properties__choices">
+          ${options
+            .map((option, index) => {
+              const price = optionPrices[option] ?? '';
+              const priceInput = addPrice
+                ? `<input type="number" class="quotemate-form-field__input" value="${price}" placeholder="Price" min="0" step="0.01" data-choice-price="${index}" data-field-id="${fieldId}">`
+                : '';
+              return `
+                <div class="quotemate-form-properties__choice${addPrice ? ' quotemate-form-properties__choice--priced' : ''}">
+                  <input type="text" class="quotemate-form-field__input" value="${option}" data-choice-index="${index}" data-field-id="${fieldId}">
+                  ${priceInput}
+                  <button type="button" class="quotemate-form-properties__remove-choice" data-remove-choice="${index}" data-field-id="${fieldId}">×</button>
+                </div>
+              `;
+            })
+            .join('')}
+        </div>
+        <button type="button" class="quotemate-btn quotemate-btn--secondary" data-add-choice data-field-id="${fieldId}">Add Choice</button>
+      </div>
+    `;
+  }
+
   generateTypeSpecificProperties(fieldType, fieldData, fieldId) {
     let html = "";
 
@@ -670,6 +999,9 @@ export class FieldProperties {
       case "select":
       case "radio":
       case "checkbox":
+        html = this.generateStandardChoicesSection(fieldData, fieldId);
+        break;
+
       case "project_type":
       case "project_category":
       case "service_type":
@@ -793,21 +1125,6 @@ export class FieldProperties {
 
       case "form_summary":
         html = this.generateFormSummaryPropertiesHtml(fieldData, fieldId);
-        break;
-
-      case "page_break":
-        html = `
-          <div class="quotemate-form-properties__section">
-            <label class="quotemate-form-properties__label">Next Page Title <span class="quotemate-form-properties__label-icon" title="Title shown for the next page">?</span></label>
-              <input type="text" class="quotemate-form-field__input" 
-                   value="${fieldData && fieldData.page_title ? fieldData.page_title : "Next Page"}" 
-                     data-property="page_title" data-field-id="${fieldId}">
-            </div>
-          <div class="quotemate-form-properties__section">
-            <label class="quotemate-form-properties__label">Next Page Description <span class="quotemate-form-properties__label-icon" title="Optional description for the next page">?</span></label>
-            <textarea class="quotemate-form-field__input" rows="3" data-property="page_description" data-field-id="${fieldId}">${fieldData && fieldData.page_description ? fieldData.page_description : ""}</textarea>
-          </div>
-        `;
         break;
 
       case "section_break":
@@ -1161,7 +1478,7 @@ export class FieldProperties {
 
   getAvailableFields(currentFieldId) {
     return this.formBuilder.formData.fields
-      .filter(field => field.id !== currentFieldId && !['page_break', 'section_break', 'html'].includes(field.type))
+      .filter(field => field.id !== currentFieldId && !['page_break', 'section_break', 'html', 'heading', 'paragraph'].includes(field.type))
       .map(field => ({
         id: field.id,
         label: field.label,
@@ -1199,6 +1516,14 @@ export class FieldProperties {
         const fieldId = e.target.dataset.fieldId;
         const index = parseInt(e.target.dataset.choiceIndex);
         this.formBuilder.updateFieldChoice(fieldId, index, e.target.value);
+      });
+    });
+
+    document.querySelectorAll("[data-choice-price]").forEach((input) => {
+      input.addEventListener("change", (e) => {
+        const fieldId = e.target.dataset.fieldId;
+        const index = parseInt(e.target.dataset.choicePrice, 10);
+        this.formBuilder.updateFieldChoicePrice(fieldId, index, e.target.value);
       });
     });
 

@@ -114,6 +114,15 @@ export class EnhancedServiceManager {
       if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-add-service-category]')) {
         const button = e.target.closest('[data-add-service-category]');
         const parentPath = button.dataset.parentPath ?? '';
+        const row = button.closest('.service-flat-row');
+        const fieldData = this.getFieldData(this.currentFieldId);
+
+        if (row) {
+          const typeSelect = row.querySelector('.service-pricing-type-select');
+          if (this.isPerPricingTypeKey(typeSelect?.value, fieldData)) {
+            return;
+          }
+        }
 
         if (parentPath === '') {
           this.addServiceCategory(parentPath);
@@ -122,6 +131,11 @@ export class EnhancedServiceManager {
           this.addServiceItem(parentPath);
         } else {
           // Clicking "Add Category" on a row: save row data and show options view for that row
+          this.syncRowDataFromDOM(parentPath);
+          const parent = this.getServiceByPath(fieldData?.enhancedServiceStructure || [], parentPath);
+          if (parent && this.isPerPricingTypeKey(parent.pricingType, fieldData)) {
+            return;
+          }
           this.openOptionsViewForRow(parentPath);
         }
       }
@@ -136,15 +150,6 @@ export class EnhancedServiceManager {
         const path = btn.getAttribute('data-options-view-path') ?? '';
         this.currentViewParentPath = path;
         this.refreshModal(this.getFieldData(this.currentFieldId));
-      }
-
-      if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-options-view-next]')) {
-        const btn = e.target.closest('[data-options-view-next]');
-        const path = btn.getAttribute('data-options-view-next') ?? '';
-        if (path) {
-          this.currentViewParentPath = path;
-          this.refreshModal(this.getFieldData(this.currentFieldId));
-        }
       }
 
       if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-add-service-item]')) {
@@ -303,6 +308,11 @@ export class EnhancedServiceManager {
     const customPricingTypes = fieldData?.customPricingTypes || [];
     const topLevelWithPaths = (services || []).map((s, i) => ({ service: s, path: String(i) })).filter(x => x.service.type !== 'page_break');
     const serviceLabel = fieldData?.serviceStructureLabel || '';
+    const maxDropdownsDesktop = Math.min(12, Math.max(1, parseInt(fieldData?.maxDropdownsPerPageDesktop, 10) || 3));
+    const serviceMaxQuantity = parseInt(fieldData?.serviceMaxQuantity, 10) || '';
+    const maxDropdownOptions = Array.from({ length: 12 }, (_, i) => i + 1)
+      .map((n) => `<option value="${n}" ${n === maxDropdownsDesktop ? 'selected' : ''}>${n}</option>`)
+      .join('');
 
     return `
       <div class="enhanced-service-config-modal-overlay">
@@ -313,8 +323,55 @@ export class EnhancedServiceManager {
           </div>
           
           <div class="enhanced-service-modal-body">
+            <div class="enhanced-service-tabs">
+              <button type="button" class="tab-button active" data-tab="general">General</button>
+              <button type="button" class="tab-button" data-tab="structure">Structure</button>
+              <button type="button" class="tab-button" data-tab="pricing-types">Pricing Types</button>
+            </div>
+
+            <div class="tab-panel active" data-panel="general">
+              <div class="service-general-settings">
+                <h4>General Settings</h4>
+                <div class="service-general-field">
+                  <label for="max-dropdowns-desktop-${this.currentFieldId}">Maximum Dropdowns Per Page (Desktop)</label>
+                  <select
+                    class="service-input"
+                    id="max-dropdowns-desktop-${this.currentFieldId}"
+                    data-field="maxDropdownsPerPageDesktop"
+                  >${maxDropdownOptions}</select>
+                  <p class="service-general-hint">
+                    Tablet always shows up to 2 dropdowns per page. Mobile always shows 1 per page.
+                    When the limit is reached, remaining dropdowns continue on the next page.
+                  </p>
+                </div>
+                <div class="service-general-field">
+                  <label for="service-max-quantity-${this.currentFieldId}">Maximum Quantity</label>
+                  <input
+                    type="number"
+                    class="service-input"
+                    id="service-max-quantity-${this.currentFieldId}"
+                    data-field="serviceMaxQuantity"
+                    list="service-max-quantity-presets-${this.currentFieldId}"
+                    min="1"
+                    step="1"
+                    placeholder="e.g. 10, 50, 100, 500"
+                    value="${serviceMaxQuantity}">
+                  <datalist id="service-max-quantity-presets-${this.currentFieldId}">
+                    <option value="10"></option>
+                    <option value="50"></option>
+                    <option value="100"></option>
+                    <option value="500"></option>
+                  </datalist>
+                  <p class="service-general-hint">
+                    Limits how high customers can set quantity for Per pricing types on the frontend.
+                    Leave empty for no limit.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <!-- Structure Tab - Image design: Create Your Service Structure + Label + flat rows -->
-            <div class="tab-panel active" data-panel="structure">
+            <div class="tab-panel" data-panel="structure">
               <div class="service-structure-create">
                 <h4>Create Your Service Structure</h4>
                 <div class="service-structure-label-field">
@@ -363,6 +420,57 @@ export class EnhancedServiceManager {
     `;
   }
 
+  getPricingTypeLabel(pricingTypeKey, fieldData) {
+    if (!pricingTypeKey) return '';
+
+    const customPricingTypes = fieldData?.customPricingTypes || [];
+    const allPricingTypes = [...this.defaultPricingTypes, ...customPricingTypes];
+    const match = allPricingTypes.find((type) => type.key === pricingTypeKey);
+
+    if (match?.label) {
+      return String(match.label).trim();
+    }
+
+    const key = String(pricingTypeKey).toLowerCase();
+    if (key.startsWith('per_')) {
+      const words = key.slice(4).replace(/_/g, ' ');
+      return `Per ${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+    }
+
+    return String(pricingTypeKey).trim();
+  }
+
+  isPerPricingTypeKey(pricingTypeKey, fieldData) {
+    if (!pricingTypeKey) return false;
+
+    const label = this.getPricingTypeLabel(pricingTypeKey, fieldData);
+    if (label.startsWith('Per')) {
+      return true;
+    }
+
+    return String(pricingTypeKey).toLowerCase().startsWith('per_');
+  }
+
+  updateAddCategoryVisibilityForRow(row, fieldData) {
+    if (!row) return;
+
+    const typeSelect = row.querySelector('.service-pricing-type-select');
+    const pricingTypeKey = typeSelect?.value || '';
+    const hidePerTypeControls = this.isPerPricingTypeKey(pricingTypeKey, fieldData);
+
+    row.querySelectorAll('.btn-add-category, .btn-add-row').forEach((button) => {
+      button.hidden = hidePerTypeControls;
+      button.classList.toggle('is-per-type-hidden', hidePerTypeControls);
+      button.setAttribute('aria-hidden', hidePerTypeControls ? 'true' : 'false');
+    });
+  }
+
+  updateAllAddCategoryVisibility(fieldData) {
+    document
+      .querySelectorAll('.enhanced-service-structure-container .service-flat-row')
+      .forEach((row) => this.updateAddCategoryVisibilityForRow(row, fieldData));
+  }
+
   generateFlatCategoryRowsHtml(topLevelWithPaths, options = {}) {
     const { isChildView = false, parentPath = '' } = options;
     const fieldData = this.getFieldData(this.currentFieldId) || {};
@@ -373,6 +481,9 @@ export class EnhancedServiceManager {
     return topLevelWithPaths.map(({ service, path: servicePath }) => {
       const name = (service.name || '').replace(/"/g, '&quot;');
       const price = service.basePrice ?? service.price ?? '';
+      const hideAddCategory = this.isPerPricingTypeKey(service.pricingType, fieldData);
+      const perTypeHiddenAttrs = hideAddCategory ? ' hidden aria-hidden="true"' : '';
+      const perTypeHiddenClass = hideAddCategory ? ' is-per-type-hidden' : '';
 
       return `
         <div class="service-flat-row" data-service-path="${servicePath}">
@@ -408,16 +519,16 @@ export class EnhancedServiceManager {
 
           <button 
             type="button" 
-            class="btn-icon btn-add-row" 
+            class="btn-icon btn-add-row${perTypeHiddenClass}" 
             data-add-service-category 
             data-parent-path="${addRowParentPath}" 
-            title="${isChildView ? 'Add new option' : 'Add new row'}">
+            title="${isChildView ? 'Add new option' : 'Add new row'}"${perTypeHiddenAttrs}>
             +
           </button>
           <button type="button" class="btn-icon btn-delete" data-remove-service data-service-path="${servicePath}" title="Delete">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
           </button>
-          <button type="button" class="btn-add-category" data-add-service-category data-parent-path="${servicePath}">Add Category</button>
+          <button type="button" class="btn-add-category${perTypeHiddenClass}" data-add-service-category data-parent-path="${servicePath}"${perTypeHiddenAttrs}>Add Category</button>
         </div>
       `;
     }).join('');
@@ -1515,6 +1626,12 @@ export class EnhancedServiceManager {
     if (!servicePath) {
       if (field === 'serviceStructureLabel') {
         fieldData.serviceStructureLabel = input.value;
+      } else if (field === 'maxDropdownsPerPageDesktop') {
+        const parsed = parseInt(input.value, 10);
+        fieldData.maxDropdownsPerPageDesktop = parsed >= 1 && parsed <= 12 ? parsed : 3;
+      } else if (field === 'serviceMaxQuantity') {
+        const parsed = parseInt(input.value, 10);
+        fieldData.serviceMaxQuantity = parsed >= 1 ? parsed : null;
       }
       return;
     }
@@ -1533,6 +1650,12 @@ export class EnhancedServiceManager {
         service.optionsLabel = input.value.trim();
       } else if (field === 'pageBreakBeforeOptions') {
         service.pageBreakBeforeOptions = input.checked;
+        if (!input.checked) {
+          service.pageBreakTitle = '';
+        }
+        this.togglePageBreakTitleField(input.checked);
+      } else if (field === 'pageBreakTitle') {
+        service.pageBreakTitle = input.value.trim();
       } else {
         service[field] = input.value;
       }
@@ -1574,6 +1697,13 @@ export class EnhancedServiceManager {
         this.refreshModal(fieldData);
         return;
       }
+
+      if (field === 'pricingType') {
+        const row = input.closest('.service-flat-row');
+        if (row) {
+          this.updateAddCategoryVisibilityForRow(row, fieldData);
+        }
+      }
     }
   }
 
@@ -1588,6 +1718,10 @@ export class EnhancedServiceManager {
         if (labelInput) parent.optionsLabel = labelInput.value.trim();
         const pageBreakInput = document.querySelector(`.enhanced-service-structure-container input[data-field="pageBreakBeforeOptions"]`);
         if (pageBreakInput) parent.pageBreakBeforeOptions = pageBreakInput.checked;
+        const pageBreakTitleInput = document.querySelector(`.enhanced-service-structure-container input[data-field="pageBreakTitle"]`);
+        if (pageBreakTitleInput) {
+          parent.pageBreakTitle = parent.pageBreakBeforeOptions ? pageBreakTitleInput.value.trim() : '';
+        }
         // Sync every child option row (name, price type, price) from DOM so sub-category prices save
         (parent.children || []).forEach((_, index) => {
           this.syncRowDataFromDOM(`${this.currentViewParentPath}.${index}`);
@@ -1613,6 +1747,24 @@ export class EnhancedServiceManager {
       // Persist top-level label (dropdown name for the first-level options)
       if (typeof fieldData.serviceStructureLabel !== 'undefined') {
         mainFieldData.serviceStructureLabel = fieldData.serviceStructureLabel;
+      }
+      const maxDropdownsInput = document.querySelector(
+        '.enhanced-service-config-modal [data-field="maxDropdownsPerPageDesktop"]'
+      );
+      if (maxDropdownsInput) {
+        const parsed = parseInt(maxDropdownsInput.value, 10);
+        mainFieldData.maxDropdownsPerPageDesktop = parsed >= 1 && parsed <= 12 ? parsed : 3;
+      } else if (typeof fieldData.maxDropdownsPerPageDesktop !== 'undefined') {
+        mainFieldData.maxDropdownsPerPageDesktop = fieldData.maxDropdownsPerPageDesktop;
+      }
+      const maxQuantityInput = document.querySelector(
+        '.enhanced-service-config-modal [data-field="serviceMaxQuantity"]'
+      );
+      if (maxQuantityInput) {
+        const parsed = parseInt(maxQuantityInput.value, 10);
+        mainFieldData.serviceMaxQuantity = parsed >= 1 ? parsed : null;
+      } else if (typeof fieldData.serviceMaxQuantity !== 'undefined') {
+        mainFieldData.serviceMaxQuantity = fieldData.serviceMaxQuantity;
       }
     }
 
@@ -1652,6 +1804,18 @@ export class EnhancedServiceManager {
       });
   }
 
+  togglePageBreakTitleField(show) {
+    const wrap = document.querySelector('.service-page-break-title-field');
+    if (!wrap) return;
+    if (show) {
+      wrap.removeAttribute('hidden');
+    } else {
+      wrap.setAttribute('hidden', '');
+      const input = wrap.querySelector('input[data-field="pageBreakTitle"]');
+      if (input) input.value = '';
+    }
+  }
+
   refreshModal(fieldData) {
     if (fieldData?.enhancedServiceStructure) {
       fieldData.enhancedServiceStructure = this.stripLegacyPageBreaks(fieldData.enhancedServiceStructure);
@@ -1674,6 +1838,8 @@ export class EnhancedServiceManager {
         const parent = this.getServiceByPath(fieldData.enhancedServiceStructure, this.currentViewParentPath);
         const childLabel = (parent?.optionsLabel || '').replace(/"/g, '&quot;');
         const pageBreakBefore = parent?.pageBreakBeforeOptions ? 'checked' : '';
+        const pageBreakTitle = (parent?.pageBreakTitle || '').replace(/"/g, '&quot;');
+        const pageBreakTitleHidden = parent?.pageBreakBeforeOptions ? '' : 'hidden';
         const children = parent?.children || [];
         const childrenWithPaths = children
           .map((service, index) => ({ service, path: `${this.currentViewParentPath}.${index}` }));
@@ -1686,16 +1852,9 @@ export class EnhancedServiceManager {
           return `${i > 0 ? '<span class="service-breadcrumb-sep">→</span>' : ''}<button type="button" class="service-breadcrumb-item${isLast ? ' is-current' : ''}" ${pathAttr}>${escaped}</button>`;
         }).join('');
 
-        const hasChildren = childrenWithPaths.length > 0;
-        const nextPath = hasChildren ? `${this.currentViewParentPath}.0` : '';
-        const nextButtonHtml = hasChildren
-          ? `<button type="button" class="btn btn-primary btn-options-view-next" data-options-view-next="${nextPath.replace(/"/g, '&quot;')}">Next →</button>`
-          : '';
-
         structureContainer.innerHTML = `
           <div class="service-options-view-header">
             <div class="service-options-breadcrumb">${breadcrumbHtml}</div>
-            ${nextButtonHtml}
           </div>
           <div class="service-options-label-field">
             <div class="service-options-label-field-row">
@@ -1710,17 +1869,30 @@ export class EnhancedServiceManager {
                   data-field="optionsLabel"
                   data-service-path="${this.currentViewParentPath}">
               </div>
-              <label class="service-page-break-toggle-card" title="Show this dropdown on a new page after the previous selection">
-                <input
-                  type="checkbox"
-                  data-field="pageBreakBeforeOptions"
-                  data-service-path="${this.currentViewParentPath}"
-                  ${pageBreakBefore}>
-                <span class="service-page-break-toggle-card__content">
-                  <span class="service-page-break-toggle-card__title">Page break</span>
-                  <span class="service-page-break-toggle-card__hint">Show this dropdown on a new page</span>
-                </span>
-              </label>
+              <div class="service-page-break-controls">
+                <label class="service-page-break-toggle-card" title="Show this dropdown on a new page after the previous selection">
+                  <input
+                    type="checkbox"
+                    data-field="pageBreakBeforeOptions"
+                    data-service-path="${this.currentViewParentPath}"
+                    ${pageBreakBefore}>
+                  <span class="service-page-break-toggle-card__content">
+                    <span class="service-page-break-toggle-card__title">Page break</span>
+                    <span class="service-page-break-toggle-card__hint">Show this dropdown on a new page</span>
+                  </span>
+                </label>
+                <div class="service-page-break-title-field" ${pageBreakTitleHidden}>
+                  <label for="service-page-break-title-input">Page Title</label>
+                  <input
+                    id="service-page-break-title-input"
+                    type="text"
+                    class="service-input service-page-break-title-input"
+                    placeholder="e.g. Business Details"
+                    value="${pageBreakTitle}"
+                    data-field="pageBreakTitle"
+                    data-service-path="${this.currentViewParentPath}">
+                </div>
+              </div>
             </div>
           </div>
           <div class="service-options-view-rows">
@@ -1768,6 +1940,8 @@ export class EnhancedServiceManager {
         }
       }
     }
+
+    this.updateAllAddCategoryVisibility(fieldData);
   }
 
   closeServiceConfigModal() {

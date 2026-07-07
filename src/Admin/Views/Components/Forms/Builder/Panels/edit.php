@@ -1,6 +1,8 @@
 <?php
 
 use Dawnsol\Quotemate\Helpers\AssetHelper;
+use Dawnsol\Quotemate\Helpers\DesignHelper;
+use Dawnsol\Quotemate\Helpers\ThemeHelper;
 use Dawnsol\Quotemate\Helpers\ViewRenderer;
 defined('ABSPATH') || exit;
 
@@ -47,6 +49,35 @@ wp_enqueue_style('quotemate-builder-form-main', QUOTEMATE_URL . 'assets/css/admi
 $form_builder_css = QUOTEMATE_DIR . 'assets/css/form/builder.css';
 wp_enqueue_style('quotemate-builder-panels-form-builder', QUOTEMATE_URL . 'assets/css/form/builder.css', [], file_exists($form_builder_css) ? filemtime($form_builder_css) : QUOTEMATE_VERSION);
 
+$form_settings_decoded = json_decode($form_data->settings ?? '{}', true) ?: [];
+$form_design = DesignHelper::resolve($form_settings_decoded);
+$builder_theme_id = $form_design['themeId'] ?? ThemeHelper::THEME_CLASSIC;
+$form_design_style = DesignHelper::get_css_vars_style($form_design);
+$form_width_class = DesignHelper::get_width_class($form_design);
+$form_title = $form_settings_decoded['title'] ?? 'Quote Request Form';
+$form_description = $form_settings_decoded['description'] ?? 'Please fill out this form to receive a quote for our services.';
+
+wp_enqueue_style(
+    'quotemate-form-layout',
+    QUOTEMATE_URL . 'public/css/form-layout.css',
+    [],
+    QUOTEMATE_VERSION
+);
+foreach (ThemeHelper::get_ids() as $theme_id) {
+    wp_enqueue_style(
+        'quotemate-theme-' . $theme_id,
+        ThemeHelper::get_css_url($theme_id),
+        ['quotemate-form-layout'],
+        QUOTEMATE_VERSION
+    );
+}
+wp_enqueue_style(
+    'quotemate-form-navigation',
+    QUOTEMATE_URL . 'public/css/form-navigation.css',
+    [],
+    QUOTEMATE_VERSION
+);
+
 // Add critical inline CSS for form builder
 $field_search_style = '
 .quotemate-form-builder__field-search {
@@ -92,23 +123,41 @@ if (!window.Quotemate["admin_forms_builder_form_builder_main"].quotemate_form_da
         <!-- Main Form Builder Area -->
         <div class="quotemate-form-builder__main">
             <div class="quotemate-form-builder__canvas">
-                <div class="quotemate-form-builder__form-preview">
-                    <div class="quotemate-form-builder__form-header">
-                        <h2 class="quotemate-form-builder__form-title" contenteditable="true">Quote Request Form</h2>
-                        <p class="quotemate-form-builder__form-description" contenteditable="true">Please fill out this form to receive a quote for our services.</p>
+                <div
+                    class="quotemate-form-wrapper quotemate-form quotemate-form-builder__form-preview <?= esc_attr($form_width_class) ?> quotemate-theme-<?= esc_attr($builder_theme_id) ?>"
+                    id="builder-form-preview"
+                    style="<?= esc_attr($form_design_style) ?>"
+                    data-qm-theme="<?= esc_attr($builder_theme_id) ?>"
+                    data-qm-header-style="<?= esc_attr($form_design['headerStyle']) ?>"
+                    data-qm-button-style="<?= esc_attr($form_design['buttonStyle']) ?>"
+                    data-qm-multistep="false"
+                >
+                    <div class="form-header quotemate-form-builder__form-header">
+                        <h2 class="form-title quotemate-form-builder__form-title" contenteditable="true"><?= esc_html($form_title) ?></h2>
+                        <p class="form-description quotemate-form-builder__form-description" contenteditable="true"><?= esc_html($form_description) ?></p>
                     </div>
-                    <div class="quotemate-form-builder__drop-zone" id="form-drop-zone">
-                        <div class="quotemate-form-builder__drop-placeholder">
-                            <div class="quotemate-form-builder__drop-placeholder-content">
-                                <span class="quotemate-form-builder__drop-placeholder-icon">⬇️</span>
-                                <h3>Drag fields here to build your quote form</h3>
-                                <p>Select any field from the list on the left and drag it into this area.</p>
+                    <form class="quotemate-form quotemate-form-builder__preview-form single-step-form" onsubmit="return false;">
+                        <div class="step-progress quotemate-form-builder__step-progress" id="builder-step-progress" hidden>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 50%;"></div>
+                            </div>
+                            <div class="step-indicators" id="builder-step-indicators"></div>
+                        </div>
+                        <div class="form-content quotemate-form-builder__form-content">
+                            <div class="quotemate-form-builder__drop-zone" id="form-drop-zone">
+                                <div class="quotemate-form-builder__drop-placeholder">
+                                    <div class="quotemate-form-builder__drop-placeholder-content">
+                                        <span class="quotemate-form-builder__drop-placeholder-icon">⬇️</span>
+                                        <h3>Drag fields here to build your quote form</h3>
+                                        <p>Select any field from the list on the left and drag it into this area.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-navigation quotemate-form-builder__form-footer">
+                                <button type="button" class="btn btn-primary quotemate-form-builder__submit-btn">Get Quote</button>
                             </div>
                         </div>
-                    </div>
-                    <div class="quotemate-form-builder__form-footer">
-                        <button type="submit" class="quotemate-btn quotemate-btn--primary quotemate-form-builder__submit-btn">Get Quote</button>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -143,7 +192,70 @@ if (!window.Quotemate["admin_forms_builder_form_builder_main"].quotemate_form_da
                             </button>
                         </div>
                     </div>
-                    <!-- A. Customer Information -->
+
+                    <!-- Form Structure -->
+                    <div class="quotemate-form-builder__field-category">
+                        <h4 class="quotemate-form-builder__category-title">Form Structure</h4>
+                        <div class="quotemate-form-builder__field-list">
+                            <div class="quotemate-form-builder__field-item" data-field-type="heading" draggable="true">
+                                <span class="quotemate-form-builder__field-icon">H</span>
+                                <span class="quotemate-form-builder__field-label">Heading</span>
+                            </div>
+                            <div class="quotemate-form-builder__field-item" data-field-type="paragraph" draggable="true">
+                                <span class="quotemate-form-builder__field-icon">¶</span>
+                                <span class="quotemate-form-builder__field-label">Paragraph</span>
+                            </div>
+                            <div class="quotemate-form-builder__field-item" data-field-type="section_break" draggable="true">
+                                <span class="quotemate-form-builder__field-icon">⏸️</span>
+                                <span class="quotemate-form-builder__field-label">Section Break</span>
+                            </div>
+                            <div class="quotemate-form-builder__field-item" data-field-type="page_break" draggable="true">
+                                <span class="quotemate-form-builder__field-icon">📄</span>
+                                <span class="quotemate-form-builder__field-label">Page Break</span>
+                            </div>
+                            <div class="quotemate-form-builder__field-item" data-field-type="html" draggable="true">
+                                <span class="quotemate-form-builder__field-icon">📋</span>
+                                <span class="quotemate-form-builder__field-label">HTML Block</span>
+                            </div>
+                            <div class="quotemate-form-builder__field-item" data-field-type="divider" draggable="true">
+                                <span class="quotemate-form-builder__field-icon">➖</span>
+                                <span class="quotemate-form-builder__field-label">Divider</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Standard Fields -->
+                    <div class="quotemate-form-builder__field-category">
+                        <h4 class="quotemate-form-builder__category-title">Standard Fields</h4>
+                        <div class="quotemate-form-builder__field-list">
+                            <div class="quotemate-form-builder__field-item" data-field-type="text" draggable="true">
+                                <span class="quotemate-form-builder__field-icon">📝</span>
+                                <span class="quotemate-form-builder__field-label">Single Line Text</span>
+                            </div>
+                            <div class="quotemate-form-builder__field-item" data-field-type="textarea" draggable="true">
+                                <span class="quotemate-form-builder__field-icon">📄</span>
+                                <span class="quotemate-form-builder__field-label">Paragraph Text</span>
+                            </div>
+                            <div class="quotemate-form-builder__field-item" data-field-type="select" draggable="true">
+                                <span class="quotemate-form-builder__field-icon">📋</span>
+                                <span class="quotemate-form-builder__field-label">Drop Down</span>
+                            </div>
+                            <div class="quotemate-form-builder__field-item" data-field-type="radio" draggable="true">
+                                <span class="quotemate-form-builder__field-icon">⚪</span>
+                                <span class="quotemate-form-builder__field-label">Multiple Choice</span>
+                            </div>
+                            <div class="quotemate-form-builder__field-item" data-field-type="checkbox" draggable="true">
+                                <span class="quotemate-form-builder__field-icon">☑️</span>
+                                <span class="quotemate-form-builder__field-label">Checkboxes</span>
+                            </div>
+                            <div class="quotemate-form-builder__field-item" data-field-type="file" draggable="true">
+                                <span class="quotemate-form-builder__field-icon">📎</span>
+                                <span class="quotemate-form-builder__field-label">File Upload</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer Information -->
                     <div class="quotemate-form-builder__field-category">
                         <h4 class="quotemate-form-builder__category-title">Customer Information</h4>
                         <div class="quotemate-form-builder__field-list">
@@ -182,33 +294,13 @@ if (!window.Quotemate["admin_forms_builder_form_builder_main"].quotemate_form_da
                         </div>
                     </div>
                     
-                    <!-- B. Project Details -->
+                    <!-- Project Details -->
                     <div class="quotemate-form-builder__field-category">
                         <h4 class="quotemate-form-builder__category-title">Project Details</h4>
                         <div class="quotemate-form-builder__field-list">
-                            <div class="quotemate-form-builder__field-item" data-field-type="project_title" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">📌</span>
-                                <span class="quotemate-form-builder__field-label">Project Title</span>
-                            </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="project_category" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">📋</span>
-                                <span class="quotemate-form-builder__field-label">Project Category</span>
-                            </div>
                             <div class="quotemate-form-builder__field-item" data-field-type="service" draggable="true">
                                 <span class="quotemate-form-builder__field-icon">🛠️</span>
                                 <span class="quotemate-form-builder__field-label">Service Selection</span>
-                            </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="service_type" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">🔧</span>
-                                <span class="quotemate-form-builder__field-label">Service Type</span>
-                            </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="project_description" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">📄</span>
-                                <span class="quotemate-form-builder__field-label">Project Description</span>
-                            </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="project_location" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">📍</span>
-                                <span class="quotemate-form-builder__field-label">Project Location</span>
                             </div>
                             <div class="quotemate-form-builder__field-item" data-field-type="start_date" draggable="true">
                                 <span class="quotemate-form-builder__field-icon">📅</span>
@@ -226,14 +318,10 @@ if (!window.Quotemate["admin_forms_builder_form_builder_main"].quotemate_form_da
                                 <span class="quotemate-form-builder__field-icon">💰</span>
                                 <span class="quotemate-form-builder__field-label">Budget Range</span>
                             </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="attach_files" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">📎</span>
-                                <span class="quotemate-form-builder__field-label">Attach Reference Files</span>
-                            </div>
                         </div>
                     </div>
                     
-                    <!-- C. Estimation / Pricing -->
+                    <!-- Estimation / Pricing -->
                     <div class="quotemate-form-builder__field-category">
                         <h4 class="quotemate-form-builder__category-title">Estimation / Pricing</h4>
                         <div class="quotemate-form-builder__field-list">
@@ -264,64 +352,6 @@ if (!window.Quotemate["admin_forms_builder_form_builder_main"].quotemate_form_da
                             <div class="quotemate-form-builder__field-item" data-field-type="form_summary" draggable="true">
                                 <span class="quotemate-form-builder__field-icon">📋</span>
                                 <span class="quotemate-form-builder__field-label">Form Summary</span>
-                            </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="quote_total" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">💵</span>
-                                <span class="quotemate-form-builder__field-label">Quote Total</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- D. Structural Fields -->
-                    <div class="quotemate-form-builder__field-category">
-                        <h4 class="quotemate-form-builder__category-title">Form Structure</h4>
-                        <div class="quotemate-form-builder__field-list">
-                            <div class="quotemate-form-builder__field-item" data-field-type="section_break" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">⏸️</span>
-                                <span class="quotemate-form-builder__field-label">Section Break</span>
-                            </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="page_break" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">📄</span>
-                                <span class="quotemate-form-builder__field-label">Page Break</span>
-                            </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="html" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">📋</span>
-                                <span class="quotemate-form-builder__field-label">HTML Block</span>
-                            </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="divider" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">➖</span>
-                                <span class="quotemate-form-builder__field-label">Divider</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- E. Standard Fields (flexibility) -->
-                    <div class="quotemate-form-builder__field-category">
-                        <h4 class="quotemate-form-builder__category-title">Standard Fields</h4>
-                        <div class="quotemate-form-builder__field-list">
-                            <div class="quotemate-form-builder__field-item" data-field-type="text" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">📝</span>
-                                <span class="quotemate-form-builder__field-label">Single Line Text</span>
-                            </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="textarea" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">📄</span>
-                                <span class="quotemate-form-builder__field-label">Paragraph Text</span>
-                            </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="select" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">📋</span>
-                                <span class="quotemate-form-builder__field-label">Drop Down</span>
-                            </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="radio" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">⚪</span>
-                                <span class="quotemate-form-builder__field-label">Multiple Choice</span>
-                            </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="checkbox" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">☑️</span>
-                                <span class="quotemate-form-builder__field-label">Checkboxes</span>
-                            </div>
-                            <div class="quotemate-form-builder__field-item" data-field-type="file" draggable="true">
-                                <span class="quotemate-form-builder__field-icon">📎</span>
-                                <span class="quotemate-form-builder__field-label">File Upload</span>
                             </div>
                         </div>
                     </div>
@@ -413,6 +443,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 } catch (error) {
                     console.warn('Error loading form settings:', error);
                 }
+            } else if (window.QuotemateDesign?.applyToBuilder && window.formSettingsManager) {
+                window.QuotemateDesign.applyToBuilder(window.formSettingsManager.settings.design || {});
             }
         }
         
@@ -463,6 +495,9 @@ document.addEventListener('DOMContentLoaded', function() {
             tab.addEventListener('click', function() {
                 const container = this.closest('#field-settings-content');
                 if (!container) return;
+                if (window.formBuilder?.syncPropertiesFromPanel) {
+                    window.formBuilder.syncPropertiesFromPanel();
+                }
                 container.querySelectorAll('.quotemate-form-builder__sub-tab').forEach(t => t.classList.remove('active'));
                 this.classList.add('active');
                 const subTabId = this.getAttribute('data-sub-tab');

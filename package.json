@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node post-build-cleanup.js",
-    "test": "node tests/unified-form-steps.test.mjs"
+    "test": "node tests/unified-form-steps.test.mjs",
+    "test:browser": "node tests/browser-form-test.mjs && node tests/browser-empty-next-test.mjs && node tests/browser-summary-pricing-test.mjs && node tests/browser-full-flow-test.mjs && node tests/browser-prev-resume-test.mjs && node tests/browser-prev-ui-test.mjs && node tests/browser-user-flow-test.mjs",
+    "test:all": "node tests/unified-form-steps.test.mjs && node tests/browser-form-test.mjs && node tests/browser-empty-next-test.mjs && node tests/browser-summary-pricing-test.mjs && node tests/browser-full-flow-test.mjs && node tests/browser-prev-resume-test.mjs && node tests/browser-prev-ui-test.mjs && node tests/browser-user-flow-test.mjs"
   },
   "repository": {
     "type": "git",

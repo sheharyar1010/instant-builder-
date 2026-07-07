@@ -1,0 +1,83 @@
+/* Minimal — centered card, light progress */
+
+.quotemate-form-wrapper[data-qm-theme="minimal"] .form-header {
+    background: transparent !important;
+    color: var(--qm-text-color, #1a1a1a);
+    padding: 2rem 1rem 1rem;
+    margin-bottom: 0;
+}
+
+.quotemate-form-wrapper[data-qm-theme="minimal"] .form-title {
+    color: var(--qm-text-color, #1a1a1a);
+    text-shadow: none;
+    font-size: 2rem;
+    font-family: Georgia, 'Times New Roman', serif;
+}
+
+.quotemate-form-wrapper[data-qm-theme="minimal"] .form-description {
+    color: var(--qm-text-muted, #555);
+    opacity: 1;
+}
+
+.quotemate-form-wrapper[data-qm-theme="minimal"] .step-progress,
+.quotemate-form-wrapper[data-qm-theme="minimal"] .service-cascade-step-progress {
+    margin-bottom: 1rem;
+}
+
+.quotemate-form-wrapper[data-qm-theme="minimal"] .progress-bar {
+    height: 2px;
+    background: #eee;
+}
+
+.quotemate-form-wrapper[data-qm-theme="minimal"] .step-indicators {
+    display: none;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="minimal"] .step-indicators {
+    display: none;
+}
+
+.quotemate-form-wrapper[data-qm-theme="minimal"] .form-content {
+    background: var(--qm-card-bg, #ffffff);
+    border-radius: var(--qm-form-border-radius, 8px);
+    box-shadow: none;
+    border: 1px solid var(--qm-form-border-color, #e5e5e5);
+    overflow: hidden;
+}
+
+.quotemate-form-wrapper[data-qm-theme="minimal"] .form-step {
+    padding: 2rem 2.5rem;
+}
+
+.quotemate-form-wrapper[data-qm-theme="minimal"] .form-navigation {
+    justify-content: center;
+    gap: 1.25rem;
+    border-top: none;
+    padding-top: 1rem;
+}
+
+.quotemate-form-wrapper[data-qm-theme="minimal"] .btn-primary {
+    border-radius: 8px;
+    color: #1a1a1a !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    min-width: 140px;
+    justify-content: center;
+}
+
+.quotemate-form-wrapper[data-qm-theme="minimal"] .btn-secondary {
+    background: var(--qm-secondary-btn-bg, #faf8f4);
+    color: var(--qm-secondary-btn-text, #1a1a1a);
+    border: 1px solid var(--qm-secondary-btn-border, #e8e4dc);
+    border-radius: 8px;
+    box-shadow: none;
+    font-weight: 700;
+}
+
+.quotemate-form-wrapper[data-qm-theme="minimal"] .form-radio,
+.quotemate-form-wrapper[data-qm-theme="minimal"] .form-checkbox {
+    accent-color: var(--qm-button-color, #f5c518);
+}
+
+.quotemate-form-wrapper[data-qm-theme="minimal"] .field-label {
+    font-weight: 700;
+}

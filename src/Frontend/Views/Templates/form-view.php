@@ -5,23 +5,24 @@ if (!defined('ABSPATH')) {
 }
 
 use Dawnsol\Quotemate\Helpers\FormHelper;
+use Dawnsol\Quotemate\Helpers\DesignHelper;
+use Dawnsol\Quotemate\Helpers\HeadingHelper;
+use Dawnsol\Quotemate\Helpers\TextFormatHelper;
 
 /** @var $form  object */
 /** @var $fields array */
 /** @var $settings array */
 
 $steps = FormHelper::group_fields_by_pages($fields);
+$step_labels = FormHelper::get_step_labels_from_fields($fields);
 $hasMultipleSteps = count($steps) > 1;
+$form_layout = FormHelper::resolve_layout($settings, $fields);
+$form_design = DesignHelper::resolve($settings);
+$form_design_style = DesignHelper::get_css_vars_style($form_design);
+$form_width_class = DesignHelper::get_width_class($form_design);
 ?>
 
-<div class="quotemate-form-wrapper quotemate-form" id="quotemate-form-<?php echo esc_attr($form->id); ?>">
-    <div class="form-header">
-        <h2 class="form-title"><?php echo esc_html($settings['title'] ?? 'Quote Request Form'); ?></h2>
-        <?php if (!empty($settings['description'])): ?>
-            <p class="form-description"><?php echo esc_html($settings['description']); ?></p>
-        <?php endif; ?>
-    </div>
-
+<div class="quotemate-form-wrapper quotemate-form quotemate-theme-<?php echo esc_attr($form_design['themeId']); ?> <?php echo esc_attr($form_width_class); ?>" id="quotemate-form-<?php echo esc_attr($form->id); ?>" style="<?php echo esc_attr($form_design_style); ?>" data-qm-theme="<?php echo esc_attr($form_design['themeId']); ?>" data-qm-header-style="<?php echo esc_attr($form_design['headerStyle']); ?>" data-qm-button-style="<?php echo esc_attr($form_design['buttonStyle']); ?>">
     <div class="form-messages" style="display: none;"></div>
 
     <form method="post" action="javascript:void(0);" class="quotemate-form quotemate-frontend-form <?php echo $hasMultipleSteps ? 'multi-step-form' : 'single-step-form'; ?>" id="quotemate-form-<?php echo esc_attr($form->id); ?>-form">
@@ -39,7 +40,7 @@ $hasMultipleSteps = count($steps) > 1;
                     <?php foreach ($steps as $stepIndex => $step): ?>
                         <div class="step-indicator <?php echo $stepIndex === 0 ? 'active' : ''; ?>" data-step="<?php echo $stepIndex; ?>">
                             <div class="step-number"><?php echo $stepIndex + 1; ?></div>
-                            <div class="step-label">Step <?php echo $stepIndex + 1; ?></div>
+                            <div class="step-label"><?php echo esc_html($step_labels[$stepIndex] ?? ('Step ' . ($stepIndex + 1))); ?></div>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -54,458 +55,112 @@ $hasMultipleSteps = count($steps) > 1;
                     <?php foreach ($step['sections'] as $section): ?>
                         <div class="form-section">
                             <?php if ($section['title']): ?>
-                                <h3 class="section-title"><?php echo esc_html($section['title']); ?></h3>
+                                <h3 class="section-title"><?php echo esc_html(TextFormatHelper::to_title_case($section['title'])); ?></h3>
                             <?php endif; ?>
 
-                            <div class="section-fields">
-                                <?php foreach ($section['fields'] as $field): ?>
-                                    <?php $field_style = FormHelper::get_field_style_attr($field); ?>
-                                    <div class="form-group" data-field-id="<?php echo esc_attr($field['id']); ?>" data-field-type="<?php echo esc_attr($field['type']); ?>"<?php echo $field_style !== '' ? ' style="' . $field_style . '"' : ''; ?>>
-                                        <?php if (!empty($field['label'])): ?>
-                                            <label for="<?php echo esc_attr($field['id']); ?>" class="field-label">
-                                                <?php echo esc_html($field['label']); ?>
-                                                <?php if (!empty($field['required'])) echo '<span class="required">*</span>'; ?>
-                                            </label>
-                                        <?php endif; ?>
-
-                                        <div class="field-input">
                                             <?php
-                                            switch ($field['type']) {
-                                                case 'text':
-                                                case 'name':
-                                                case 'company':
-                                                case 'address':
-                                                case 'city':
-                                                    ?>
-                                                    <input type="text"
-                                                        id="<?php echo esc_attr($field['id']); ?>"
-                                                        name="<?php echo esc_attr($field['id']); ?>"
-                                                        placeholder="<?php echo esc_attr($field['placeholder'] ?? ''); ?>"
-                                                        class="form-control <?php echo esc_attr($field['cssClass'] ?? ''); ?>"
-                                                        <?php if (!empty($field['required'])) echo 'required'; ?> />
-                                                    <?php
-                                                    break;
-
-                                                case 'email':
-                                                    ?>
-                                                    <input type="email"
-                                                        id="<?php echo esc_attr($field['id']); ?>"
-                                                        name="<?php echo esc_attr($field['id']); ?>"
-                                                        placeholder="<?php echo esc_attr($field['placeholder'] ?? ''); ?>"
-                                                        class="form-control <?php echo esc_attr($field['cssClass'] ?? ''); ?>"
-                                                        <?php if (!empty($field['required'])) echo 'required'; ?> />
-                                                    <?php
-                                                    break;
-
-                                                case 'phone':
-                                                    ?>
-                                                    <input type="tel"
-                                                        id="<?php echo esc_attr($field['id']); ?>"
-                                                        name="<?php echo esc_attr($field['id']); ?>"
-                                                        placeholder="<?php echo esc_attr($field['placeholder'] ?? ''); ?>"
-                                                        class="form-control <?php echo esc_attr($field['cssClass'] ?? ''); ?>"
-                                                        <?php if (!empty($field['required'])) echo 'required'; ?> />
-                                                    <?php
-                                                    break;
-
-                                                case 'textarea':
-                                                    ?>
-                                                    <textarea id="<?php echo esc_attr($field['id']); ?>"
-                                                              name="<?php echo esc_attr($field['id']); ?>"
-                                                              placeholder="<?php echo esc_attr($field['placeholder'] ?? ''); ?>"
-                                                              class="form-control <?php echo esc_attr($field['cssClass'] ?? ''); ?>"
-                                                              rows="4"
-                                                              <?php if (!empty($field['required'])) echo 'required'; ?>></textarea>
-                                                    <?php
-                                                    break;
-
-                                                case 'select':
-                                                    ?>
-                                                    <select id="<?php echo esc_attr($field['id']); ?>"
-                                                            name="<?php echo esc_attr($field['id']); ?>"
-                                                            class="form-control <?php echo esc_attr($field['cssClass'] ?? ''); ?>"
-                                                            <?php if (!empty($field['required'])) echo 'required'; ?>>
-                                                        <option value="">Select an option</option>
-                                                        <?php
-                                                        if (!empty($field['options']) && is_array($field['options'])) {
-                                                            foreach ($field['options'] as $option) {
-                                                                echo '<option value="' . esc_attr($option) . '">' . esc_html($option) . '</option>';
-                                                            }
-                                                        }
-                                                        ?>
-                                                    </select>
-                                                    <?php
-                                                    break;
-
-                                                case 'checkbox':
-                                                    ?>
-                                                    <div class="checkbox-wrapper">
-                                                        <input type="checkbox"
-                                                            id="<?php echo esc_attr($field['id']); ?>"
-                                                            name="<?php echo esc_attr($field['id']); ?>"
-                                                            value="1"
-                                                            class="form-checkbox <?php echo esc_attr($field['cssClass'] ?? ''); ?>" />
-                                                        <label for="<?php echo esc_attr($field['id']); ?>" class="checkbox-label">
-                                                            <?php echo esc_html($field['label'] ?? ''); ?>
-                                                        </label>
+                            $section_layout = FormHelper::organize_section_fields_by_layout($section['fields'], $form_layout);
+                            $section_fields_class = 'section-fields' . ($section_layout['has_layout'] ? ' section-fields--layout' : '');
+                            $field_group_partial = QUOTEMATE_DIR . 'src/Frontend/Views/Templates/partials/field-group.php';
+                            ?>
+                            <div class="<?php echo esc_attr($section_fields_class); ?>">
+                                <?php if ($section_layout['has_layout']) : ?>
+                                    <?php foreach ($section_layout['rows'] as $layout_row) : ?>
+                                        <div class="quotemate-form-row" style="--qm-row-columns: <?php echo (int) $layout_row['column_count']; ?>">
+                                            <?php foreach ($layout_row['columns'] as $layout_column) : ?>
+                                                <div class="quotemate-form-column">
+                                                    <?php foreach ($layout_column['fields'] as $field) : ?>
+                                                        <?php include $field_group_partial; ?>
+                                                    <?php endforeach; ?>
                                                     </div>
-                                                    <?php
-                                                    break;
-
-                                                case 'radio':
-                                                    if (!empty($field['options']) && is_array($field['options'])):
-                                                        echo '<div class="radio-group">';
-                                                        foreach ($field['options'] as $option): ?>
-                                                            <div class="radio-wrapper">
-                                                                <input type="radio"
-                                                                    id="<?php echo esc_attr($field['id'] . '_' . sanitize_title($option)); ?>"
-                                                                    name="<?php echo esc_attr($field['id']); ?>"
-                                                                    value="<?php echo esc_attr($option); ?>"
-                                                                    class="form-radio"
-                                                                    <?php if (!empty($field['required'])) echo 'required'; ?> />
-                                                                <label for="<?php echo esc_attr($field['id'] . '_' . sanitize_title($option)); ?>" class="radio-label">
-                                                                    <?php echo esc_html($option); ?>
-                                                                </label>
+                                            <?php endforeach; ?>
                                                             </div>
-                                                        <?php endforeach;
-                                                        echo '</div>';
-                                                    endif;
-                                                    break;
-
-                                                case 'project_type':
-                                                    ?>
-                                                    <select id="<?php echo esc_attr($field['id']); ?>"
-                                                            name="<?php echo esc_attr($field['id']); ?>"
-                                                            class="form-control <?php echo esc_attr($field['cssClass'] ?? ''); ?>"
-                                                            <?php if (!empty($field['required'])) echo 'required'; ?>>
-                                                        <option value="">Select project type</option>
-                                                        <?php
-                                                        if (!empty($field['options']) && is_array($field['options'])) {
-                                                            foreach ($field['options'] as $option) {
-                                                                echo '<option value="' . esc_attr($option) . '">' . esc_html($option) . '</option>';
-                                                            }
-                                                        }
-                                                        ?>
-                                                    </select>
-                                                    <?php
-                                                    break;
-
-                                                case 'service':
-                                                case 'service_options':
-                                                    ?>
-                                                    <?php
-                                                    // Get enhanced service structure from field data
-                                                    $enhanced_service_structure = !empty($field['enhancedServiceStructure']) ? $field['enhancedServiceStructure'] : [];
-                                                    
-                                                    // Check if we should use progressive selector (unlimited nesting support)
-                                                    // Use progressive selector for enhanced service structure with quantity support
-                                                    $use_progressive_selector = !empty($enhanced_service_structure) && is_array($enhanced_service_structure);
-                                                    ?>
-                                                    
-                                                    <div class="service-field-container" 
-                                                         data-field-type="service" 
-                                                         data-field-id="<?php echo esc_attr($field['id']); ?>"
-                                                         data-field-data="<?php echo esc_attr(json_encode($field)); ?>"
-                                                         data-enhanced-structure="<?php echo esc_attr(json_encode($enhanced_service_structure)); ?>">
-                                                        
-                                                    <!-- Default select dropdown (Starting point for Progressive JS) -->
-                                                    <select id="<?php echo esc_attr($field['id']); ?>"
-                                                            name="<?php echo esc_attr($field['id']); ?>"
-                                                            class="form-control <?php echo esc_attr($field['cssClass'] ?? ''); ?>"
-                                                            data-original-required="<?php echo !empty($field['required']) ? 'true' : 'false'; ?>"
-                                                            <?php if (!empty($field['required'])) echo 'required'; ?>>
-                                                        <option value="">Select a service</option>
-                                                        <?php
-                                                        // Check for enhanced service structure first
-                                                        if (!empty($field['enhancedServiceStructure']) && is_array($field['enhancedServiceStructure'])) {
-                                                            // Function to render enhanced service structure
-                                                            FormHelper::render_enhanced_services($field['enhancedServiceStructure']);
-                                                        }
-                                                        // Check for legacy service structure
-                                                        elseif (!empty($field['serviceStructure']) && is_array($field['serviceStructure'])) {
-                                                            foreach ($field['serviceStructure'] as $category) {
-                                                                if (!empty($category['children']) && is_array($category['children'])) {
-                                                                    $categoryName = esc_html($category['name'] ?? 'Services');
-                                                                    echo '<optgroup label="' . $categoryName . '">';
-                                                                    
-                                                                    foreach ($category['children'] as $service) {
-                                                                        $serviceName = esc_html($service['name'] ?? '');
-                                                                        $basePrice = isset($service['basePrice']) ? (float)$service['basePrice'] : 0;
-                                                                        $pricingType = $service['pricingType'] ?? 'fixed';
-                                                                        
-                                                                        $priceDisplay = '';
-                                                                        if ($pricingType === 'fixed') {
-                                                                            $priceDisplay = ' ($' . number_format($basePrice, 2) . ')';
-                                                                        } else {
-                                                                            $typeLabel = str_replace('_', ' ', $pricingType);
-                                                                            $priceDisplay = ' ($' . number_format($basePrice, 2) . ' ' . $typeLabel . ')';
-                                                                        }
-                                                                        
-                                                                        echo '<option value="' . esc_attr($service['name'] ?? '') . '">' . $serviceName . $priceDisplay . '</option>';
-                                                                    }
-                                                                    echo '</optgroup>';
-                                                                }
-                                                            }
-                                                        } 
-                                                        // Fallback to legacy services structure
-                                                        elseif (!empty($field['services']) && is_array($field['services'])) {
-                                                            foreach ($field['services'] as $service) {
-                                                                $serviceName = esc_html($service['name'] ?? '');
-                                                                $servicePrice = isset($service['price']) ? ' ($' . number_format((float)$service['price'], 2) . ')' : '';
-                                                                echo '<option value="' . esc_attr($service['name'] ?? '') . '">' . $serviceName . $servicePrice . '</option>';
-                                                            }
-                                                        }
-                                                        ?>
-                                                    </select>
+                                    <?php endforeach; ?>
+                                <?php else : ?>
+                                    <?php foreach ($section['fields'] as $field) : ?>
+                                        <?php include $field_group_partial; ?>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                                                     </div>
-                                                    
-                                                    <!-- Auto-generated quantity field for services with maxQuantity -->
-                                                    <?php if (!empty($field['enhancedServiceStructure'])): ?>
-                                                        <?php
-                                                        // Check if any service in this field has maxQuantity
-                                                        if (FormHelper::has_service_with_max_quantity($field['enhancedServiceStructure'])):
-                                                        ?>
-                                                        <div class="form-group auto-quantity-field" style="margin-top: 20px; display: none;">
-                                                            <label class="field-label">
-                                                                Number of Pages
-                                                                <span class="required">*</span>
-                                                            </label>
-                                                            <div class="field-input">
-                                                                <select id="field_9_quantity"
-                                                                        name="field_9_quantity"
-                                                                        class="form-control quantity-select"
-                                                                        data-related-service="field_9"
-                                                                        required>
-                                                                    <option value="">Select number of pages</option>
-                                                                    <?php for ($i = 1; $i <= 8; $i++): ?>
-                                                                        <option value="<?php echo $i; ?>"><?php echo $i; ?> <?php echo $i === 1 ? 'page' : 'pages'; ?></option>
-                                                                    <?php endfor; ?>
-                                                                </select>
-                                                                <div class="quantity-price-display" style="display: none; margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #007cba;">
-                                                                    <div class="price-breakdown">
-                                                                        <div class="price-line">
-                                                                            <span>Unit Price:</span>
-                                                                            <span class="unit-price">$0.00</span>
                                                                         </div>
-                                                                        <div class="price-line">
-                                                                            <span>Quantity:</span>
-                                                                            <span class="quantity-value">0</span>
-                                                                        </div>
-                                                                        <div class="price-line total-line">
-                                                                            <span>Total:</span>
-                                                                            <span class="total-price">$0.00</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <?php endif; ?>
-                                                    <?php endif; ?>
-                                                    
-                                                    <?php
-                                                    break;
-
-                                                case 'quantity':
-                                                    // Check if this quantity field is related to a service field
-                                                    $relatedServiceField = null;
-                                                    $maxQuantity = null;
-                                                    $pricingType = null;
-                                                    
-                                                    // Look for service fields in the same form
-                                                    foreach ($form_data['fields'] as $formField) {
-                                                        if (($formField['type'] === 'service' || $formField['type'] === 'service_options') && 
-                                                            !empty($formField['enhancedServiceStructure'])) {
-                                                            // Check if this quantity field might be related to this service
-                                                            $relatedServiceField = $formField;
-                                                            break;
-                                                        }
-                                                    }
-                                                    
-                                                    // If we found a related service field, get its max quantity
-                                                    if ($relatedServiceField && !empty($relatedServiceField['enhancedServiceStructure'])) {
-                                                        // Recursively search through the enhanced service structure
-                                                        $serviceWithMaxQuantity = FormHelper::find_service_with_max_quantity($relatedServiceField['enhancedServiceStructure']);
-                                                        if ($serviceWithMaxQuantity) {
-                                                            $maxQuantity = $serviceWithMaxQuantity['maxQuantity'];
-                                                            $pricingType = $serviceWithMaxQuantity['pricingType'] ?? 'per_item';
-                                                        }
-                                                    }
-                                                    
-                                                    // If we have a max quantity, create a dropdown
-                                                    if ($maxQuantity && $maxQuantity > 1):
-                                                        $unitLabel = 'items';
-                                                        switch ($pricingType) {
-                                                            case 'per_page':
-                                                                $unitLabel = 'pages';
-                                                                break;
-                                                            case 'per_hour':
-                                                                $unitLabel = 'hours';
-                                                                break;
-                                                            case 'per_month':
-                                                                $unitLabel = 'months';
-                                                                break;
-                                                            case 'per_year':
-                                                                $unitLabel = 'years';
-                                                                break;
-                                                            case 'per_user':
-                                                                $unitLabel = 'users';
-                                                                break;
-                                                            case 'per_feature':
-                                                                $unitLabel = 'features';
-                                                                break;
-                                                            case 'per_backlink':
-                                                                $unitLabel = 'backlinks';
-                                                                break;
-                                                            case 'per_post':
-                                                                $unitLabel = 'posts';
-                                                                break;
-                                                            case 'per_campaign':
-                                                                $unitLabel = 'campaigns';
-                                                                break;
-                                                            case 'per_project':
-                                                                $unitLabel = 'projects';
-                                                                break;
-                                                        }
-                                                        ?>
-                                                        <select id="<?php echo esc_attr($field['id']); ?>"
-                                                                name="<?php echo esc_attr($field['id']); ?>"
-                                                                class="form-control quantity-select <?php echo esc_attr($field['cssClass'] ?? ''); ?>"
-                                                                data-related-service="<?php echo esc_attr($relatedServiceField['id'] ?? ''); ?>"
-                                                                <?php if (!empty($field['required'])) echo 'required'; ?>>
-                                                            <option value="">Select number of <?php echo esc_html($unitLabel); ?></option>
-                                                            <?php for ($i = 1; $i <= $maxQuantity; $i++): ?>
-                                                                <option value="<?php echo $i; ?>"><?php echo $i; ?> <?php echo $i === 1 ? $unitLabel : $unitLabel; ?></option>
-                                                            <?php endfor; ?>
-                                                        </select>
-                                                        <div class="quantity-price-display" style="display: none; margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #007cba;">
-                                                            <div class="price-breakdown">
-                                                                <div class="price-line">
-                                                                    <span>Unit Price:</span>
-                                                                    <span class="unit-price">$0.00</span>
-                                                                </div>
-                                                                <div class="price-line">
-                                                                    <span>Quantity:</span>
-                                                                    <span class="quantity-value">0</span>
-                                                                </div>
-                                                                <div class="price-line total-line">
-                                                                    <span>Total:</span>
-                                                                    <span class="total-price">$0.00</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    <?php else: ?>
-                                                        <!-- Fallback to regular number input -->
-                                                        <input type="number"
-                                                            id="<?php echo esc_attr($field['id']); ?>"
-                                                            name="<?php echo esc_attr($field['id']); ?>"
-                                                            placeholder="<?php echo esc_attr($field['placeholder'] ?? 'Enter quantity'); ?>"
-                                                            class="form-control <?php echo esc_attr($field['cssClass'] ?? ''); ?>"
-                                                            min="1"
-                                                            step="1"
-                                                            <?php if (!empty($field['required'])) echo 'required'; ?> />
-                                                    <?php endif; ?>
-                                                    <?php
-                                                    break;
-
-                                                case 'form_summary':
-                                                    $summary_settings = wp_parse_args($field, [
-                                                        'summaryTitle' => 'Quote Summary',
-                                                        'showSubtotal' => true,
-                                                        'currencyCode' => 'USD',
-                                                        'currencySymbol' => '$',
-                                                        'showQuantity' => true,
-                                                        'showPricingType' => true,
-                                                        'showPath' => true,
-                                                        'serviceDisplayMode' => 'final_only',
-                                                        'showTax' => false,
-                                                        'taxRate' => 0,
-                                                        'taxMode' => 'exclusive',
-                                                        'showDiscount' => false,
-                                                        'discountType' => 'percent',
-                                                        'discountValue' => 0,
-                                                        'showGrandTotal' => true,
-                                                        'submitButtonText' => 'Submit Quote Request',
-                                                        'emptyStateMessage' => 'Complete the steps above to see your quote summary.',
-                                                        'showTermsCheckbox' => false,
-                                                        'termsText' => 'I agree to the terms and conditions.',
-                                                        'termsRequired' => true,
-                                                        'disclaimerText' => '',
-                                                        'layoutStyle' => 'detailed',
-                                                        'showDeliveryTime' => true,
-                                                        'showPrintButton' => true,
-                                                        'showSavingsHighlight' => true,
-                                                    ]);
-                                                    ?>
-                                                    <div class="quotemate-form-summary"
-                                                         data-field-id="<?php echo esc_attr($field['id']); ?>"
-                                                         data-summary-settings="<?php echo esc_attr(wp_json_encode($summary_settings)); ?>">
-                                                        <h3 class="quotemate-form-summary__title"><?php echo esc_html($summary_settings['summaryTitle']); ?></h3>
-                                                        <div class="quotemate-form-summary__body">
-                                                            <div class="quotemate-summary-empty"><?php echo esc_html($summary_settings['emptyStateMessage']); ?></div>
-                                                        </div>
-                                                        <input type="hidden" class="quotemate-form-summary__total-input" name="<?php echo esc_attr($field['id']); ?>" value="0">
-                                                        <input type="hidden" class="quotemate-form-summary__snapshot-input" name="<?php echo esc_attr($field['id']); ?>_snapshot" value="">
-                                                    </div>
-                                                    <?php
-                                                    break;
-
-                                                case 'quote_total':
-                                                    ?>
-                                                    <div class="quote-total-display" id="<?php echo esc_attr($field['id']); ?>">
-                                                        <div class="total-header">
-                                                            <h4>Quote Summary</h4>
-                                                        </div>
-                                                        <div class="total-content">
-                                                            <div class="service-summary" style="display: none;">
-                                                                <div class="service-item">
-                                                                    <span class="service-name"></span>
-                                                                    <span class="service-price"></span>
-                                                                </div>
-                                                            </div>
-                                                            <div class="total-line">
-                                                                <span class="total-label">Total:</span>
-                                                                <span class="total-value" data-field-id="<?php echo esc_attr($field['id']); ?>">$0.00</span>
-                                                            </div>
-                                                        </div>
-                                                        <input type="hidden" name="<?php echo esc_attr($field['id']); ?>" value="0" />
-                                                    </div>
-                                                    <?php
-                                                    break;
-
-                                                default:
-                                                    echo '<p>Unsupported field type: ' . esc_html($field['type']) . '</p>';
-                                                    break;
-                                            }
-                                            ?>
-                                        </div>
-
-                                        <?php if (!empty($field['description'])): ?>
-                                            <div class="field-description"><?php echo esc_html($field['description']); ?></div>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
                     <?php endforeach; ?>
 
                     <!-- Navigation (only show if multiple steps) -->
                     <?php if ($hasMultipleSteps): ?>
-                        <div class="form-navigation">
-                            <?php if ($stepIndex > 0): ?>
-                                <button type="button" class="btn btn-secondary prev-step">
-                                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M15 18l-6-6 6-6"/>
-                                    </svg>
-                                    Previous
-                                </button>
+                                                    <?php
+                        $page_break_nav = $step['page_break_after'] ?? null;
+                        $page_break_index = (int) ($step['page_break_index'] ?? 0);
+                        $has_nav_row = $page_break_nav && $page_break_index > 0;
+                        $show_prev_button = $has_nav_row
+                            && $stepIndex > 0
+                            && FormHelper::should_show_page_break_previous($page_break_nav);
+                        $is_last_step = $stepIndex >= count($steps) - 1;
+                        $next_btn_label = $page_break_nav && !empty($page_break_nav['page_title'])
+                            ? $page_break_nav['page_title']
+                            : __('Continue', 'quotemate');
+                        $prev_btn_label = $page_break_nav && !empty($page_break_nav['page_prev_title'])
+                            ? $page_break_nav['page_prev_title']
+                            : __('Previous', 'quotemate');
+                        $next_btn_style = (!$is_last_step && $page_break_nav)
+                            ? FormHelper::get_page_break_button_spacing_style($page_break_nav, 'next')
+                            : '';
+                        $prev_btn_style = ($show_prev_button && $page_break_nav)
+                            ? FormHelper::get_page_break_button_spacing_style($page_break_nav, 'prev')
+                            : '';
+                        if (!$is_last_step && $page_break_nav) {
+                            $next_btn_style = trim($next_btn_style . ';background:' . FormHelper::resolve_page_break_button_background($page_break_nav, $form_design), ';');
+                        }
+                        if ($show_prev_button && $page_break_nav) {
+                            $prev_bg = FormHelper::resolve_page_break_prev_button_background($page_break_nav, $form_design);
+                            $prev_btn_style = trim($prev_btn_style . ';background:' . $prev_bg . ';color:' . ($form_design['secondaryBtnText'] ?? '#1a1a1a'), ';');
+                            if (!empty($form_design['secondaryBtnBorder'])) {
+                                $prev_btn_style .= ';border:1px solid ' . esc_attr($form_design['secondaryBtnBorder']);
+                            }
+                        }
+                        $nav_spacing_style = $page_break_nav ? FormHelper::get_field_style_attr($page_break_nav) : '';
+                        $nav_classes = 'form-navigation' . ($page_break_nav ? ' quotemate-form-navigation--has-page-break' : '');
+                        if ($has_nav_row) {
+                            $nav_classes .= ' quotemate-form-navigation--dual';
+                            $nav_classes .= ' ' . FormHelper::get_page_break_nav_align_class($page_break_nav['page_break_align'] ?? 'center');
+                            if (!$show_prev_button) {
+                                $nav_classes .= ' quotemate-form-navigation--prev-hidden';
+                            }
+                        } elseif ($page_break_nav) {
+                            $nav_classes .= ' ' . FormHelper::get_page_break_nav_align_class($page_break_nav['page_break_align'] ?? 'center');
+                        } else {
+                            $nav_classes .= ' quotemate-form-navigation--align-center';
+                        }
+                        $nav_inline_style = $nav_spacing_style;
+                        ?>
+                        <div class="<?php echo esc_attr($nav_classes); ?>"<?php echo $nav_inline_style !== '' ? ' style="' . esc_attr($nav_inline_style) . '"' : ''; ?>>
+                            <?php if ($page_break_nav && !empty($page_break_nav['page_description'])) : ?>
+                                <p class="quotemate-form-field__page-break-desc"><?php echo esc_html($page_break_nav['page_description']); ?></p>
+                                                    <?php endif; ?>
+                            <?php if ($has_nav_row && $page_break_nav && !empty($page_break_nav['page_prev_description'])) : ?>
+                                <p class="quotemate-form-field__page-break-desc quotemate-form-field__page-break-desc--prev"><?php echo esc_html($page_break_nav['page_prev_description']); ?></p>
                             <?php endif; ?>
-                            <?php if ($stepIndex < count($steps) - 1): ?>
-                                <button type="button" class="btn btn-primary next-step">
-                                    Next
-                                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M9 18l6-6-6-6"/>
-                                    </svg>
-                                </button>
+                            <?php if ($has_nav_row) : ?>
+                                                    <?php
+                                $nav_row_class = 'quotemate-form-page-break-nav';
+                                if (!$show_prev_button) {
+                                    $nav_row_class .= ' quotemate-form-page-break-nav--prev-hidden';
+                                }
+                                ?>
+                                <div class="<?php echo esc_attr($nav_row_class); ?>">
+                                    <?php if (!$is_last_step) : ?>
+                                        <div class="quotemate-form-page-break-nav__slot quotemate-form-page-break-nav__slot--next quotemate-form-page-break-nav__slot--<?php echo esc_attr(FormHelper::resolve_page_break_align($page_break_nav['page_break_align'] ?? 'left')); ?>">
+                                            <button type="button" class="btn btn-primary next-step"<?php echo $next_btn_style !== '' ? ' style="' . esc_attr($next_btn_style) . '"' : ''; ?>><?php echo esc_html($next_btn_label); ?></button>
+                                        </div>
+                                        <?php endif; ?>
+                                    <?php if ($show_prev_button) : ?>
+                                        <div class="quotemate-form-page-break-nav__slot quotemate-form-page-break-nav__slot--prev quotemate-form-page-break-nav__slot--<?php echo esc_attr(FormHelper::resolve_page_break_align($page_break_nav['page_break_prev_align'] ?? 'right')); ?>">
+                                            <button type="button" class="btn btn-secondary prev-step"<?php echo $prev_btn_style !== '' ? ' style="' . esc_attr($prev_btn_style) . '"' : ''; ?>><?php echo esc_html($prev_btn_label); ?></button>
+                                    </div>
+                            <?php endif; ?>
+                                </div>
+                            <?php else : ?>
+                            <?php if (!$is_last_step): ?>
+                                <button type="button" class="btn btn-primary next-step"<?php echo $next_btn_style !== '' ? ' style="' . esc_attr($next_btn_style) . '"' : ''; ?>><?php echo esc_html($next_btn_label); ?></button>
                             <?php else: ?>
                                 <button type="submit" class="btn btn-primary submit-btn">
                                     <span class="btn-text">Submit Quote Request</span>
@@ -519,6 +174,10 @@ $hasMultipleSteps = count($steps) > 1;
                                         Submitting...
                                     </span>
                                 </button>
+                            <?php endif; ?>
+                            <?php if (!$has_nav_row && $stepIndex > 0): ?>
+                                <button type="button" class="btn btn-secondary prev-step">Previous</button>
+                            <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     <?php else: ?>
@@ -545,23 +204,42 @@ $hasMultipleSteps = count($steps) > 1;
 </div>
 
 <style>
-/* Modern Form Styles */
+/* Modern Form Styles — driven by --qm-* CSS variables from Design settings */
 .quotemate-form-wrapper {
-    max-width: 800px;
+    max-width: var(--qm-form-max-width, 1248px);
     margin: 0 auto;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--qm-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+    font-size: var(--qm-font-size, 16px);
     line-height: 1.6;
-    color: #333;
+    color: var(--qm-text-color, #333);
+    background-color: var(--qm-form-bg, #ffffff);
+    padding-left: 40px;
+    padding-right: 40px;
+    box-sizing: border-box;
+    border: var(--qm-form-border-width, 0) solid var(--qm-form-border-color, transparent);
+    border-radius: var(--qm-form-border-radius, 12px);
+}
+
+.quotemate-form-width-full {
+    max-width: 100%;
 }
 
 .form-header {
     text-align: center;
     margin-bottom: 2rem;
     padding: 2rem 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(
+        135deg,
+        var(--qm-header-color, #667eea) 0%,
+        var(--qm-header-color-end, #764ba2) 100%
+    );
+    color: var(--qm-header-text, #ffffff);
     border-radius: 12px;
     margin-bottom: 2rem;
+}
+
+.quotemate-form-wrapper[data-qm-header-style="solid"] .form-header {
+    background: var(--qm-header-color, #667eea);
 }
 
 .form-title {
@@ -586,7 +264,7 @@ $hasMultipleSteps = count($steps) > 1;
 
 .progress-bar {
     height: 6px;
-    background: #e9ecef;
+    background: var(--qm-progress-track, #e9ecef);
     border-radius: 3px;
     overflow: hidden;
     margin-bottom: 1rem;
@@ -594,14 +272,29 @@ $hasMultipleSteps = count($steps) > 1;
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(
+        90deg,
+        var(--qm-button-color, #667eea) 0%,
+        var(--qm-button-color-end, #764ba2) 100%
+    );
     transition: width 0.3s ease;
+}
+
+.quotemate-form-wrapper[data-qm-button-style="solid"] .progress-fill {
+    background: var(--qm-button-color, #667eea);
 }
 
 .step-indicators {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+/* Form step progress — keep number circles visible (not service selector labels) */
+.quotemate-form-wrapper .step-progress .step-indicator > .step-number,
+.quotemate-form-wrapper .unified-step-progress .step-indicator > .step-number,
+.quotemate-form-wrapper .service-cascade-step-progress .step-indicator > .step-number {
+    display: inline-flex !important;
 }
 
 .step-indicator {
@@ -621,39 +314,48 @@ $hasMultipleSteps = count($steps) > 1;
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: #e9ecef;
+    background: var(--qm-progress-track, #e9ecef);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 600;
     font-size: 1.1rem;
-    color: #6c757d;
+    color: var(--qm-text-muted, #6c757d);
     transition: all 0.3s ease;
 }
 
-.step-indicator.active .step-number {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+.quotemate-form-wrapper:not([data-qm-theme="numbered"]) .step-indicator.active .step-number {
+    background: linear-gradient(
+        135deg,
+        var(--qm-button-color, #667eea) 0%,
+        var(--qm-button-color-end, #764ba2) 100%
+    );
+    color: var(--qm-button-text, #ffffff);
+    box-shadow: 0 4px 12px var(--qm-step-shadow, rgba(102, 126, 234, 0.4));
+}
+
+.quotemate-form-wrapper[data-qm-button-style="solid"]:not([data-qm-theme="numbered"]) .step-indicator.active .step-number {
+    background: var(--qm-button-color, #667eea);
 }
 
 .step-label {
     font-size: 0.9rem;
     font-weight: 500;
-    color: #6c757d;
+    color: var(--qm-text-muted, #6c757d);
 }
 
 .step-indicator.active .step-label {
-    color: #333;
+    color: var(--qm-text-color, #333);
     font-weight: 600;
 }
 
-/* Form Content */
+/* Form Content — flat by default; minimal theme adds card styling */
 .form-content {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    overflow: hidden;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    overflow: visible;
 }
 
 .form-step {
@@ -672,7 +374,7 @@ $hasMultipleSteps = count($steps) > 1;
 .section-title {
     font-size: 1.5rem;
     font-weight: 600;
-    color: #333;
+    color: var(--qm-text-color, #333);
     margin: 0 0 1.5rem 0;
     padding-bottom: 0.5rem;
     border-bottom: 2px solid #f8f9fa;
@@ -680,7 +382,9 @@ $hasMultipleSteps = count($steps) > 1;
 
 .section-fields {
     display: grid;
-    gap: 1.5rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    align-items: start;
 }
 
 /* Form Groups */
@@ -689,6 +393,11 @@ $hasMultipleSteps = count($steps) > 1;
     flex-direction: column;
     gap: 0.5rem;
     transition: all 0.3s ease;
+    margin-bottom: var(--qm-field-spacing, 1.5rem);
+}
+
+.section-fields > .form-group:last-child {
+    margin-bottom: 0;
 }
 
 .form-group[data-hidden-by-logic="true"] {
@@ -697,7 +406,7 @@ $hasMultipleSteps = count($steps) > 1;
 
 .field-label {
     font-weight: 600;
-    color: #495057;
+    color: var(--qm-label-color, #495057);
     font-size: 0.95rem;
 }
 
@@ -746,7 +455,7 @@ $hasMultipleSteps = count($steps) > 1;
 
 .field-description {
     font-size: 0.875rem;
-    color: #6c757d;
+    color: var(--qm-text-muted, #6c757d);
     margin-top: 0.25rem;
 }
 
@@ -754,27 +463,27 @@ $hasMultipleSteps = count($steps) > 1;
 .form-control {
     width: 100%;
     padding: 0.75rem 1rem;
-    border: 1px solid #ced4da; /* Bootstrap-like border */
-    border-radius: 0.375rem; /* Bootstrap-like radius */
+    border: 1px solid var(--qm-border-color, #ced4da);
+    border-radius: 0.375rem;
     font-size: 1rem;
     line-height: 1.5;
-    color: #495057;
+    color: var(--qm-label-color, #495057);
     background-color: #fff;
     background-clip: padding-box;
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    box-sizing: border-box; /* Critical fix for width: 100% + padding */
+    box-sizing: border-box;
 }
 
 .form-control:focus {
-    color: #495057;
+    color: var(--qm-label-color, #495057);
     background-color: #fff;
-    border-color: #80bdff;
+    border-color: var(--qm-focus-color, #667eea);
     outline: 0;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    box-shadow: 0 0 0 0.2rem var(--qm-focus-ring, rgba(102, 126, 234, 0.25));
 }
 
 .form-control::placeholder {
-    color: #6c757d;
+    color: var(--qm-text-muted, #6c757d);
     opacity: 1;
 }
 
@@ -795,12 +504,12 @@ $hasMultipleSteps = count($steps) > 1;
 .form-checkbox, .form-radio {
     width: 18px;
     height: 18px;
-    accent-color: #667eea;
+    accent-color: var(--qm-accent-color, #667eea);
 }
 
 .checkbox-label, .radio-label {
     font-weight: 500;
-    color: #495057;
+    color: var(--qm-label-color, #495057);
     cursor: pointer;
 }
 
@@ -845,7 +554,7 @@ $hasMultipleSteps = count($steps) > 1;
 
 .service-price {
     font-weight: 600;
-    color: #667eea;
+    color: var(--qm-accent-color, #667eea);
 }
 
 .total-line {
@@ -863,7 +572,7 @@ $hasMultipleSteps = count($steps) > 1;
 }
 
 .total-value {
-    color: #667eea;
+    color: var(--qm-accent-color, #667eea);
     font-size: 1.5rem;
 }
 
@@ -890,20 +599,20 @@ $hasMultipleSteps = count($steps) > 1;
 }
 
 .progressive-dropdown-level.active {
-    border-color: #667eea;
-    background: #f0f4ff;
+    border-color: var(--qm-accent-color, #667eea);
+    background: color-mix(in srgb, var(--qm-accent-color, #667eea) 8%, #ffffff);
 }
 
 .progressive-dropdown-level .level-label {
     font-weight: 600;
     font-size: 0.95rem;
-    color: #495057;
+    color: var(--qm-label-color, #495057);
     margin-bottom: 0.5rem;
 }
 
 .progressive-dropdown-level select {
     padding: 0.75rem 1rem;
-    border: 2px solid #e9ecef;
+    border: 2px solid var(--qm-border-color, #e9ecef);
     border-radius: 8px;
     font-size: 1rem;
     background: white;
@@ -912,8 +621,8 @@ $hasMultipleSteps = count($steps) > 1;
 
 .progressive-dropdown-level select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--qm-focus-color, #667eea);
+    box-shadow: 0 0 0 3px var(--qm-focus-ring, rgba(102, 126, 234, 0.1));
 }
 
 .progressive-dropdown-level.completed {
@@ -929,8 +638,8 @@ $hasMultipleSteps = count($steps) > 1;
 
 /* Quantity Dropdown Level Styles */
 .progressive-dropdown-level.quantity-dropdown-level {
-    border-color: #007cba;
-    background: #e3f2fd;
+    border-color: var(--qm-accent-color, #667eea);
+    background: color-mix(in srgb, var(--qm-accent-color, #667eea) 10%, #ffffff);
 }
 
 .progressive-dropdown-level.quantity-dropdown-level.completed {
@@ -939,16 +648,16 @@ $hasMultipleSteps = count($steps) > 1;
 }
 
 .progressive-dropdown-level.quantity-dropdown-level .level-label {
-    color: #007cba;
+    color: var(--qm-accent-color, #667eea);
 }
 
 .progressive-dropdown-level.quantity-dropdown-level select {
-    border-color: #007cba;
+    border-color: var(--qm-accent-color, #667eea);
 }
 
 .progressive-dropdown-level.quantity-dropdown-level select:focus {
-    border-color: #007cba;
-    box-shadow: 0 0 0 3px rgba(0, 124, 186, 0.1);
+    border-color: var(--qm-focus-color, #667eea);
+    box-shadow: 0 0 0 3px var(--qm-focus-ring, rgba(102, 126, 234, 0.1));
 }
 
 /* Form Messages */
@@ -974,11 +683,89 @@ $hasMultipleSteps = count($steps) > 1;
 /* Form Navigation */
 .form-navigation {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 1.25rem;
     margin-top: 2rem;
     padding-top: 2rem;
     border-top: 2px solid #f8f9fa;
+}
+
+.form-navigation.quotemate-form-navigation--align-left {
+    justify-content: flex-start;
+}
+
+.form-navigation.quotemate-form-navigation--align-right {
+    justify-content: flex-end;
+}
+
+.form-navigation.unified-form-navigation.quotemate-form-navigation--align-left {
+    justify-content: flex-start;
+}
+
+.form-navigation.unified-form-navigation.quotemate-form-navigation--align-right {
+    justify-content: flex-end;
+}
+
+.form-navigation.quotemate-form-navigation--dual {
+    gap: 0.75rem;
+}
+
+.form-navigation.quotemate-form-navigation--dual .quotemate-form-page-break-nav,
+.form-navigation.quotemate-form-navigation--dual .quotemate-form-nav-button-group {
+    gap: 0;
+}
+
+.form-navigation.quotemate-form-navigation--dual .quotemate-form-page-break-nav .btn + .btn,
+.form-navigation.quotemate-form-navigation--dual .quotemate-form-nav-button-group .btn + .btn {
+    margin-left: 0;
+}
+
+.form-navigation.quotemate-form-navigation--dual .next-step:not(:only-child) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+}
+
+.form-navigation.quotemate-form-navigation--dual .prev-step {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-left: -1px;
+}
+
+.form-navigation.unified-form-navigation.quotemate-form-navigation--dual {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.form-navigation.unified-form-navigation {
+    gap: 1.25rem;
+    justify-content: center;
+}
+
+.form-navigation.unified-form-navigation.nav-has-prev {
+    justify-content: center;
+}
+
+.form-navigation.unified-form-navigation.nav-has-prev.quotemate-form-navigation--align-left {
+    justify-content: flex-start;
+}
+
+.form-navigation.unified-form-navigation.nav-has-prev.quotemate-form-navigation--align-right {
+    justify-content: flex-end;
+}
+
+.form-navigation .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-width: 120px;
+    justify-content: center;
+}
+
+.form-navigation .btn + .btn {
+    margin-left: 0;
 }
 
 /* Buttons */
@@ -1004,24 +791,37 @@ $hasMultipleSteps = count($steps) > 1;
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    background: linear-gradient(
+        135deg,
+        var(--qm-button-color, #667eea) 0%,
+        var(--qm-button-color-end, #764ba2) 100%
+    );
+    color: var(--qm-button-text, #ffffff);
+    box-shadow: 0 4px 12px var(--qm-accent-shadow, rgba(102, 126, 234, 0.3));
+}
+
+.quotemate-form-wrapper[data-qm-button-style="solid"] .btn-primary {
+    background: var(--qm-button-color, #667eea);
 }
 
 .btn-primary:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 6px 20px var(--qm-accent-shadow-hover, rgba(102, 126, 234, 0.4));
 }
 
 .btn-secondary {
-    background: #6c757d;
-    color: white;
+    background: var(--qm-secondary-btn-bg, #faf8f4);
+    color: var(--qm-secondary-btn-text, #1a1a1a);
+    border: 1px solid var(--qm-secondary-btn-border, #e8e4dc);
+    box-shadow: none;
+    font-weight: 700;
 }
 
 .btn-secondary:hover:not(:disabled) {
-    background: #5a6268;
-    transform: translateY(-1px);
+    background: var(--qm-secondary-btn-hover, #f0ebe3);
+    color: var(--qm-secondary-btn-text, #1a1a1a);
+    border-color: var(--qm-secondary-btn-border, #e8e4dc);
+    transform: none;
 }
 
 .btn-icon {
@@ -1043,7 +843,8 @@ $hasMultipleSteps = count($steps) > 1;
 /* Responsive Design */
 @media (max-width: 768px) {
     .quotemate-form-wrapper {
-        margin: 0 1rem;
+        padding-left: 20px;
+        padding-right: 20px;
     }
     
     .form-title {
@@ -1094,8 +895,8 @@ $hasMultipleSteps = count($steps) > 1;
 
 .quantity-select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--qm-focus-color, #667eea);
+    box-shadow: 0 0 0 3px var(--qm-focus-ring, rgba(102, 126, 234, 0.1));
 }
 
 .quantity-price-display {
@@ -1190,6 +991,24 @@ $hasMultipleSteps = count($steps) > 1;
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    const qmText = window.QuoteMateTextFormat || {};
+    const qmFormatDisplay = (text) => (qmText.formatDisplayName ? qmText.formatDisplayName(text) : text);
+    const qmFormatChoose = (subject, kind) => (
+        qmText.formatChoosePlaceholder
+            ? qmText.formatChoosePlaceholder(subject, kind)
+            : `Choose ${subject || 'Option'}`
+    );
+    const qmFormatChooseNumber = (unit) => (
+        qmText.formatChooseNumberPlaceholder
+            ? qmText.formatChooseNumberPlaceholder(unit)
+            : `Choose Number of ${unit}`
+    );
+    const qmFormatQtyOption = (count, unit) => (
+        qmText.formatQuantityOption
+            ? qmText.formatQuantityOption(count, unit)
+            : `${count} ${unit}`
+    );
+
     const formWrapper = document.getElementById('quotemate-form-<?php echo esc_attr($form->id); ?>');
     const form = formWrapper.querySelector('.quotemate-form');
     const steps = formWrapper.querySelectorAll(".form-step");
@@ -1206,7 +1025,10 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
         steps.forEach((step, i) => step.style.display = i === index ? '' : 'none');
-        stepIndicators.forEach((indicator, i) => indicator.classList.toggle("active", i === index));
+        stepIndicators.forEach((indicator, i) => {
+            indicator.classList.toggle("active", i === index);
+            indicator.classList.toggle("completed", i < index);
+        });
         
         // Update progress bar
         if (progressFill) {
@@ -1257,6 +1079,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Step indicator clicks (only for multi-step forms)
     if (stepIndicators.length > 0) {
         stepIndicators.forEach((indicator, i) => indicator.addEventListener("click", () => {
+            if (form.classList.contains('unified-multi-step-form')) return;
             hideMessage();
             showStep(i);
         }));
@@ -1415,10 +1238,15 @@ function resetHiddenInputs() {
 }
 
 function updateStepProgress() {
-    if (!hasMultipleSteps) return;
+    const unifiedForm = document.querySelector('.quotemate-frontend-form.unified-multi-step-form');
+    if (unifiedForm) return;
+
+    if (typeof hasMultipleSteps === 'undefined' || !hasMultipleSteps) return;
     
-    const progressFill = document.querySelector('.progress-fill');
-    const stepIndicators = document.querySelectorAll('.step-indicator');
+    const progressFill = document.querySelector('.step-progress:not(.unified-step-progress) .progress-fill');
+    const stepIndicators = document.querySelectorAll(
+      '.step-progress:not(.unified-step-progress) .step-indicator'
+    );
     
     if (progressFill) {
         const progressPercentage = ((currentStep + 1) / steps.length) * 100;
@@ -1555,21 +1383,21 @@ function initializeProgressiveServiceSelectors() {
             // Add default option
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
-            defaultOption.textContent = `Select number of ${unitLabel}`;
+            defaultOption.textContent = qmFormatChooseNumber(unitLabel);
             quantityField.appendChild(defaultOption);
             
             // Add quantity options
             for (let i = 1; i <= maxQuantity; i++) {
                 const option = document.createElement('option');
                 option.value = i;
-                option.textContent = `${i} ${i === 1 ? unitLabel.slice(0, -1) : unitLabel}`;
+                option.textContent = qmFormatQtyOption(i, unitLabel);
                 quantityField.appendChild(option);
             }
             
             // Update the label
             const label = quantityField.parentNode.parentNode.querySelector('.field-label');
             if (label) {
-                label.innerHTML = `Number of ${unitLabel.charAt(0).toUpperCase() + unitLabel.slice(1)}<span class="required">*</span>`;
+                label.innerHTML = `Number of ${qmFormatDisplay(unitLabel)}<span class="required">*</span>`;
             }
         }
 
@@ -1772,7 +1600,7 @@ function initializeProgressiveServiceSelectors() {
         
         const levelLabel = document.createElement('div');
         levelLabel.className = 'level-label';
-        levelLabel.textContent = `Choose Number of ${unitLabel.charAt(0).toUpperCase() + unitLabel.slice(1)}:`;
+        levelLabel.textContent = `${qmFormatChooseNumber(unitLabel)}:`;
         
         // Create quantity dropdown
         const dropdown = document.createElement('select');
@@ -1783,7 +1611,7 @@ function initializeProgressiveServiceSelectors() {
         // Add default option
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
-        defaultOption.textContent = `Select number of ${unitLabel}`;
+        defaultOption.textContent = qmFormatChooseNumber(unitLabel);
         dropdown.appendChild(defaultOption);
         
         // Add quantity options
@@ -1833,7 +1661,7 @@ function initializeProgressiveServiceSelectors() {
         const levelNames = ['Category', 'Subcategory', 'Service Type', 'Service', 'Option'];
         const levelName = levelNames[level] || `Level ${level + 1}`;
         
-        label.textContent = `Choose ${levelName}:`;
+        label.textContent = `${qmFormatChoose(levelName, 'option')}:`;
         return label;
     }
     
@@ -1845,7 +1673,7 @@ function initializeProgressiveServiceSelectors() {
         // Add default option
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
-        defaultOption.textContent = 'Select an option...';
+        defaultOption.textContent = qmFormatChoose('Option', 'option');
         select.appendChild(defaultOption);
         
         // Add options from data
@@ -1857,7 +1685,7 @@ function initializeProgressiveServiceSelectors() {
 
             const option = document.createElement('option');
             option.value = index;
-            option.textContent = item.name || 'Unnamed Item';
+            option.textContent = qmFormatDisplay(item.name || 'Unnamed Item');
             option.dataset.itemData = JSON.stringify(item);
             select.appendChild(option);
         });

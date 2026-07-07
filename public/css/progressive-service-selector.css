@@ -51,32 +51,224 @@ body:not(.wp-admin) .step-label {
   font-size: 16px;
 }
 
-.quotemate-frontend-form .step-number,
-body:not(.wp-admin) .step-number {
+.quotemate-frontend-form .step-label .step-number,
+body:not(.wp-admin) .step-label .step-number {
   display: none !important;
 }
 
-.quotemate-frontend-form .step-container:not(.active) .step-number,
-body:not(.wp-admin) .step-container:not(.active) .step-number {
+.quotemate-frontend-form .step-container:not(.active) .step-label .step-number,
+body:not(.wp-admin) .step-container:not(.active) .step-label .step-number {
   background: #6c757d;
 }
 
 .quotemate-frontend-form .step-select,
 body:not(.wp-admin) .step-select {
   width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #dee2e6;
-  border-radius: 6px;
-  font-size: 16px;
+  min-height: calc(0.75rem * 2 + 1.5rem + 4px);
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--qm-border-color, #dee2e6);
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  line-height: 1.5;
   background: white;
-  transition: border-color 0.2s ease;
+  color: var(--qm-label-color, #495057);
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.15s ease-in-out;
 }
 
 .quotemate-frontend-form .step-select:focus,
 body:not(.wp-admin) .step-select:focus {
   outline: none;
-  border-color: #007cba;
-  box-shadow: 0 0 0 3px rgba(0, 124, 186, 0.1);
+  border-color: var(--qm-button-color, #ff6b35);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--qm-button-color, #ff6b35) 22%, transparent);
+}
+
+/* Integrated per-unit pricing calculator (quantity step) */
+.quotemate-frontend-form .quotemate-pricing-calculator,
+body:not(.wp-admin) .quotemate-pricing-calculator {
+  margin: 0;
+  padding: 0;
+}
+
+.quotemate-frontend-form .quotemate-pricing-calculator__desc,
+body:not(.wp-admin) .quotemate-pricing-calculator__desc {
+  margin: 0 0 0.75rem;
+  color: var(--qm-text-muted, #6c757d);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.quotemate-frontend-form .quotemate-pricing-calculator .field-label.quantity-label,
+body:not(.wp-admin) .quotemate-pricing-calculator .field-label.quantity-label {
+  display: block;
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--qm-label-color, #495057);
+}
+
+.quotemate-frontend-form .quotemate-pricing-calculator .field-label.quantity-label--sr-only,
+body:not(.wp-admin) .quotemate-pricing-calculator .field-label.quantity-label--sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.quotemate-frontend-form .quotemate-pricing-row,
+body:not(.wp-admin) .quotemate-pricing-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.65rem 0.75rem;
+}
+
+.quotemate-frontend-form .quotemate-pricing-row__input-wrap,
+body:not(.wp-admin) .quotemate-pricing-row__input-wrap {
+  flex: 0 0 auto;
+  width: min(100%, 9.5rem);
+}
+
+.quotemate-frontend-form .quotemate-pricing-calculator .quantity-input,
+body:not(.wp-admin) .quotemate-pricing-calculator .quantity-input {
+  width: 100%;
+  min-height: calc(0.75rem * 2 + 1.5rem + 4px);
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--qm-border-color, #dee2e6);
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--qm-label-color, #495057);
+  background: #fff;
+  text-align: left;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  box-sizing: border-box;
+}
+
+.quotemate-frontend-form .quotemate-pricing-calculator .quantity-input:hover,
+body:not(.wp-admin) .quotemate-pricing-calculator .quantity-input:hover {
+  border-color: color-mix(in srgb, var(--qm-button-color, #ff6b35) 35%, #ced4da);
+}
+
+.quotemate-frontend-form .quotemate-pricing-calculator .quantity-input:focus,
+body:not(.wp-admin) .quotemate-pricing-calculator .quantity-input:focus {
+  outline: none;
+  border-color: var(--qm-button-color, #ff6b35);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--qm-button-color, #ff6b35) 22%, transparent);
+}
+
+.quotemate-frontend-form .quotemate-pricing-row__formula,
+body:not(.wp-admin) .quotemate-pricing-row__formula {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.quotemate-frontend-form .quotemate-pricing-row__op,
+body:not(.wp-admin) .quotemate-pricing-row__op {
+  color: var(--qm-text-muted, #6c757d);
+  font-weight: 500;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.quotemate-frontend-form .quotemate-pricing-row__rate,
+body:not(.wp-admin) .quotemate-pricing-row__rate {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.quotemate-frontend-form .quotemate-pricing-calculator .unit-price-display,
+body:not(.wp-admin) .quotemate-pricing-calculator .unit-price-display {
+  color: var(--qm-button-color, #ff6b35);
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  transition: color 0.2s ease;
+}
+
+.quotemate-frontend-form .quotemate-pricing-row__rate-suffix,
+body:not(.wp-admin) .quotemate-pricing-row__rate-suffix {
+  color: var(--qm-text-muted, #6c757d);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.quotemate-frontend-form .quotemate-pricing-row__total-wrap,
+body:not(.wp-admin) .quotemate-pricing-row__total-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.quotemate-frontend-form .quotemate-pricing-row__total-label,
+body:not(.wp-admin) .quotemate-pricing-row__total-label {
+  color: var(--qm-text-muted, #6c757d);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.quotemate-frontend-form .quotemate-pricing-calculator .total-price-display,
+body:not(.wp-admin) .quotemate-pricing-calculator .total-price-display {
+  color: var(--qm-button-color, #ff6b35);
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1.2;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.quotemate-frontend-form .quotemate-pricing-calculator__delivery,
+body:not(.wp-admin) .quotemate-pricing-calculator__delivery {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--qm-text-muted, #6c757d);
+}
+
+.quotemate-frontend-form .quotemate-pricing-calculator__delivery .delivery-time,
+body:not(.wp-admin) .quotemate-pricing-calculator__delivery .delivery-time {
+  font-weight: 600;
+  color: var(--qm-button-color, #ff6b35);
+}
+
+.quotemate-frontend-form .inline-cascade-level--quantity,
+body:not(.wp-admin) .inline-cascade-level--quantity {
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.quotemate-frontend-form .inline-cascade-level--quantity .quotemate-pricing-calculator--inline,
+body:not(.wp-admin) .inline-cascade-level--quantity .quotemate-pricing-calculator--inline {
+  width: 100%;
+}
+
+.quotemate-frontend-form .inline-cascade-level--quantity .quotemate-pricing-row__input-wrap,
+body:not(.wp-admin) .inline-cascade-level--quantity .quotemate-pricing-row__input-wrap {
+  width: 4.75rem;
+  flex-shrink: 0;
+}
+
+.quotemate-frontend-form .inline-cascade-level--quantity .quotemate-pricing-row__formula,
+body:not(.wp-admin) .inline-cascade-level--quantity .quotemate-pricing-row__formula {
+  font-size: clamp(0.78rem, 1.1vw, 0.92rem);
+}
+
+.quotemate-frontend-form .inline-cascade-level--quantity .quotemate-pricing-calculator .total-price-display,
+body:not(.wp-admin) .inline-cascade-level--quantity .quotemate-pricing-calculator .total-price-display {
+  font-size: clamp(0.95rem, 1.2vw, 1.1rem);
 }
 
 /* Service Details */
@@ -112,7 +304,6 @@ body:not(.wp-admin) .pricing-type {
   border-radius: 4px;
   font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
 }
 
 .quotemate-frontend-form .base-price,
@@ -192,8 +383,6 @@ body:not(.wp-admin) .option-label {
   font-size: 14px;
   color: #6c757d;
   margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   font-weight: 500;
 }
 
@@ -333,8 +522,8 @@ body:not(.wp-admin) .total-price-display {
 
 .quotemate-frontend-form .total-price-display,
 body:not(.wp-admin) .total-price-display {
-  font-size: 24px;
-  color: #90EE90;
+  font-size: 1.25rem;
+  color: var(--qm-button-color, #ff6b35);
 }
 
 /* Responsive Design */
@@ -358,11 +547,30 @@ body:not(.wp-admin) .total-price-display {
     font-size: 15px;
   }
 
-  .quotemate-frontend-form .step-number,
-  body:not(.wp-admin) .step-number {
+  .quotemate-frontend-form .step-label .step-number,
+  body:not(.wp-admin) .step-label .step-number {
     width: 24px;
     height: 24px;
     font-size: 12px;
+  }
+
+  .quotemate-frontend-form .quotemate-pricing-row,
+  body:not(.wp-admin) .quotemate-pricing-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+
+  .quotemate-frontend-form .quotemate-pricing-row__input-wrap,
+  body:not(.wp-admin) .quotemate-pricing-row__input-wrap {
+    width: 100%;
+    max-width: none;
+  }
+
+  .quotemate-frontend-form .quotemate-pricing-row__formula,
+  body:not(.wp-admin) .quotemate-pricing-row__formula {
+    width: 100%;
+    padding-top: 0.15rem;
   }
 
   .quotemate-frontend-form .pricing-info,
@@ -414,6 +622,31 @@ body:not(.wp-admin) .total-price-display {
   body:not(.wp-admin) .option-price {
     font-size: 16px;
   }
+
+  .quotemate-frontend-form .inline-cascade-row:has(> .inline-cascade-level--quantity:last-child),
+  body:not(.wp-admin) .inline-cascade-row:has(> .inline-cascade-level--quantity:last-child) {
+    grid-template-columns: 1fr;
+  }
+
+  .quotemate-frontend-form .progressive-service-selector .inline-cascade-slot,
+  .quotemate-frontend-form .progressive-service-selector .inline-cascade-level:not(.inline-cascade-level--quantity),
+  body:not(.wp-admin) .progressive-service-selector .inline-cascade-slot,
+  body:not(.wp-admin) .progressive-service-selector .inline-cascade-level:not(.inline-cascade-level--quantity) {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .quotemate-frontend-form .progressive-service-selector .step-container > select.step-select,
+  body:not(.wp-admin) .progressive-service-selector .step-container > select.step-select {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .quotemate-frontend-form .inline-cascade-row,
+  body:not(.wp-admin) .inline-cascade-row {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
 }
 
 /* Animation for step transitions – keep subtle, without nesting illusion */
@@ -427,6 +660,127 @@ body:not(.wp-admin) .step-container {
 body:not(.wp-admin) .step-container:not(.active) {
   opacity: 1;
   transform: none;
+}
+
+.quotemate-frontend-form .inline-cascade-pages,
+body:not(.wp-admin) .inline-cascade-pages {
+  margin-top: 14px;
+}
+
+.quotemate-frontend-form .inline-cascade-page,
+body:not(.wp-admin) .inline-cascade-page {
+  display: none;
+}
+
+.quotemate-frontend-form .inline-cascade-page.active-page,
+body:not(.wp-admin) .inline-cascade-page.active-page {
+  display: block;
+}
+
+.quotemate-frontend-form .inline-cascade-row,
+body:not(.wp-admin) .inline-cascade-row {
+  display: grid;
+  grid-template-columns: repeat(var(--qm-row-columns, var(--qm-cascade-columns, 3)), minmax(0, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+
+/* Field size must not override dropdowns-per-row grid */
+.quotemate-frontend-form .progressive-service-selector[data-field-size] .inline-cascade-row,
+body:not(.wp-admin) .progressive-service-selector[data-field-size] .inline-cascade-row {
+  display: grid;
+}
+
+/* Multi-item row: equal columns, each slot fills its cell */
+.quotemate-frontend-form .progressive-service-selector .inline-cascade-row:not([data-single-item-row]) .inline-cascade-slot,
+.quotemate-frontend-form .progressive-service-selector .inline-cascade-row:not([data-single-item-row]) .inline-cascade-level,
+body:not(.wp-admin) .progressive-service-selector .inline-cascade-row:not([data-single-item-row]) .inline-cascade-slot,
+body:not(.wp-admin) .progressive-service-selector .inline-cascade-row:not([data-single-item-row]) .inline-cascade-level {
+  width: 100%;
+  max-width: 100%;
+  justify-self: stretch;
+}
+
+/* Single dropdown in a row: field size (Small / Medium / Large) */
+.quotemate-frontend-form .progressive-service-selector .inline-cascade-row[data-single-item-row] .inline-cascade-slot,
+.quotemate-frontend-form .progressive-service-selector .inline-cascade-row[data-single-item-row] .inline-cascade-level:not(.inline-cascade-level--quantity),
+body:not(.wp-admin) .progressive-service-selector .inline-cascade-row[data-single-item-row] .inline-cascade-slot,
+body:not(.wp-admin) .progressive-service-selector .inline-cascade-row[data-single-item-row] .inline-cascade-level:not(.inline-cascade-level--quantity) {
+  width: var(--qm-cascade-select-width, 100%);
+  max-width: 100%;
+  justify-self: start;
+}
+
+.quotemate-frontend-form .progressive-service-selector .inline-cascade-row[data-single-item-row] .inline-cascade-level--quantity,
+body:not(.wp-admin) .progressive-service-selector .inline-cascade-row[data-single-item-row] .inline-cascade-level--quantity {
+  width: var(--qm-cascade-select-width, 100%);
+  max-width: 100%;
+  justify-self: start;
+}
+
+.quotemate-frontend-form .progressive-service-selector .inline-cascade-slot > select.step-select,
+.quotemate-frontend-form .progressive-service-selector .inline-cascade-level:not(.inline-cascade-level--quantity) > select.step-select,
+body:not(.wp-admin) .progressive-service-selector .inline-cascade-slot > select.step-select,
+body:not(.wp-admin) .progressive-service-selector .inline-cascade-level:not(.inline-cascade-level--quantity) > select.step-select {
+  width: 100%;
+  max-width: 100%;
+}
+
+.quotemate-frontend-form .progressive-service-selector .step-container > select.step-select,
+body:not(.wp-admin) .progressive-service-selector .step-container > select.step-select {
+  width: var(--qm-cascade-select-width, 100%);
+  max-width: 100%;
+}
+
+.quotemate-frontend-form .inline-cascade-row:not([data-single-item-row]):has(> .inline-cascade-level--quantity:last-child),
+body:not(.wp-admin) .inline-cascade-row:not([data-single-item-row]):has(> .inline-cascade-level--quantity:last-child) {
+  grid-template-columns: repeat(calc(var(--qm-row-columns, 4) - 1), minmax(0, 1fr)) minmax(220px, 1.65fr);
+}
+
+.quotemate-frontend-form .progressive-service-selector[data-dropdowns-per-row] .inline-cascade-row:not([data-single-item-row]),
+body:not(.wp-admin) .progressive-service-selector[data-dropdowns-per-row] .inline-cascade-row:not([data-single-item-row]) {
+  grid-template-columns: repeat(var(--qm-row-columns, var(--qm-cascade-columns, 3)), minmax(0, 1fr));
+}
+
+.quotemate-frontend-form .progressive-service-selector[data-dropdowns-per-row] .inline-cascade-row:not([data-single-item-row]):has(> .inline-cascade-level--quantity:last-child),
+body:not(.wp-admin) .progressive-service-selector[data-dropdowns-per-row] .inline-cascade-row:not([data-single-item-row]):has(> .inline-cascade-level--quantity:last-child) {
+  grid-template-columns: repeat(var(--qm-row-columns, var(--qm-cascade-columns, 3)), minmax(0, 1fr));
+}
+
+/* Service selector: no field/section headings or dropdown labels — placeholder only */
+.quotemate-frontend-form .form-group:has(.progressive-service-selector) > .field-label,
+.quotemate-frontend-form .form-group:has(.progressive-service-selector) > .field-description,
+body:not(.wp-admin) .form-group:has(.progressive-service-selector) > .field-label,
+body:not(.wp-admin) .form-group:has(.progressive-service-selector) > .field-description {
+  display: none !important;
+}
+
+.quotemate-frontend-form .form-section:has(.progressive-service-selector):not(:has(.form-group:not(:has(.progressive-service-selector)))) > .section-title,
+body:not(.wp-admin) .form-section:has(.progressive-service-selector):not(:has(.form-group:not(:has(.progressive-service-selector)))) > .section-title {
+  display: none !important;
+}
+
+.quotemate-frontend-form .progressive-service-selector .step-label,
+body:not(.wp-admin) .progressive-service-selector .step-label {
+  display: none !important;
+}
+
+.quotemate-frontend-form .inline-cascade-slot,
+.quotemate-frontend-form .inline-cascade-level,
+body:not(.wp-admin) .inline-cascade-slot,
+body:not(.wp-admin) .inline-cascade-level {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.quotemate-frontend-form .inline-cascade-slot .step-label,
+.quotemate-frontend-form .inline-cascade-level .step-label,
+body:not(.wp-admin) .inline-cascade-slot .step-label,
+body:not(.wp-admin) .inline-cascade-level .step-label {
+  margin-bottom: 0;
 }
 
 .quotemate-frontend-form .inline-cascade-levels,
@@ -450,8 +804,9 @@ body:not(.wp-admin) .inline-cascade-level .step-label {
 }
 
 /* Internal page-break navigation — hidden when form-level step UI is present */
-.quotemate-frontend-form:has(.step-progress) .progressive-selector-navigation,
+.quotemate-frontend-form:has(.step-progress:not(.service-cascade-step-progress)) .progressive-selector-navigation,
 .quotemate-frontend-form.multi-step-form .progressive-selector-navigation,
+.quotemate-frontend-form.unified-multi-step-form .progressive-selector-navigation,
 .quotemate-frontend-form.unified-multi-step-form .progressive-selector-navigation,
 body:not(.wp-admin) .multi-step-form .progressive-selector-navigation,
 body:not(.wp-admin) .unified-multi-step-form .progressive-selector-navigation {
@@ -496,8 +851,11 @@ body:not(.wp-admin) .progressive-selector-navigation .btn {
 
 .quotemate-frontend-form .progressive-selector-navigation .btn-secondary,
 body:not(.wp-admin) .progressive-selector-navigation .btn-secondary {
-  background: #6c757d;
-  color: #fff;
+  background: var(--qm-secondary-btn-bg, #faf8f4);
+  color: var(--qm-secondary-btn-text, #1a1a1a);
+  border: 1px solid var(--qm-secondary-btn-border, #e8e4dc) !important;
+  box-shadow: none;
+  font-weight: 700;
 }
 
 .quotemate-frontend-form .progressive-selector-navigation .btn-primary,
@@ -534,8 +892,11 @@ body:not(.wp-admin) .progressive-pagination-controls .btn {
 
 .quotemate-frontend-form .progressive-pagination-controls .btn-secondary,
 body:not(.wp-admin) .progressive-pagination-controls .btn-secondary {
-  background: #6c757d;
-  color: #fff;
+  background: var(--qm-secondary-btn-bg, #faf8f4);
+  color: var(--qm-secondary-btn-text, #1a1a1a);
+  border: 1px solid var(--qm-secondary-btn-border, #e8e4dc);
+  box-shadow: none;
+  font-weight: 700;
 }
 
 .quotemate-frontend-form .progressive-pagination-controls .btn-primary,

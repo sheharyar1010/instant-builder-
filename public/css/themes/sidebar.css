@@ -1,0 +1,273 @@
+/* Sidebar — vertical step list (reference: circle before label, bordered step cards) */
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] {
+    padding: 0;
+    overflow: hidden;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .form-header {
+    border-radius: 0;
+    margin-bottom: 0;
+    padding: 1.75rem 2rem;
+    box-shadow: none;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .form-title {
+    font-size: 1.75rem;
+    text-shadow: none;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] form.multi-step-form,
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .quotemate-form-builder__preview-form.multi-step-form,
+.quotemate-form-builder__form-preview[data-qm-theme="sidebar"] .quotemate-form-builder__preview-form.multi-step-form {
+    display: contents;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"]:has(form.multi-step-form),
+.quotemate-form-wrapper[data-qm-theme="sidebar"][data-qm-multistep="true"],
+.quotemate-form-builder__form-preview[data-qm-theme="sidebar"][data-qm-multistep="true"] {
+    display: grid;
+    grid-template-columns: minmax(240px, 280px) 1fr;
+    grid-template-rows: auto 1fr;
+    align-items: stretch;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"]:has(form.multi-step-form) .form-header,
+.quotemate-form-wrapper[data-qm-theme="sidebar"][data-qm-multistep="true"] > .form-header,
+.quotemate-form-wrapper[data-qm-theme="sidebar"][data-qm-multistep="true"] > .quotemate-form-builder__form-header,
+.quotemate-form-builder__form-preview[data-qm-theme="sidebar"][data-qm-multistep="true"] > .form-header,
+.quotemate-form-builder__form-preview[data-qm-theme="sidebar"][data-qm-multistep="true"] > .quotemate-form-builder__form-header {
+    grid-column: 1 / -1;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-progress {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0;
+    padding: 1.25rem 1rem 1.5rem;
+    background: #ffffff;
+    border-right: 1px solid #eee;
+    align-self: stretch;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .progress-bar {
+    display: none;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicators {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.75rem;
+}
+
+/* Step card — number/tick circle always left, label vertically centered */
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicator {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.625rem;
+    opacity: 1;
+    padding: 0.625rem 0.75rem;
+    border-radius: 14px;
+    border: 1px solid #e8e8e8;
+    background: #ffffff;
+    cursor: default;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+    min-height: 44px;
+}
+
+/* Upcoming — white card, grey border */
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicator:not(.active):not(.completed) {
+    border-color: #ececec;
+    background: #ffffff;
+}
+
+/* Current step — white card, accent border (screenshot step 2) */
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicator.active {
+    background: #ffffff;
+    border: 2px solid var(--qm-button-color, #e53935);
+    padding: calc(0.625rem - 1px) calc(0.75rem - 1px);
+}
+
+/* Done steps — light tint, no strong box border (screenshot step 1) */
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicator.completed {
+    cursor: pointer;
+    background: color-mix(in srgb, var(--qm-button-color, #e53935) 8%, #ffffff);
+    border: 1px solid color-mix(in srgb, var(--qm-button-color, #e53935) 18%, #ececec);
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicator.completed.active {
+    background: #ffffff;
+    border: 2px solid var(--qm-button-color, #e53935);
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-progress .step-number,
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .unified-step-progress,
+.service-cascade-step-progress .step-number {
+    display: inline-flex !important;
+}
+
+/* Circle badge — before text, compact size */
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-number {
+    order: -1;
+    flex: 0 0 auto;
+    align-self: center;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    margin: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: none;
+    background: #ececec;
+    border: 1.5px solid #e0e0e0;
+    color: #9e9e9e;
+}
+
+/* Upcoming — grey filled ring */
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicator:not(.active):not(.completed) .step-number {
+    background: #ececec;
+    border-color: #e0e0e0;
+    color: #8a8a8a;
+}
+
+/* Active — solid accent circle + white number */
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicator.active .step-number {
+    background: var(--qm-button-color, #e53935);
+    border: 1.5px solid var(--qm-button-color, #e53935);
+    color: #ffffff;
+    box-shadow: none;
+}
+
+/* Completed — solid accent circle + white tick (hide number text) */
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicator.completed:not(.active) .step-number {
+    background: var(--qm-button-color, #e53935);
+    border: 1.5px solid var(--qm-button-color, #e53935);
+    color: transparent;
+    font-size: 0;
+    position: relative;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicator.completed:not(.active) .step-number::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 6px;
+    height: 10px;
+    border: solid #ffffff;
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, -58%) rotate(45deg);
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-progress .step-label,
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .unified-step-progress,
+.service-cascade-step-progress .step-label {
+    order: 0;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    align-self: center;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #b0b0b0;
+    line-height: 1.2;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicator.active .step-label {
+    color: var(--qm-button-color, #e53935);
+    font-weight: 600;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicator.completed .step-label {
+    color: var(--qm-button-color, #e53935);
+    font-weight: 600;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .form-content {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-radius: 0;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .form-content .form-navigation,
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .form-content .unified-form-navigation {
+    margin-top: auto;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #eee;
+    justify-content: center;
+    gap: 1.25rem;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .form-navigation.nav-has-prev,
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .unified-form-navigation.nav-has-prev {
+    justify-content: flex-end;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .form-navigation {
+    justify-content: center;
+    gap: 1.25rem;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .btn-primary {
+    border-radius: 10px;
+    box-shadow: 0 4px 14px var(--qm-accent-shadow, rgba(229, 57, 53, 0.28));
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"] .btn-secondary {
+    background: var(--qm-secondary-btn-bg, #faf8f4);
+    color: var(--qm-secondary-btn-text, #1a1a1a);
+    border: 1px solid var(--qm-secondary-btn-border, #e8e4dc);
+    box-shadow: none;
+    font-weight: 700;
+    border-radius: 10px;
+}
+
+.quotemate-form-wrapper[data-qm-theme="sidebar"]:not(:has(form.multi-step-form)) .form-content {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 768px) {
+    .quotemate-form-wrapper[data-qm-theme="sidebar"]:has(form.multi-step-form) {
+        grid-template-columns: 1fr;
+    }
+
+    .quotemate-form-wrapper[data-qm-theme="sidebar"] .step-progress {
+        grid-column: 1;
+        grid-row: auto;
+        border-right: none;
+        border-bottom: 1px solid #eee;
+    }
+
+    .quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicators {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .quotemate-form-wrapper[data-qm-theme="sidebar"] .step-indicator {
+        flex: 1 1 calc(50% - 0.5rem);
+        min-width: 140px;
+    }
+
+    .quotemate-form-wrapper[data-qm-theme="sidebar"] .form-content,
+    .quotemate-form-wrapper[data-qm-theme="sidebar"] .form-content .form-navigation,
+    .quotemate-form-wrapper[data-qm-theme="sidebar"] .form-content .unified-form-navigation {
+        grid-column: 1;
+    }
+}

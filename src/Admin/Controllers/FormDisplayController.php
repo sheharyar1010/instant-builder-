@@ -7,6 +7,9 @@ use Dawnsol\Quotemate\Admin\Models\Form;
 use Dawnsol\Quotemate\Admin\Models\Submission;
 use Dawnsol\Quotemate\Helpers\ViewRenderer;
 use Dawnsol\Quotemate\Helpers\LogHelper;
+use Dawnsol\Quotemate\Helpers\FormHelper;
+use Dawnsol\Quotemate\Helpers\DesignHelper;
+use Dawnsol\Quotemate\Helpers\ThemeHelper;
 
 class FormDisplayController
 {
@@ -37,10 +40,9 @@ class FormDisplayController
         }
 
         $settings = json_decode($form->settings, true) ?? [];
-        $fields   = json_decode($form->fields, true) ?? [];
+        $fields   = FormHelper::normalize_fields(json_decode($form->fields, true) ?? []);
 
-        // Enqueue conditional logic and calculation assets if needed
-        $this->enqueue_form_assets($fields);
+        $this->enqueue_form_assets($fields, $settings);
 
         ob_start();
         ViewRenderer::render('Templates/form-view', false, [
@@ -54,8 +56,39 @@ class FormDisplayController
     /**
      * Enqueue form assets (conditional logic and calculations) based on field types
      */
-    private function enqueue_form_assets($fields)
+    private function enqueue_form_assets($fields, array $settings = [])
     {
+        $design = DesignHelper::resolve($settings);
+        $theme_id = $design['themeId'] ?? ThemeHelper::THEME_CLASSIC;
+
+        wp_enqueue_style(
+            'quotemate-form-layout',
+            QUOTEMATE_URL . 'public/css/form-layout.css',
+            [],
+            QUOTEMATE_VERSION
+        );
+        wp_enqueue_style(
+            'quotemate-theme-' . $theme_id,
+            ThemeHelper::get_css_url($theme_id),
+            ['quotemate-form-layout'],
+            QUOTEMATE_VERSION
+        );
+        wp_enqueue_style(
+            'quotemate-form-navigation',
+            QUOTEMATE_URL . 'public/css/form-navigation.css',
+            ['quotemate-theme-' . $theme_id],
+            QUOTEMATE_VERSION
+        );
+
+        if (!is_admin()) {
+            wp_enqueue_script(
+                'quotemate-text-format',
+                QUOTEMATE_URL . 'public/js/text-format.js',
+                [],
+                QUOTEMATE_VERSION,
+                true
+            );
+        }
         // Check if any fields have conditional logic
         $has_conditional_logic = false;
         $has_calculation_fields = false;
@@ -125,7 +158,7 @@ class FormDisplayController
             wp_enqueue_script(
                 'quotemate-progressive-service-selector',
                 QUOTEMATE_URL . 'public/js/progressive-service-selector.js',
-                [],
+                ['quotemate-text-format'],
                 time(), // Force cache bust for debugging
                 true
             );
@@ -142,7 +175,7 @@ class FormDisplayController
             wp_enqueue_script(
                 'quotemate-unified-form-steps',
                 QUOTEMATE_URL . 'public/js/unified-form-steps.js',
-                $unified_deps,
+                array_values(array_unique(array_merge($unified_deps, ['quotemate-text-format']))),
                 time(),
                 true
             );
@@ -165,7 +198,7 @@ class FormDisplayController
             wp_enqueue_script(
                 'quotemate-quote-summary',
                 QUOTEMATE_URL . 'public/js/quote-summary.js',
-                array_values(array_unique($summary_deps)),
+                array_values(array_unique(array_merge($summary_deps, ['quotemate-text-format']))),
                 time(),
                 true
             );
@@ -174,7 +207,7 @@ class FormDisplayController
         wp_enqueue_script(
             'quotemate-multi-step-form',
             QUOTEMATE_URL . 'public/js/multi-step-form.js',
-            [],
+            ['quotemate-text-format'],
             QUOTEMATE_VERSION,
             true
         );

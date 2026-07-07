@@ -900,31 +900,33 @@ class QuotemateFormBuilder {
     this.selectField(fieldElement);
   }
 
+  /** Deep-clone field data for duplicate/copy (independent options, services, etc.) */
+  cloneFieldData(fieldData, newFieldId) {
+    const clone = JSON.parse(JSON.stringify(fieldData));
+    clone.id = newFieldId;
+    return clone;
+  }
+
   duplicateField(fieldId) {
     const fieldData = this.formData.fields.find((f) => f.id === fieldId);
-    if (fieldData) {
-      this.fieldCounter++;
-      const newFieldId = `field_${this.fieldCounter}`;
-      const newFieldData = {
-        ...fieldData,
-        id: newFieldId,
-      };
+    if (!fieldData) return;
 
-      const fieldHtml = this.generateFieldHtml(fieldData.type, newFieldId);
-      const originalElement = document.querySelector(
-        `[data-field-id="${fieldId}"]`
-      );
+    this.fieldCounter++;
+    const newFieldId = `field_${this.fieldCounter}`;
+    const newFieldData = this.cloneFieldData(fieldData, newFieldId);
 
-      const fieldElement = document.createElement("div");
-      fieldElement.innerHTML = fieldHtml;
-      originalElement.parentNode.insertBefore(
-        fieldElement.firstElementChild,
-        originalElement.nextSibling
-      );
+    const originalElement = document.querySelector(`[data-field-id="${fieldId}"]`);
+    if (!originalElement?.parentNode) return;
 
-      this.formData.fields.push(newFieldData);
-      this.updateFormData();
-    }
+    const wrap = document.createElement('div');
+    wrap.innerHTML = this.generateFieldHtmlFromData(newFieldData);
+    const newElement = wrap.firstElementChild;
+    if (!newElement) return;
+
+    originalElement.parentNode.insertBefore(newElement, originalElement.nextSibling);
+
+    this.formData.fields.push(newFieldData);
+    this.updateFormData();
   }
 
   deleteField(fieldId) {
