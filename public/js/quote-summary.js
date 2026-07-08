@@ -126,9 +126,6 @@ class QuoteSummaryEngine {
   }
 
   static shouldRenderSummaryRow(item) {
-    if (item.isLeaf === true || item.isBasePriceRow || item.isChoiceFieldRow) {
-      return true;
-    }
     return (Number(item.lineTotal) || 0) > 0;
   }
 
@@ -640,10 +637,11 @@ class QuoteSummaryEngine {
     };
   }
 
-  static renderLineItems(lineItems, settings, totals) {
+  static renderLineItems(lineItems, settings, totals, options = {}) {
     const sym = settings.currencySymbol || '$';
     const layout = settings.layoutStyle || 'detailed';
     const progressive = QuoteSummaryEngine.getProgressive();
+    const grandInTable = !!options.grandInTable;
 
     if (!lineItems.length) {
       return `<div class="quotemate-summary-empty">${settings.emptyStateMessage || QuoteSummaryEngine.DEFAULTS.emptyStateMessage}</div>`;
@@ -685,7 +683,20 @@ class QuoteSummaryEngine {
             .map((item) => QuoteSummaryEngine.renderSummaryTableRow(item, sym, progressive))
             .join('')}
         </tbody>
+        ${grandInTable ? QuoteSummaryEngine.renderTableGrandFooter(totals, sym) : ''}
       </table>`;
+  }
+
+  static renderTableGrandFooter(totals, sym) {
+    return `
+        <tfoot>
+          <tr class="quotemate-summary-table__row--grand">
+            <td class="quotemate-summary-table__name">Grand Total</td>
+            <td class="quotemate-summary-table__qty"></td>
+            <td class="quotemate-summary-table__type"></td>
+            <td class="quotemate-summary-amount">${QuoteSummaryEngine.formatMoney(totals.total, sym)}</td>
+          </tr>
+        </tfoot>`;
   }
 
   static renderCompactLine(item, sym, progressive) {
@@ -734,9 +745,10 @@ class QuoteSummaryEngine {
       </div>`;
   }
 
-  static renderTotals(totals, settings) {
-    const sym = totals.symbol;
-    let html = '<div class="quotemate-summary-totals">';
+  static renderTotals(totals, settings, options = {}) {
+    const sym = totals.symbol || settings.currencySymbol || '$';
+    const grandInTable = !!options.grandInTable;
+    let html = '';
 
     if (settings.showSubtotal) {
       html += `
@@ -778,7 +790,7 @@ class QuoteSummaryEngine {
         </div>`;
     }
 
-    if (settings.showGrandTotal) {
+    if (!grandInTable) {
       html += `
         <div class="quotemate-summary-totals__row quotemate-summary-totals__row--grand">
           <span>Grand Total</span>
@@ -786,8 +798,9 @@ class QuoteSummaryEngine {
         </div>`;
     }
 
-    html += '</div>';
-    return html;
+    if (!html) return '';
+
+    return `<div class="quotemate-summary-totals">${html}</div>`;
   }
 
   static renderFooter(settings) {
@@ -836,11 +849,15 @@ class QuoteSummaryEngine {
       titleEl.textContent = settings.summaryTitle || field.label || 'Quote Summary';
     }
 
+    const layout = settings.layoutStyle || 'detailed';
+    const grandInTable = layout === 'detailed' && lineItems.length > 0;
+    const renderOptions = { grandInTable };
+
     const bodyEl = root.querySelector('.quotemate-form-summary__body');
     if (bodyEl) {
       bodyEl.innerHTML =
-        QuoteSummaryEngine.renderLineItems(lineItems, settings, totals) +
-        QuoteSummaryEngine.renderTotals(totals, settings) +
+        QuoteSummaryEngine.renderLineItems(lineItems, settings, totals, renderOptions) +
+        QuoteSummaryEngine.renderTotals(totals, settings, renderOptions) +
         QuoteSummaryEngine.renderFooter(settings);
     }
 
@@ -876,6 +893,7 @@ class QuoteSummaryEngine {
       h1 { font-size: 22px; margin-bottom: 16px; }
       table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
       th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+      .quotemate-summary-table__row--grand td { font-weight: bold; font-size: 18px; }
       .quotemate-summary-totals__row--grand { font-weight: bold; font-size: 18px; }
     `;
     printWindow.document.write(`

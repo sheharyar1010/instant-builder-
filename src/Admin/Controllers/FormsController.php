@@ -410,6 +410,39 @@ class FormsController
             }
         }
 
+        if (($field['type'] ?? '') === 'form_summary') {
+            if (isset($field['summary_prev_align'])) {
+                $align = sanitize_key($field['summary_prev_align']);
+                $sanitized['summary_prev_align'] = in_array($align, ['left', 'center', 'right'], true) ? $align : 'center';
+            }
+            if (isset($field['summary_submit_align'])) {
+                $align = sanitize_key($field['summary_submit_align']);
+                $sanitized['summary_submit_align'] = in_array($align, ['left', 'center', 'right'], true) ? $align : 'center';
+            }
+            if (isset($field['summary_prev_button_color'])) {
+                $color = trim((string) $field['summary_prev_button_color']);
+                if ($color === '') {
+                    unset($sanitized['summary_prev_button_color']);
+                } elseif (preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/', $color)) {
+                    $sanitized['summary_prev_button_color'] = $color;
+                }
+            }
+            if (isset($field['summary_submit_button_color'])) {
+                $color = trim((string) $field['summary_submit_button_color']);
+                if ($color === '') {
+                    unset($sanitized['summary_submit_button_color']);
+                } elseif (preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/', $color)) {
+                    $sanitized['summary_submit_button_color'] = $color;
+                }
+            }
+            if (isset($field['summaryButtonOrder'])) {
+                $order = sanitize_key($field['summaryButtonOrder']);
+                $sanitized['summaryButtonOrder'] = in_array($order, ['prev_submit', 'submit_prev'], true)
+                    ? $order
+                    : 'prev_submit';
+            }
+        }
+
         // Sanitize boolean properties (Advance tab + Style layout linked)
         $bool_props = [
             'hideLabel', 'readOnly', 'show_tax', 'show_discount',
@@ -440,8 +473,10 @@ class FormsController
 
         // Form Summary text/select settings
         $summary_text_props = [
-            'summaryTitle', 'currencyCode', 'currencySymbol', 'layoutStyle', 'serviceDisplayMode',
-            'taxMode', 'discountType', 'submitButtonText', 'emptyStateMessage', 'termsText', 'disclaimerText',
+            'stepTitle', 'summaryTitle', 'currencyCode', 'currencySymbol', 'layoutStyle', 'serviceDisplayMode',
+            'taxMode', 'discountType', 'submitButtonText', 'summary_prev_title', 'summaryButtonOrder',
+            'summary_prev_button_color', 'summary_submit_button_color', 'summary_prev_align', 'summary_submit_align',
+            'emptyStateMessage', 'termsText', 'disclaimerText',
         ];
         foreach ($summary_text_props as $prop) {
             if (isset($field[$prop])) {
@@ -625,6 +660,10 @@ class FormsController
 
             // Add name for category and service types
             $sanitized_item['name'] = isset($item['name']) ? sanitize_text_field($item['name']) : '';
+
+            if (isset($item['id'])) {
+                $sanitized_item['id'] = sanitize_text_field($item['id']);
+            }
 
             // Label for this item's options dropdown (e.g. "models", "type")
             if (isset($item['optionsLabel'])) {

@@ -30,7 +30,7 @@
 .quotemate-summary-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 20px;
+  margin-bottom: 0;
   font-size: 14px;
   table-layout: fixed;
 }
@@ -198,9 +198,32 @@
 }
 
 .quotemate-summary-totals {
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.quotemate-summary-totals:has(.quotemate-summary-totals__row:not(.quotemate-summary-totals__row--grand)) {
   border-top: 2px solid #e5e7eb;
   padding-top: 16px;
   margin-top: 8px;
+}
+
+.quotemate-summary-table:has(tfoot) tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.quotemate-summary-table tfoot tr.quotemate-summary-table__row--grand td {
+  border-top: 2px solid color-mix(in srgb, var(--qm-button-color, #2563eb) 25%, #e5e7eb);
+  border-bottom: none;
+  padding-top: 14px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--qm-button-color, #2563eb);
+}
+
+.quotemate-summary-table tfoot tr.quotemate-summary-table__row--grand .quotemate-summary-amount {
+  font-weight: 800;
+  color: var(--qm-button-color, #2563eb);
 }
 
 .quotemate-summary-totals__row {
@@ -223,7 +246,7 @@
   font-size: 1.2rem;
   font-weight: 800;
   padding-top: 12px;
-  margin-top: 8px;
+  margin-top: 0;
   border-top: 2px solid color-mix(in srgb, var(--qm-button-color, #2563eb) 25%, #e5e7eb);
   color: var(--qm-button-color, #2563eb);
 }

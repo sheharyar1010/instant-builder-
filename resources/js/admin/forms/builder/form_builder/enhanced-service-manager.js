@@ -6,6 +6,7 @@ export class EnhancedServiceManager {
   constructor(formBuilder) {
     this.formBuilder = formBuilder;
     this.currentFieldId = null;
+    this.branchClipboard = null;
 
     // Dynamic pricing types that users can configure
     this.defaultPricingTypes = [
@@ -152,6 +153,10 @@ export class EnhancedServiceManager {
         this.refreshModal(this.getFieldData(this.currentFieldId));
       }
 
+      if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-hierarchy-back]')) {
+        this.navigateUpOneHierarchyLevel();
+      }
+
       if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-add-service-item]')) {
         const button = e.target.closest('[data-add-service-item]');
         const parentPath = button.dataset.parentPath;
@@ -174,6 +179,18 @@ export class EnhancedServiceManager {
         const button = e.target.closest('[data-remove-service]');
         const servicePath = button.dataset.servicePath;
         this.removeService(servicePath);
+      }
+
+      if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-copy-service-branch]')) {
+        const button = e.target.closest('[data-copy-service-branch]');
+        this.copyBranch(button.dataset.servicePath);
+      }
+
+      if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-paste-service-branch]')) {
+        const button = e.target.closest('[data-paste-service-branch]');
+        if (!button.disabled) {
+          this.pasteBranch(button.dataset.servicePath);
+        }
       }
 
       if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-save-enhanced-services]')) {
@@ -484,6 +501,10 @@ export class EnhancedServiceManager {
       const hideAddCategory = this.isPerPricingTypeKey(service.pricingType, fieldData);
       const perTypeHiddenAttrs = hideAddCategory ? ' hidden aria-hidden="true"' : '';
       const perTypeHiddenClass = hideAddCategory ? ' is-per-type-hidden' : '';
+      const pasteDisabled = !this.canPasteBranchTo(servicePath);
+      const pasteDisabledAttr = pasteDisabled ? ' disabled' : '';
+      const hasClipboard =
+        this.branchClipboard && this.branchClipboard.fieldId === this.currentFieldId;
 
       return `
         <div class="service-flat-row" data-service-path="${servicePath}">
@@ -524,6 +545,23 @@ export class EnhancedServiceManager {
             data-parent-path="${addRowParentPath}" 
             title="${isChildView ? 'Add new option' : 'Add new row'}"${perTypeHiddenAttrs}>
             +
+          </button>
+          <button
+            type="button"
+            class="btn-icon btn-copy-branch"
+            data-copy-service-branch
+            data-service-path="${servicePath}"
+            title="Copy Branch">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </button>
+          <button
+            type="button"
+            class="btn-icon btn-paste-branch${hasClipboard ? ' has-clipboard' : ''}"
+            data-paste-service-branch
+            data-service-path="${servicePath}"
+            title="Paste Branch"
+            ${pasteDisabledAttr}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1"></rect></svg>
           </button>
           <button type="button" class="btn-icon btn-delete" data-remove-service data-service-path="${servicePath}" title="Delete">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
@@ -1322,6 +1360,49 @@ export class EnhancedServiceManager {
   }
 
   /**
+   * Breadcrumb trail + hierarchy back control for nested Structure views.
+   */
+  generateOptionsViewBreadcrumbSection(fieldData) {
+    const breadcrumb = this.getOptionsViewBreadcrumb(fieldData);
+    const breadcrumbHtml = breadcrumb
+      .map((segment, index) => {
+        const escaped = (segment.label || 'Options')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/"/g, '&quot;');
+        const pathAttr =
+          segment.path === ''
+            ? 'data-options-view-path=""'
+            : `data-options-view-path="${segment.path.replace(/"/g, '&quot;')}"`;
+        const isLast = index === breadcrumb.length - 1;
+        return `${index > 0 ? '<span class="service-breadcrumb-sep">→</span>' : ''}<button type="button" class="service-breadcrumb-item${isLast ? ' is-current' : ''}" ${pathAttr}>${escaped}</button>`;
+      })
+      .join('');
+
+    return `
+      <div class="service-options-view-header">
+        <div class="service-options-breadcrumb" role="navigation" aria-label="Service structure hierarchy">
+          <div class="service-options-breadcrumb__trail">
+            ${breadcrumbHtml}
+          </div>
+          ${this.generateHierarchyBackButtonHtml()}
+        </div>
+      </div>`;
+  }
+
+  generateHierarchyBackButtonHtml() {
+    return `
+      <button
+        type="button"
+        class="service-breadcrumb-back-btn"
+        data-hierarchy-back
+        title="Back to Previous Level"
+        aria-label="Back to Previous Level">
+        <span class="service-breadcrumb-back-btn__icon" aria-hidden="true">←</span>
+      </button>`;
+  }
+
+  /**
    * Build breadcrumb segments for the options view: e.g. [{ label: 'Cars', path: '' }, { label: 'models', path: '0' }, { label: 'years', path: '0.0' }]
    * Each path is the view to show when that segment is clicked.
    */
@@ -1565,6 +1646,195 @@ export class EnhancedServiceManager {
       }
     }
 
+    this.refreshModal(fieldData);
+  }
+
+  generateServiceNodeId() {
+    return `svc_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  stripRuntimeNodeState(node) {
+    if (!node || typeof node !== 'object') return;
+    delete node.isCollapsed;
+    if (Array.isArray(node.children)) {
+      node.children.forEach((child) => this.stripRuntimeNodeState(child));
+    }
+  }
+
+  assignNewNodeIds(node) {
+    if (!node || typeof node !== 'object') return;
+    node.id = this.generateServiceNodeId();
+    if (Array.isArray(node.children)) {
+      node.children.forEach((child) => this.assignNewNodeIds(child));
+    }
+  }
+
+  deepCloneBranchNode(node) {
+    const clone = JSON.parse(JSON.stringify(node));
+    this.stripRuntimeNodeState(clone);
+    this.assignNewNodeIds(clone);
+    return clone;
+  }
+
+  syncAllRowsFromDOM() {
+    const fieldData = this.getFieldData(this.currentFieldId);
+    if (!fieldData?.enhancedServiceStructure) return;
+
+    if (this.currentViewParentPath !== '') {
+      this.syncRowDataFromDOM(this.currentViewParentPath);
+      const parent = this.getServiceByPath(
+        fieldData.enhancedServiceStructure,
+        this.currentViewParentPath
+      );
+      if (parent) {
+        const labelInput = document.querySelector(
+          '.enhanced-service-structure-container input[data-field="optionsLabel"]'
+        );
+        if (labelInput) parent.optionsLabel = labelInput.value.trim();
+
+        const pageBreakInput = document.querySelector(
+          '.enhanced-service-structure-container input[data-field="pageBreakBeforeOptions"]'
+        );
+        if (pageBreakInput) parent.pageBreakBeforeOptions = pageBreakInput.checked;
+
+        const pageBreakTitleInput = document.querySelector(
+          '.enhanced-service-structure-container input[data-field="pageBreakTitle"]'
+        );
+        if (pageBreakTitleInput) {
+          parent.pageBreakTitle = parent.pageBreakBeforeOptions
+            ? pageBreakTitleInput.value.trim()
+            : '';
+        }
+
+        (parent.children || []).forEach((_, index) => {
+          this.syncRowDataFromDOM(`${this.currentViewParentPath}.${index}`);
+        });
+      }
+      return;
+    }
+
+    fieldData.enhancedServiceStructure.forEach((_, index) => {
+      this.syncRowDataFromDOM(String(index));
+    });
+  }
+
+  getParentServicePath(path) {
+    if (!path || !String(path).includes('.')) return '';
+    return String(path).split('.').slice(0, -1).join('.');
+  }
+
+  navigateUpOneHierarchyLevel() {
+    if (!this.currentViewParentPath) return;
+
+    const scrollEl =
+      document.querySelector('.enhanced-service-modal-body') ||
+      document.querySelector('.enhanced-service-config-modal .enhanced-service-modal-body');
+    const scrollTop = scrollEl?.scrollTop ?? 0;
+
+    this.syncAllRowsFromDOM();
+    this.currentViewParentPath = this.getParentServicePath(this.currentViewParentPath);
+
+    const fieldData = this.getFieldData(this.currentFieldId);
+    this.refreshModal(fieldData);
+
+    if (scrollEl) {
+      requestAnimationFrame(() => {
+        scrollEl.scrollTop = scrollTop;
+      });
+    }
+  }
+
+  isSiblingServicePath(pathA, pathB) {
+    return this.getParentServicePath(pathA) === this.getParentServicePath(pathB);
+  }
+
+  canPasteBranchTo(targetPath) {
+    if (!this.branchClipboard || this.branchClipboard.fieldId !== this.currentFieldId) {
+      return false;
+    }
+
+    const sourcePath = this.branchClipboard.sourcePath;
+    if (!targetPath || targetPath === sourcePath) return false;
+    return this.isSiblingServicePath(sourcePath, targetPath);
+  }
+
+  copyBranch(servicePath) {
+    this.syncAllRowsFromDOM();
+
+    const fieldData = this.getFieldData(this.currentFieldId);
+    const node = this.getServiceByPath(fieldData?.enhancedServiceStructure || [], servicePath);
+    if (!node) {
+      this.showNotification('Could not find the selected branch.', 'error');
+      return;
+    }
+
+    const branch = JSON.parse(JSON.stringify(node));
+    this.stripRuntimeNodeState(branch);
+
+    this.branchClipboard = {
+      fieldId: this.currentFieldId,
+      sourcePath: servicePath,
+      branch,
+    };
+
+    const label = (node.name || 'Category').trim() || 'Category';
+    this.showNotification(`Copied branch "${label}".`, 'success');
+    this.refreshModal(fieldData);
+  }
+
+  applyBranchSubtreeToTarget(target, source) {
+    if (!target || !source) return;
+
+    if (source.optionsLabel !== undefined) target.optionsLabel = source.optionsLabel;
+    if (source.pageBreakBeforeOptions !== undefined) {
+      target.pageBreakBeforeOptions = source.pageBreakBeforeOptions;
+    }
+    if (source.pageBreakTitle !== undefined) target.pageBreakTitle = source.pageBreakTitle;
+
+    const configKeys = [
+      'pricingType',
+      'basePrice',
+      'description',
+      'minQuantity',
+      'maxQuantity',
+      'deliveryTime',
+    ];
+    configKeys.forEach((key) => {
+      if (source[key] !== undefined) target[key] = source[key];
+    });
+
+    if (Array.isArray(source.pricingTiers)) {
+      target.pricingTiers = JSON.parse(JSON.stringify(source.pricingTiers));
+    }
+
+    if (source.type === 'category' || (Array.isArray(source.children) && source.children.length > 0)) {
+      target.type = 'category';
+    }
+
+    target.children = (source.children || []).map((child) => this.deepCloneBranchNode(child));
+  }
+
+  pasteBranch(targetPath) {
+    if (!this.canPasteBranchTo(targetPath)) {
+      this.showNotification('Paste is only available on a sibling category.', 'error');
+      return;
+    }
+
+    this.syncAllRowsFromDOM();
+
+    const fieldData = this.getFieldData(this.currentFieldId);
+    const target = this.getServiceByPath(fieldData?.enhancedServiceStructure || [], targetPath);
+    const source = this.branchClipboard?.branch;
+
+    if (!target || !source) {
+      this.showNotification('Could not paste branch.', 'error');
+      return;
+    }
+
+    this.applyBranchSubtreeToTarget(target, source);
+
+    const label = (target.name || 'Category').trim() || 'Category';
+    this.showNotification(`Pasted branch into "${label}".`, 'success');
     this.refreshModal(fieldData);
   }
 
@@ -1844,18 +2114,8 @@ export class EnhancedServiceManager {
         const childrenWithPaths = children
           .map((service, index) => ({ service, path: `${this.currentViewParentPath}.${index}` }));
 
-        const breadcrumb = this.getOptionsViewBreadcrumb(fieldData);
-        const breadcrumbHtml = breadcrumb.map((s, i) => {
-          const escaped = (s.label || 'Options').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-          const pathAttr = s.path === '' ? 'data-options-view-path=""' : `data-options-view-path="${s.path.replace(/"/g, '&quot;')}"`;
-          const isLast = i === breadcrumb.length - 1;
-          return `${i > 0 ? '<span class="service-breadcrumb-sep">→</span>' : ''}<button type="button" class="service-breadcrumb-item${isLast ? ' is-current' : ''}" ${pathAttr}>${escaped}</button>`;
-        }).join('');
-
         structureContainer.innerHTML = `
-          <div class="service-options-view-header">
-            <div class="service-options-breadcrumb">${breadcrumbHtml}</div>
-          </div>
+          ${this.generateOptionsViewBreadcrumbSection(fieldData)}
           <div class="service-options-label-field">
             <div class="service-options-label-field-row">
               <div class="service-options-label-input-wrap">

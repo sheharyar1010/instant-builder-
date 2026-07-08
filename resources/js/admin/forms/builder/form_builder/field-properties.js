@@ -898,8 +898,8 @@ export class FieldProperties {
   }
 
   generateStylePropertiesHtml(fieldType, fieldData, fieldId) {
-    const layoutOnlyTypes = ['page_break', 'section_break', 'divider'];
-    const noStyleTypes = ['quote_total', 'form_summary'];
+    const layoutOnlyTypes = ['page_break', 'section_break', 'divider', 'form_summary'];
+    const noStyleTypes = ['quote_total'];
 
     if (noStyleTypes.includes(fieldType)) {
       return '<div class="quotemate-form-properties quotemate-form-properties--style"><p class="quotemate-form-builder__advance-placeholder">No style options for this field type.</p></div>';
@@ -907,20 +907,24 @@ export class FieldProperties {
 
     if (layoutOnlyTypes.includes(fieldType)) {
       const hasPreviousButton = fieldType === 'page_break' && this.getPageBreakIndex(fieldId) > 0;
+      const isSummary = fieldType === 'form_summary';
       let layoutContent = '<div class="quotemate-form-properties__section quotemate-style-layout-section">';
-      if (hasPreviousButton) {
-        layoutContent += '<p class="quotemate-form-properties__section-heading">Next button spacing</p>';
+      if (hasPreviousButton || isSummary) {
+        layoutContent += `<p class="quotemate-form-properties__section-heading">${isSummary ? 'Submit button spacing' : 'Next button spacing'}</p>`;
       }
       layoutContent += this.generateStyleLayoutBlock('margin', fieldData, fieldId);
       layoutContent += this.generateStyleLayoutBlock('padding', fieldData, fieldId);
-      if (hasPreviousButton) {
-        layoutContent += '<p class="quotemate-form-properties__section-heading">Previous button spacing</p>';
+      if (hasPreviousButton || isSummary) {
+        layoutContent += `<p class="quotemate-form-properties__section-heading">${isSummary ? 'Previous button spacing' : 'Previous button spacing'}</p>`;
         layoutContent += this.generateStyleLayoutBlock('margin', fieldData, fieldId, { prefix: 'stylePrevMargin', label: 'Margin' });
         layoutContent += this.generateStyleLayoutBlock('padding', fieldData, fieldId, { prefix: 'stylePrevPadding', label: 'Padding' });
       }
       layoutContent += '</div>';
+      const hint = isSummary
+        ? 'Adjust margin and padding for the Summary step Previous and Submit buttons.'
+        : 'Adjust margin and padding for each page break button.';
       return '<div class="quotemate-form-properties quotemate-form-properties--style">' +
-        '<p class="quotemate-form-properties__hint">Adjust margin and padding for each page break button.</p>' +
+        `<p class="quotemate-form-properties__hint">${hint}</p>` +
         layoutContent +
         '</div>';
     }
@@ -1494,7 +1498,7 @@ export class FieldProperties {
   attachPropertyEventListeners() {
     // Property changes
     document.querySelectorAll("[data-property]").forEach((input) => {
-      const eventType = (input.tagName === 'INPUT' && input.type === 'checkbox') || input.tagName === 'SELECT' ? 'change' : 'input';
+      const eventType = (input.tagName === 'INPUT' && (input.type === 'checkbox' || input.type === 'radio')) || input.tagName === 'SELECT' ? 'change' : 'input';
       input.addEventListener(eventType, (e) => {
         const fieldId = e.target.dataset.fieldId;
         const property = e.target.dataset.property;
@@ -1883,7 +1887,18 @@ export class FieldProperties {
         `<option value="${currency.code}" ${currencyCode === currency.code ? 'selected' : ''}>${currency.code} (${currency.symbol}) — ${currency.name}</option>`
     ).join('');
 
+    const defaultPrevColor = getDefaultPageBreakPrevButtonColor();
+    const defaultNextColor = getDefaultPageBreakButtonColor();
+    const buttonOrder = d('summaryButtonOrder', 'prev_submit');
+
     return `
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__label">Step Title</label>
+        <input type="text" class="quotemate-form-field__input" value="${d('stepTitle', 'Final Quote')}"
+          placeholder="Final Quote" data-property="stepTitle" data-field-id="${fieldId}">
+        <p class="quotemate-form-properties__hint">Labels the final step in the admin preview navigation.</p>
+      </div>
+
       <div class="quotemate-form-properties__section">
         <label class="quotemate-form-properties__label">Summary Title</label>
         <input type="text" class="quotemate-form-field__input" value="${d('summaryTitle', 'Quote Summary')}"
@@ -2003,10 +2018,57 @@ export class FieldProperties {
       </div>` : ''}
 
       <div class="quotemate-form-properties__section">
-        <label class="quotemate-form-properties__label">Submit Button Text</label>
-        <input type="text" class="quotemate-form-field__input" value="${d('submitButtonText', 'Submit Quote Request')}"
-          data-property="submitButtonText" data-field-id="${fieldId}">
+        <p class="quotemate-form-properties__section-heading">Final Step Buttons</p>
+        <p class="quotemate-form-properties__hint">Controls the Previous and Submit buttons shown on the final step.</p>
       </div>
+
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__label">Button Order</label>
+        <label class="quotemate-form-properties__radio">
+          <input type="radio" name="summaryButtonOrder_${fieldId}" value="prev_submit"
+            ${buttonOrder !== 'submit_prev' ? 'checked' : ''}
+            data-property="summaryButtonOrder" data-field-id="${fieldId}">
+          Previous | Submit (Default)
+        </label>
+        <label class="quotemate-form-properties__radio">
+          <input type="radio" name="summaryButtonOrder_${fieldId}" value="submit_prev"
+            ${buttonOrder === 'submit_prev' ? 'checked' : ''}
+            data-property="summaryButtonOrder" data-field-id="${fieldId}">
+          Submit | Previous
+        </label>
+      </div>
+
+      ${this.generatePageBreakButtonSection(
+        'Previous Button',
+        'Controls the Previous button on the final step.',
+        fieldData,
+        fieldId,
+        {
+          textProperty: 'summary_prev_title',
+          textDefault: 'Previous',
+          textPlaceholder: 'Previous',
+          colorProperty: 'summary_prev_button_color',
+          defaultColor: defaultPrevColor,
+          alignProperty: 'summary_prev_align',
+        }
+      )}
+
+      ${this.generatePageBreakButtonSection(
+        'Submit Button',
+        'Controls the Submit button on the final step.',
+        fieldData,
+        fieldId,
+        {
+          textProperty: 'submitButtonText',
+          textDefault: 'Submit Quote Request',
+          textPlaceholder: 'Submit Quote Request',
+          colorProperty: 'summary_submit_button_color',
+          defaultColor: defaultNextColor,
+          alignProperty: 'summary_submit_align',
+        }
+      )}
+
+      <p class="quotemate-form-properties__hint">Use the <strong>Style</strong> tab to set margin and padding for each button.</p>
 
       <div class="quotemate-form-properties__section">
         <label class="quotemate-form-properties__label">Empty State Message</label>

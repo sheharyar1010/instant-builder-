@@ -25,12 +25,16 @@ class UnifiedFormSteps {
     this.baseSteps = JSON.parse(JSON.stringify(plan.steps));
     this.postServiceFields = plan.postServiceFields;
     this.serviceFieldId = plan.serviceFieldId;
+    this.serviceFieldIds = plan.serviceFieldIds || (plan.serviceFieldId ? [plan.serviceFieldId] : []);
     this.postServiceIndex = 0;
     this.currentStep = 0;
 
-    if (!this.postServiceFields.length && this.serviceFieldId) {
+    const lastServiceFieldId =
+      this.serviceFieldIds[this.serviceFieldIds.length - 1] || this.serviceFieldId;
+
+    if (!this.postServiceFields.length && lastServiceFieldId) {
       const fromDom = UnifiedFormSteps.collectPostServiceFieldsFromDom(
-        this.serviceFieldId,
+        lastServiceFieldId,
         this.fields
       );
       this.postServiceFields = fromDom.length
@@ -593,16 +597,31 @@ class UnifiedFormSteps {
     return postServiceFields;
   }
 
-  /** Split form into pre-service tokens and post-service field queue (with pageBreakAfter flags). */
+  static isServiceLayoutField(field) {
+    return !!field && (field.type === 'service' || field.type === 'service_options');
+  }
+
+  /**
+   * Split form into pre-service tokens, an ordered list of ALL service fields, and the
+   * post-service field queue (fields after the LAST service, with pageBreakAfter flags).
+   * Supports multiple Service Selectors placed sequentially on the form.
+   */
   static parseFormLayout(fields) {
+    const list = fields || [];
     const preServiceFields = [];
     const postServiceFields = [];
-    let serviceField = null;
+    const serviceFields = [];
     let seenService = false;
     const skipTypes = ['section_break'];
 
-    for (let i = 0; i < (fields || []).length; i++) {
-      const field = fields[i];
+    let lastServiceIndex = -1;
+    for (let i = 0; i < list.length; i++) {
+      if (UnifiedFormSteps.isServiceLayoutField(list[i])) lastServiceIndex = i;
+    }
+
+    for (let i = 0; i < list.length; i++) {
+      const field = list[i];
+      const afterLastService = i > lastServiceIndex;
 
       if (UnifiedFormSteps.isPageBreak(field)) {
         if (!seenService && preServiceFields.length) {
@@ -610,7 +629,7 @@ class UnifiedFormSteps {
           if (last?.type !== 'page_break') {
             preServiceFields.push({ type: 'page_break', source: 'form' });
           }
-        } else if (seenService && postServiceFields.length) {
+        } else if (afterLastService && postServiceFields.length) {
           postServiceFields[postServiceFields.length - 1].pageBreakAfter = true;
         }
         continue;
@@ -618,15 +637,16 @@ class UnifiedFormSteps {
 
       if (skipTypes.includes(field.type)) continue;
 
-      if (field.type === 'service' || field.type === 'service_options') {
+      if (UnifiedFormSteps.isServiceLayoutField(field)) {
         seenService = true;
-        serviceField = field;
+        serviceFields.push(field);
         continue;
       }
 
       if (!seenService) {
         preServiceFields.push({ type: 'field', fieldId: field.id, field });
-      } else if (UnifiedFormSteps.isQueueableFormField(field)) {
+      } else if (afterLastService && UnifiedFormSteps.isQueueableFormField(field)) {
+        // Only fields AFTER the final Service Selector are queued as post-service fields.
         postServiceFields.push({
           type: 'field',
           fieldId: field.id,
@@ -636,7 +656,12 @@ class UnifiedFormSteps {
       }
     }
 
-    return { preServiceFields, serviceField, postServiceFields };
+    return {
+      preServiceFields,
+      serviceField: serviceFields[0] || null,
+      serviceFields,
+      postServiceFields,
+    };
   }
 
   static linearizePreServiceFields(preServiceFields) {
@@ -654,12 +679,15 @@ class UnifiedFormSteps {
   }
 
   static linearizeFormFields(fields) {
-    const { preServiceFields, serviceField, postServiceFields } = UnifiedFormSteps.parseFormLayout(fields);
+    const { preServiceFields, serviceFields, postServiceFields } = UnifiedFormSteps.parseFormLayout(fields);
     const tokens = UnifiedFormSteps.linearizePreServiceFields(preServiceFields);
 
-    if (serviceField) {
+    // Linearize EACH Service Selector in order so every one becomes its own step(s).
+    (serviceFields || []).forEach((serviceField) => {
       const structure = serviceField.enhancedServiceStructure || serviceField.serviceStructure || [];
-      const hasPriorContent = tokens.some((t) => t.type === 'field');
+      const hasPriorContent = tokens.some(
+        (t) => t.type === 'field' || t.type === 'service_categories'
+      );
       const lastToken = tokens[tokens.length - 1];
       const needsImplicitBreak = hasPriorContent && lastToken?.type !== 'page_break';
 
@@ -672,9 +700,14 @@ class UnifiedFormSteps {
       } else {
         tokens.push({ type: 'field', fieldId: serviceField.id });
       }
-    }
+    });
 
-    return { tokens, postServiceFields, serviceFieldId: serviceField?.id || null };
+    return {
+      tokens,
+      postServiceFields,
+      serviceFieldId: serviceFields?.[0]?.id || null,
+      serviceFieldIds: (serviceFields || []).map((f) => f.id),
+    };
   }
 
   static buildStepsFromTokens(tokens, fieldIdToPage = new Map()) {
@@ -720,11 +753,12 @@ class UnifiedFormSteps {
   static buildStepPlan(fields, fieldIdToPage = null) {
     const pageMeta = fieldIdToPage ? null : UnifiedFormSteps.buildFormPageMeta(fields);
     const pageMap = fieldIdToPage || pageMeta.fieldIdToPage;
-    const { tokens, postServiceFields, serviceFieldId } = UnifiedFormSteps.linearizeFormFields(fields);
+    const { tokens, postServiceFields, serviceFieldId, serviceFieldIds } = UnifiedFormSteps.linearizeFormFields(fields);
     return {
       steps: UnifiedFormSteps.buildStepsFromTokens(tokens, pageMap),
       postServiceFields,
       serviceFieldId,
+      serviceFieldIds: serviceFieldIds || (serviceFieldId ? [serviceFieldId] : []),
     };
   }
 
@@ -785,16 +819,22 @@ class UnifiedFormSteps {
       const hostGroup = serviceGroup?.closest('.form-group[data-field-id]');
       if (hostGroup?.dataset.fieldId) {
         this.serviceFieldId = hostGroup.dataset.fieldId;
+        if (!this.serviceFieldIds?.length) {
+          this.serviceFieldIds = [this.serviceFieldId];
+        }
       }
     }
 
     if (!this.serviceFieldId) return 0;
 
+    const lastServiceFieldId =
+      this.getAllServiceFieldIds().slice(-1)[0] || this.serviceFieldId;
+
     const fromJson = UnifiedFormSteps.parseFormLayout(
       UnifiedFormSteps.getLayoutFields(this.fields)
     ).postServiceFields;
     const fromDom = UnifiedFormSteps.collectPostServiceFieldsFromDom(
-      this.serviceFieldId,
+      lastServiceFieldId,
       this.fields
     );
 
@@ -907,9 +947,10 @@ class UnifiedFormSteps {
   }
 
   getServiceFormPageIndex() {
-    if (!this.serviceFieldId) return -1;
-    if (this.fieldIdToPage?.has(this.serviceFieldId)) {
-      return this.fieldIdToPage.get(this.serviceFieldId);
+    const activeId = this.getActiveServiceFieldId();
+    if (!activeId) return -1;
+    if (this.fieldIdToPage?.has(activeId)) {
+      return this.fieldIdToPage.get(activeId);
     }
     return -1;
   }
@@ -922,14 +963,17 @@ class UnifiedFormSteps {
       (token) =>
         token.type === 'service_categories' ||
         token.type === 'service_options_level' ||
-        (token.type === 'field' && token.fieldId === this.serviceFieldId)
+        (token.type === 'field' && this.isServiceFieldId(token.fieldId))
     );
   }
 
   getServiceCascadeProgress() {
-    if (!this.progressive || !this.serviceFieldId) return null;
+    if (!this.progressive) return null;
 
-    const container = this.progressive.getServiceContainer(this.serviceFieldId);
+    const activeId = this.getActiveServiceFieldId();
+    if (!activeId) return null;
+
+    const container = this.progressive.getServiceContainer(activeId);
     if (!container) return null;
 
     const navSteps = this.progressive.getCascadeNavigationSteps(container);
@@ -1512,8 +1556,8 @@ class UnifiedFormSteps {
 
     if (this.hasAdvanceableInternalInlinePages()) return false;
 
-    const serviceContainer = this.getServiceContainer();
-    if (serviceContainer && !this.progressive?.isServiceReadyForPostFields(serviceContainer)) {
+    // Do not reveal post-service fields until EVERY Service Selector is complete.
+    if (!this.isServiceReadyForPostFields()) {
       return false;
     }
 
@@ -1583,9 +1627,9 @@ class UnifiedFormSteps {
   rewindServiceFlowFrom(stepIndex) {
     this.restoreBaseSteps();
 
-    if (this.serviceFieldId) {
-      this.progressive?.resetServiceFieldForReselect(this.serviceFieldId);
-    }
+    this.getAllServiceFieldIds().forEach((id) => {
+      this.progressive?.resetServiceFieldForReselect(id);
+    });
   }
 
   ensureUnifiedProgressUI() {
@@ -1700,9 +1744,41 @@ class UnifiedFormSteps {
     this.updateNavigationButtons();
   }
 
+  getAllServiceFieldIds() {
+    if (this.serviceFieldIds?.length) return this.serviceFieldIds;
+    return this.serviceFieldId ? [this.serviceFieldId] : [];
+  }
+
+  isServiceFieldId(fieldId) {
+    return !!fieldId && this.getAllServiceFieldIds().includes(fieldId);
+  }
+
+  /** The Service Selector field active on the current step (falls back to the first). */
+  getActiveServiceFieldId() {
+    const step = this.steps[this.currentStep];
+    if (step) {
+      for (const token of step.tokens) {
+        if (
+          (token.type === 'service_categories' || token.type === 'service_options_level') &&
+          this.isServiceFieldId(token.fieldId)
+        ) {
+          return token.fieldId;
+        }
+      }
+      for (const token of step.tokens) {
+        if (token.type === 'field' && this.isServiceFieldId(token.fieldId)) {
+          return token.fieldId;
+        }
+      }
+    }
+    return this.serviceFieldId || this.getAllServiceFieldIds()[0] || null;
+  }
+
   getServiceContainer() {
-    if (!this.serviceFieldId || !this.progressive) return null;
-    return this.progressive.getServiceContainer(this.serviceFieldId);
+    if (!this.progressive) return null;
+    const activeId = this.getActiveServiceFieldId();
+    if (!activeId) return null;
+    return this.progressive.getServiceContainer(activeId);
   }
 
   getServiceContainersForCurrentStep() {
@@ -1756,10 +1832,24 @@ class UnifiedFormSteps {
     return !!lastItem && !this.progressive.shouldRenderChildDropdown(lastItem);
   }
 
+  /** True only when EVERY Service Selector is complete (gates post-service fields / Final Quote). */
   isServiceReadyForPostFields() {
-    const container = this.getServiceContainer();
-    if (!container || !this.progressive) return false;
-    return this.progressive.isServiceReadyForPostFields(container);
+    if (!this.progressive) return false;
+    const ids = this.getAllServiceFieldIds();
+    if (!ids.length) return false;
+    return ids.every((id) => {
+      const container = this.progressive.getServiceContainer(id);
+      return container && this.progressive.isServiceReadyForPostFields(container);
+    });
+  }
+
+  /** True when the Service Selector(s) on the CURRENT step are complete (gates advancing to the next step). */
+  isCurrentServiceReadyForAdvance() {
+    const containers = this.getServiceContainersForCurrentStep();
+    if (!containers.length) return true;
+    return containers.every((container) =>
+      this.progressive?.isServiceReadyForPostFields(container)
+    );
   }
 
   shouldValidateFormInput(input, group) {
@@ -1771,7 +1861,7 @@ class UnifiedFormSteps {
     }
 
     const progressive = input.closest('.progressive-service-selector');
-    if (progressive && this.isServiceReadyForPostFields()) {
+    if (progressive && this.progressive?.isServiceReadyForPostFields(progressive)) {
       return false;
     }
 
@@ -1830,7 +1920,7 @@ class UnifiedFormSteps {
   }
 
   getValidationMessage() {
-    if (this.currentStepIncludesService() && !this.isServiceReadyForPostFields()) {
+    if (this.currentStepIncludesService() && !this.isCurrentServiceReadyForAdvance()) {
       return 'Please select a service option before proceeding.';
     }
     return 'Please fill in all required fields before proceeding.';
@@ -1866,7 +1956,7 @@ class UnifiedFormSteps {
     const hasPendingService = this.hasPendingServiceNavigationOnCurrentStep();
     const hasPendingFormFields = this.canAdvanceToPostServiceFields();
     const serviceIncomplete =
-      this.currentStepIncludesService() && !this.isServiceReadyForPostFields();
+      this.currentStepIncludesService() && !this.isCurrentServiceReadyForAdvance();
 
     const summaryField = this.getActiveFormSummaryField();
     const pendingPostService = this.hasMorePostServiceFieldsPending();
@@ -2423,12 +2513,14 @@ class UnifiedFormSteps {
 
     if (this.currentStep === 0 && this.baseSteps?.length > 1 && this.steps.length < this.baseSteps.length) {
       this.restoreBaseSteps();
-      this.progressive?.resetServiceFieldForReselect(this.serviceFieldId);
+      this.getAllServiceFieldIds().forEach((id) =>
+        this.progressive?.resetServiceFieldForReselect(id)
+      );
       this.showStep(1);
       return;
     }
 
-    if (this.currentStepIncludesService() && !this.isServiceReadyForPostFields()) {
+    if (this.currentStepIncludesService() && !this.isCurrentServiceReadyForAdvance()) {
       alert(this.getValidationMessage());
     }
   }

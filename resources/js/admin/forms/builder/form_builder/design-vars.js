@@ -389,17 +389,32 @@ export function buildPageBreakPreviewHtml(fieldData = {}, options = {}) {
   `.trim();
 }
 
-export function countBuilderFormSteps(fields = []) {
-  if (!Array.isArray(fields) || fields.length === 0) {
-    return 1;
-  }
-  const breaks = fields.filter((field) => field?.type === 'page_break').length;
-  return Math.max(1, breaks + 1);
-}
-
 const STEP_LABEL_FIRST = 'Getting Started';
 const STEP_LABEL_LAST = 'Final Quote';
-const STEP_LABEL_SKIP_TYPES = new Set(['page_break', 'page-break', 'section_break', 'html', 'divider', 'heading', 'paragraph']);
+const STEP_LABEL_SKIP_TYPES = new Set([
+  'page_break',
+  'page-break',
+  'section_break',
+  'html',
+  'divider',
+  'heading',
+  'paragraph',
+  'form_summary',
+]);
+const BUILDER_SERVICE_FIELD_TYPES = new Set(['service', 'service_options']);
+
+function getFormSummaryField(fields = []) {
+  const summaries = (fields || []).filter((field) => field?.type === 'form_summary');
+  return summaries.length ? summaries[summaries.length - 1] : null;
+}
+
+export function hasBuilderFormSummaryField(fields = []) {
+  return !!getFormSummaryField(fields);
+}
+
+function isBuilderServiceField(field) {
+  return BUILDER_SERVICE_FIELD_TYPES.has(field?.type);
+}
 
 function groupFieldsIntoPages(fields) {
   const pages = [];
@@ -427,37 +442,244 @@ function getPageBreaksInOrder(fields = []) {
   return (fields || []).filter((field) => field?.type === 'page_break' || field?.type === 'page-break');
 }
 
-function getFirstFieldLabelForPage(pageFields) {
+/** Admin builder preview: one step per root Service Selector; page-break rules unchanged. */
+function getAdminPreviewLabelsForMiddlePage(pageFields, pageIndex, precedingPageBreak) {
+  const customTitle = String(precedingPageBreak?.step_title || '').trim();
+  const steps = [];
+  let nonServiceFirstDone = false;
+
   for (const field of pageFields || []) {
     if (STEP_LABEL_SKIP_TYPES.has(field?.type)) {
       continue;
     }
-    const label = (field?.label || '').trim();
-    if (label) {
-      return label;
+
+    if (isBuilderServiceField(field)) {
+      steps.push({
+        label: (field.label || '').trim() || 'Service Selection',
+        fieldId: field.id,
+        sourcePageIndex: pageIndex,
+      });
+      continue;
+    }
+
+    if (!nonServiceFirstDone) {
+      steps.push({
+        label: customTitle || (field.label || '').trim() || `Step ${pageIndex + 1}`,
+        fieldId: field.id,
+        sourcePageIndex: pageIndex,
+      });
+      nonServiceFirstDone = true;
     }
   }
-  return null;
+
+  if (!steps.length) {
+    steps.push({
+      label: customTitle || `Step ${pageIndex + 1}`,
+      fieldId: null,
+      sourcePageIndex: pageIndex,
+    });
+  }
+
+  return steps;
 }
 
-export function getFormStepLabels(fields = []) {
+function buildAdminPreviewSteps(fields = []) {
+  // ADMIN BUILDER CANVAS ONLY — do not use for frontend runtime navigation.
   const pages = groupFieldsIntoPages(fields);
   const pageCount = Math.max(1, pages.length);
   const pageBreaks = getPageBreaksInOrder(fields);
+  const steps = [];
 
-  return pages.map((pageFields, index) => {
-    if (index === 0) {
-      return STEP_LABEL_FIRST;
+  pages.forEach((pageFields, pageIndex) => {
+    if (pageIndex === 0) {
+      steps.push({ label: STEP_LABEL_FIRST, fieldId: null, sourcePageIndex: 0 });
+      return;
     }
-    if (index === pageCount - 1) {
-      return STEP_LABEL_LAST;
-    }
-    const customTitle = String(pageBreaks[index - 1]?.step_title || '').trim();
-    if (customTitle) {
-      return customTitle;
-    }
-    return getFirstFieldLabelForPage(pageFields) || `Step ${index + 1}`;
+
+    const pageFieldsForSteps = pageIndex === pageCount - 1
+      ? pageFields.filter((field) => field?.type !== 'form_summary')
+      : pageFields;
+
+    steps.push(
+      ...getAdminPreviewLabelsForMiddlePage(
+        pageFieldsForSteps,
+        pageIndex,
+        pageBreaks[pageIndex - 1]
+      )
+    );
   });
+
+  const summaryField = getFormSummaryField(fields);
+  if (summaryField) {
+    const stepTitle = String(summaryField.stepTitle || STEP_LABEL_LAST).trim() || STEP_LABEL_LAST;
+    steps.push({
+      label: stepTitle,
+      fieldId: summaryField.id,
+      sourcePageIndex: null,
+      stepKind: 'summary',
+    });
+  }
+
+  return steps;
+}
+
+export function countBuilderFormSteps(fields = []) {
+  if (!Array.isArray(fields) || fields.length === 0) {
+    return 1;
+  }
+  return Math.max(1, buildAdminPreviewSteps(fields).length);
+}
+
+export function getFormStepLabels(fields = []) {
+  return buildAdminPreviewSteps(fields).map((step) => step.label);
+}
+
+/**
+ * Step index whose nav title is driven by this field's label (mirrors getFormStepLabels).
+ * Returns -1 when the field does not control a step title.
+ */
+export function getStepIndexForFieldLabelSource(fieldId, fields = []) {
+  if (!fieldId) {
+    return -1;
+  }
+
+  return buildAdminPreviewSteps(fields).findIndex((step) => step.fieldId === fieldId);
+}
+
+/** Update a single step nav label in the DOM without rebuilding indicators. */
+export function updateBuilderStepLabelAtIndex(stepIndex, labelText, fieldId = null) {
+  const indicators = document.getElementById('builder-step-indicators');
+  if (!indicators) {
+    return;
+  }
+
+  let indicator = null;
+  if (fieldId) {
+    indicator = indicators.querySelector(`.step-indicator[data-field-id="${fieldId}"]`);
+  }
+  if (!indicator && stepIndex >= 0) {
+    indicator = indicators.querySelector(`.step-indicator[data-step="${stepIndex}"]`);
+  }
+
+  const labelEl = indicator?.querySelector('.step-label');
+  if (!labelEl) {
+    return;
+  }
+
+  const resolvedIndex = stepIndex >= 0 ? stepIndex : parseInt(indicator?.dataset?.step ?? '-1', 10);
+  const trimmed = String(labelText || '').trim();
+  labelEl.textContent = trimmed || `Step ${resolvedIndex + 1}`;
+}
+
+/** Sync one step nav title when a field label changes while typing in Field Settings. */
+export function syncBuilderStepLabelForField(fieldId, fields = [], labelKey = 'label') {
+  const steps = buildAdminPreviewSteps(fields);
+  const stepIndex = steps.findIndex((step) => step.fieldId === fieldId);
+  if (stepIndex < 0) {
+    return;
+  }
+
+  const field = (fields || []).find((item) => item?.id === fieldId);
+  const labelValue = field?.[labelKey] ?? '';
+  updateBuilderStepLabelAtIndex(stepIndex, labelValue, fieldId);
+}
+
+/** Sync the first step label created by a page break's Step Title setting. */
+export function syncBuilderStepLabelForPageBreak(pageBreakFieldId, fields = []) {
+  const pageBreaks = getPageBreaksInOrder(fields);
+  const pageBreakIndex = pageBreaks.findIndex((field) => field?.id === pageBreakFieldId);
+  if (pageBreakIndex < 0) {
+    return;
+  }
+
+  const targetPageIndex = pageBreakIndex + 1;
+  const pages = groupFieldsIntoPages(fields);
+  if (targetPageIndex <= 0 || targetPageIndex >= pages.length) {
+    return;
+  }
+
+  const pageCount = pages.length;
+  const pageFields = targetPageIndex === pageCount - 1
+    ? (pages[targetPageIndex] || []).filter((field) => field?.type !== 'form_summary')
+    : (pages[targetPageIndex] || []);
+
+  const pageSteps = getAdminPreviewLabelsForMiddlePage(
+    pageFields,
+    targetPageIndex,
+    pageBreaks[pageBreakIndex]
+  );
+  if (!pageSteps.length) {
+    return;
+  }
+
+  const steps = buildAdminPreviewSteps(fields);
+  const stepIndex = steps.findIndex((step) => step.sourcePageIndex === targetPageIndex);
+  if (stepIndex < 0) {
+    return;
+  }
+
+  updateBuilderStepLabelAtIndex(stepIndex, pageSteps[0].label, pageSteps[0].fieldId);
+}
+
+export function resolveSummarySubmitButtonBackground(fieldData = {}) {
+  const custom = fieldData?.summary_submit_button_color;
+  if (custom && /^#[0-9A-Fa-f]{3,8}$/i.test(String(custom).trim())) {
+    return String(custom).trim();
+  }
+  return resolvePageBreakButtonBackground(fieldData);
+}
+
+export function resolveSummaryPrevButtonBackground(fieldData = {}) {
+  const custom = fieldData?.summary_prev_button_color;
+  if (custom && /^#[0-9A-Fa-f]{3,8}$/i.test(String(custom).trim())) {
+    return String(custom).trim();
+  }
+  return resolvePageBreakPrevButtonBackground(fieldData);
+}
+
+function buildSummarySubmitButtonHtml(text, fieldData = {}) {
+  const bg = resolveSummarySubmitButtonBackground(fieldData);
+  const spacing = getPageBreakButtonSpacingStyle(fieldData, 'next');
+  return buildPageBreakButtonHtml(text, bg, 'quotemate-form-field__page-break-btn--next quotemate-form-summary-preview__submit-btn', spacing);
+}
+
+function buildSummaryPrevButtonHtml(text, fieldData = {}) {
+  const design = resolveDesign(getBuilderDesignFromPage());
+  const parts = [];
+  const spacing = getPageBreakButtonSpacingStyle(fieldData, 'prev');
+  if (spacing) {
+    parts.push(spacing);
+  }
+  parts.push(`background:${resolveSummaryPrevButtonBackground(fieldData)}`);
+  parts.push(`color:${design.secondaryBtnText ?? '#1a1a1a'}`);
+  if (design.secondaryBtnBorder) {
+    parts.push(`border:1px solid ${design.secondaryBtnBorder}`);
+  }
+  const styleAttr = parts.join(';');
+  return `<button type="button" class="btn btn-secondary prev-step quotemate-form-summary-preview__prev-btn" disabled${styleAttr ? ` style="${styleAttr}"` : ''}>${text}</button>`;
+}
+
+/** Admin canvas preview for Summary field Previous / Submit navigation buttons. */
+export function buildFormSummaryNavPreviewHtml(fieldData = {}) {
+  const order = fieldData?.summaryButtonOrder === 'submit_prev' ? 'submit_prev' : 'prev_submit';
+  const prevText = escapePageBreakText(fieldData?.summary_prev_title || 'Previous');
+  const submitText = escapePageBreakText(fieldData?.submitButtonText || 'Submit Quote Request');
+  const prevBtn = buildSummaryPrevButtonHtml(prevText, fieldData);
+  const submitBtn = buildSummarySubmitButtonHtml(submitText, fieldData);
+  const buttons = order === 'submit_prev' ? [submitBtn, prevBtn] : [prevBtn, submitBtn];
+  const alignClass = getPageBreakAlignClass(fieldData?.summary_submit_align || 'center');
+
+  return `
+    <div class="quotemate-form-field__page-break quotemate-form-field__page-break--dual quotemate-form-summary-preview__nav ${alignClass}">
+      <div class="quotemate-form-field__page-break-actions">
+        ${buttons.map((buttonHtml, index) => `
+          <div class="quotemate-form-field__page-break-slot quotemate-form-field__page-break-slot--${index === 0 ? 'next' : 'prev'}">
+            ${buttonHtml}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `.trim();
 }
 
 export function getBuilderDesignFromPage() {
@@ -492,8 +714,8 @@ export function syncBuilderStepProgress(fields = [], activeStep = 0, design = nu
 
   const resolvedDesign = design || getBuilderDesignFromPage();
   const themeId = resolvedDesign.themeId || wrapper.dataset.qmTheme || 'classic';
-  const stepCount = countBuilderFormSteps(fields);
-  const stepLabels = getFormStepLabels(fields);
+  const previewSteps = buildAdminPreviewSteps(fields);
+  const stepCount = Math.max(1, previewSteps.length);
   const isMulti = stepCount > 1;
 
   wrapper.dataset.qmMultistep = isMulti ? 'true' : 'false';
@@ -516,15 +738,18 @@ export function syncBuilderStepProgress(fields = [], activeStep = 0, design = nu
   }
 
   const safeActive = Math.max(0, Math.min(activeStep, stepCount - 1));
-  indicators.innerHTML = Array.from({ length: stepCount }, (_, index) => {
+  indicators.innerHTML = previewSteps.map((step, index) => {
     const isActive = index === safeActive;
     const isCompleted = index < safeActive;
     const classes = ['step-indicator'];
     if (isActive) classes.push('active');
     if (isCompleted) classes.push('completed');
-    const label = stepLabels[index] || `Step ${index + 1}`;
+    const label = escapePageBreakText(step.label || `Step ${index + 1}`);
+    const fieldIdAttr = step.fieldId
+      ? ` data-field-id="${escapePageBreakText(step.fieldId)}"`
+      : '';
     return `
-      <div class="${classes.join(' ')}" data-step="${index}">
+      <div class="${classes.join(' ')}" data-step="${index}"${fieldIdAttr}>
         <div class="step-number">${index + 1}</div>
         <div class="step-label">${label}</div>
       </div>
