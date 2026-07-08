@@ -442,35 +442,47 @@ function getPageBreaksInOrder(fields = []) {
   return (fields || []).filter((field) => field?.type === 'page_break' || field?.type === 'page-break');
 }
 
-/** Admin builder preview: one step per root Service Selector; page-break rules unchanged. */
+/**
+ * Admin builder preview steps for a single page (after a page break).
+ * A Service Selector always contributes exactly ONE root step. A Page Break always
+ * owns its own step positioned in canvas order: the leading (non-service) content
+ * before the first Service Selector forms the page-break step (which may be empty
+ * when the break sits directly before a Service Selector). Post-service fields on the
+ * same page never steal the page-break title, so ordering follows the canvas exactly.
+ */
 function getAdminPreviewLabelsForMiddlePage(pageFields, pageIndex, precedingPageBreak) {
   const customTitle = String(precedingPageBreak?.step_title || '').trim();
   const steps = [];
-  let nonServiceFirstDone = false;
 
-  for (const field of pageFields || []) {
-    if (STEP_LABEL_SKIP_TYPES.has(field?.type)) {
-      continue;
-    }
+  const visibleFields = (pageFields || []).filter(
+    (field) => !STEP_LABEL_SKIP_TYPES.has(field?.type)
+  );
 
-    if (isBuilderServiceField(field)) {
-      steps.push({
-        label: (field.label || '').trim() || 'Service Selection',
-        fieldId: field.id,
-        sourcePageIndex: pageIndex,
-      });
-      continue;
-    }
+  const firstServiceIndex = visibleFields.findIndex((field) => isBuilderServiceField(field));
+  const hasService = firstServiceIndex !== -1;
+  const leadingFields = hasService
+    ? visibleFields.slice(0, firstServiceIndex)
+    : visibleFields;
+  const serviceFields = visibleFields.filter((field) => isBuilderServiceField(field));
 
-    if (!nonServiceFirstDone) {
-      steps.push({
-        label: customTitle || (field.label || '').trim() || `Step ${pageIndex + 1}`,
-        fieldId: field.id,
-        sourcePageIndex: pageIndex,
-      });
-      nonServiceFirstDone = true;
-    }
+  // The page break's own page (leading content). When a break sits directly before a
+  // Service Selector this page is empty, but it must still appear before the service.
+  if (leadingFields.length > 0 || hasService) {
+    const firstLeading = leadingFields[0];
+    steps.push({
+      label: customTitle || (firstLeading?.label || '').trim() || `Step ${pageIndex + 1}`,
+      fieldId: firstLeading?.id || null,
+      sourcePageIndex: pageIndex,
+    });
   }
+
+  serviceFields.forEach((field) => {
+    steps.push({
+      label: (field.label || '').trim() || 'Service Selection',
+      fieldId: field.id,
+      sourcePageIndex: pageIndex,
+    });
+  });
 
   if (!steps.length) {
     steps.push({

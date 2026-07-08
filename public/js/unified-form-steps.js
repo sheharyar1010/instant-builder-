@@ -128,6 +128,10 @@ class UnifiedFormSteps {
     return item?.type === 'page_break' || item?.type === 'page-break';
   }
 
+  static isFormSummaryField(field) {
+    return field?.type === 'form_summary';
+  }
+
   static STEP_LABEL_FIRST = 'Getting Started';
   static STEP_LABEL_LAST = 'Final Quote';
   static STEP_LABEL_SKIP_TYPES = new Set(['page_break', 'page-break', 'section_break', 'html', 'divider']);
@@ -139,26 +143,66 @@ class UnifiedFormSteps {
     return String(text ?? '').trim();
   }
 
-  static groupFieldsIntoPages(fields) {
+  /**
+   * Group fields into pages while tracking which page break opened each page.
+   * Rules (canvas order is always respected):
+   * - A page break closes the current page and opens a new one attributed to that break.
+   * - A Service Selector / Summary always begins its OWN dedicated page.
+   * - When a page break sits directly before a Service Selector (empty break-page), that
+   *   empty page is preserved so the break's step appears BEFORE the service step.
+   * Returns an array of { fields, pageBreak } entries.
+   */
+  static groupFieldsIntoPagesWithMeta(fields) {
     const pages = [];
-    let current = [];
+    let currentFields = [];
+    let currentBreak = null;
+    let sawBreakSincePush = false;
+
+    const startsOwnPage = (field) =>
+      UnifiedFormSteps.isServiceLayoutField(field) ||
+      UnifiedFormSteps.isFormSummaryField(field);
+
+    const commit = () => {
+      pages.push({ fields: currentFields, pageBreak: currentBreak });
+      currentFields = [];
+      currentBreak = null;
+    };
 
     for (const field of fields || []) {
       if (UnifiedFormSteps.isPageBreak(field)) {
-        if (current.length) {
-          pages.push(current);
-          current = [];
+        if (currentFields.length) {
+          commit();
         }
+        currentBreak = field;
+        sawBreakSincePush = true;
         continue;
       }
-      current.push(field);
+
+      if (startsOwnPage(field)) {
+        if (currentFields.length) {
+          commit();
+        } else if (sawBreakSincePush && pages.length > 0) {
+          // Page break directly precedes this service/summary → keep the break's empty page.
+          commit();
+        }
+        currentFields.push(field);
+        sawBreakSincePush = false;
+        continue;
+      }
+
+      currentFields.push(field);
+      sawBreakSincePush = false;
     }
 
-    if (current.length || !pages.length) {
-      pages.push(current);
+    if (currentFields.length || !pages.length) {
+      commit();
     }
 
     return pages;
+  }
+
+  static groupFieldsIntoPages(fields) {
+    return UnifiedFormSteps.groupFieldsIntoPagesWithMeta(fields).map((page) => page.fields);
   }
 
   static getFirstFieldLabelForPage(pageFields) {
@@ -180,17 +224,43 @@ class UnifiedFormSteps {
     return (fields || []).filter((field) => UnifiedFormSteps.isPageBreak(field));
   }
 
-  static buildStepLabelsFromPages(pages, pageBreaks = []) {
-    const pageCount = Math.max(1, pages.length);
+  /**
+   * Title resolution for every navigation step: custom Step Title (if not empty)
+   * -> field Label -> existing fallback.
+   *   - Middle steps: page break `step_title` -> first field label -> `Step N`.
+   *   - Final/summary step: form_summary `stepTitle` -> `Final Quote`.
+   *   - First step: `Getting Started` (no custom title source), matching the admin builder.
+   */
+  static buildStepLabelsFromPages(pagesMeta = []) {
+    const pageCount = Math.max(1, pagesMeta.length);
 
-    return pages.map((pageFields, index) => {
+    return pagesMeta.map((page, index) => {
+      const pageFields = page?.fields || [];
+
       if (index === 0) {
         return UnifiedFormSteps.STEP_LABEL_FIRST;
       }
+
+      // Title is resolved from the page break that OPENED this page (not a positional
+      // guess), so empty/synthetic pages never shift titles onto the wrong step.
+      const customTitle = String(page?.pageBreak?.step_title || '').trim();
+
       if (index === pageCount - 1) {
-        return UnifiedFormSteps.STEP_LABEL_LAST;
+        const summaryField = pageFields.find((field) => field?.type === 'form_summary');
+        if (summaryField) {
+          const summaryTitle = String(summaryField.stepTitle || '').trim();
+          return summaryTitle || UnifiedFormSteps.STEP_LABEL_LAST;
+        }
+        if (customTitle) {
+          return customTitle;
+        }
+        return (
+          UnifiedFormSteps.formatStepLabel(
+            UnifiedFormSteps.getFirstFieldLabelForPage(pageFields)
+          ) || UnifiedFormSteps.STEP_LABEL_LAST
+        );
       }
-      const customTitle = String(pageBreaks[index - 1]?.step_title || '').trim();
+
       if (customTitle) {
         return customTitle;
       }
@@ -201,13 +271,12 @@ class UnifiedFormSteps {
   }
 
   static buildFormPageMeta(fields) {
-    const pages = UnifiedFormSteps.groupFieldsIntoPages(fields);
-    const pageBreaks = UnifiedFormSteps.getPageBreaksInOrder(fields);
-    const labels = UnifiedFormSteps.buildStepLabelsFromPages(pages, pageBreaks);
+    const pagesMeta = UnifiedFormSteps.groupFieldsIntoPagesWithMeta(fields);
+    const labels = UnifiedFormSteps.buildStepLabelsFromPages(pagesMeta);
     const fieldIdToPage = new Map();
 
-    pages.forEach((pageFields, pageIndex) => {
-      pageFields.forEach((field) => {
+    pagesMeta.forEach((page, pageIndex) => {
+      (page.fields || []).forEach((field) => {
         if (field?.id) {
           fieldIdToPage.set(field.id, pageIndex);
         }
@@ -479,6 +548,11 @@ class UnifiedFormSteps {
 
   static resolveFormPageIndexForTokens(tokens, fieldIdToPage) {
     for (const token of tokens || []) {
+      // An empty page (page break directly before a service) sits on the page
+      // immediately before that service's page.
+      if (token.type === 'empty_page' && token.fieldId && fieldIdToPage.has(token.fieldId)) {
+        return Math.max(0, fieldIdToPage.get(token.fieldId) - 1);
+      }
       if (token.type === 'field' && token.fieldId && fieldIdToPage.has(token.fieldId)) {
         return fieldIdToPage.get(token.fieldId);
       }
@@ -644,9 +718,21 @@ class UnifiedFormSteps {
       }
 
       if (!seenService) {
+        // Summary always starts its own step even without a preceding page break.
+        if (
+          UnifiedFormSteps.isFormSummaryField(field) &&
+          preServiceFields.some((item) => item.type === 'field') &&
+          preServiceFields[preServiceFields.length - 1]?.type !== 'page_break'
+        ) {
+          preServiceFields.push({ type: 'page_break', source: 'summary' });
+        }
         preServiceFields.push({ type: 'field', fieldId: field.id, field });
       } else if (afterLastService && UnifiedFormSteps.isQueueableFormField(field)) {
         // Only fields AFTER the final Service Selector are queued as post-service fields.
+        // Summary always begins its own post-service group (its own dedicated page).
+        if (UnifiedFormSteps.isFormSummaryField(field) && postServiceFields.length) {
+          postServiceFields[postServiceFields.length - 1].pageBreakAfter = true;
+        }
         postServiceFields.push({
           type: 'field',
           fieldId: field.id,
@@ -686,12 +772,16 @@ class UnifiedFormSteps {
     (serviceFields || []).forEach((serviceField) => {
       const structure = serviceField.enhancedServiceStructure || serviceField.serviceStructure || [];
       const hasPriorContent = tokens.some(
-        (t) => t.type === 'field' || t.type === 'service_categories'
+        (t) => t.type === 'field' || t.type === 'service_categories' || t.type === 'empty_page'
       );
       const lastToken = tokens[tokens.length - 1];
-      const needsImplicitBreak = hasPriorContent && lastToken?.type !== 'page_break';
 
-      if (needsImplicitBreak) {
+      if (lastToken?.type === 'page_break') {
+        // A page break sits directly before this Service Selector. The break owns its own
+        // (empty) page/step in canvas order; the service then starts on the next step.
+        tokens.push({ type: 'empty_page', fieldId: serviceField.id });
+        tokens.push({ type: 'page_break', source: 'implicit_before_service', fieldId: serviceField.id });
+      } else if (hasPriorContent) {
         tokens.push({ type: 'page_break', source: 'implicit_before_service', fieldId: serviceField.id });
       }
 
@@ -981,7 +1071,9 @@ class UnifiedFormSteps {
 
     return {
       container,
-      labels: navSteps.map((step) => step.label),
+      labels: navSteps.map((step, i) =>
+        i === 0 ? this.resolveServiceRootLabel(activeId, step.label) : step.label
+      ),
       activeIndex: this.progressive.getCascadeNavigationActiveIndex(container),
       navSteps,
     };
@@ -1038,9 +1130,37 @@ class UnifiedFormSteps {
     }
   }
 
+  showStepThenCascade(stepIndex, fieldId, cascadeNavIndex) {
+    if (this.currentStep !== stepIndex) {
+      this.showStep(stepIndex);
+    }
+
+    const container = this.progressive?.getServiceContainer(fieldId);
+    if (container && this.progressive) {
+      this.progressive.showPageByNavigationIndex(container, cascadeNavIndex);
+      this.syncCascadeProgressFromService(container);
+      this.updateNavigationButtons();
+    }
+  }
+
   navigateToProgressIndex(displayIndex) {
     const state = this.getProgressDisplayState();
     if (displayIndex > state.activeIndex) return;
+
+    if (state.isMultiService && Array.isArray(state.nodes)) {
+      const node = state.nodes[displayIndex];
+      if (!node) return;
+      if (node.serviceFieldId) {
+        const stepIndex = this.getStepIndexForServiceField(node.serviceFieldId);
+        if (stepIndex >= 0) {
+          this.showStepThenCascade(stepIndex, node.serviceFieldId, node.cascadeNavIndex || 0);
+        }
+      } else if (node.formPageIndex != null) {
+        const targetUnified = this.findUnifiedStepIndexForFormPage(node.formPageIndex);
+        if (targetUnified >= 0) this.showStep(targetUnified);
+      }
+      return;
+    }
 
     if (state.cascade && state.servicePageIndex >= 0) {
       const { servicePageIndex, cascade } = state;
@@ -1070,7 +1190,172 @@ class UnifiedFormSteps {
     }
   }
 
+  isMultiServiceMode() {
+    return this.getAllServiceFieldIds().length > 1;
+  }
+
+  /**
+   * Service Selector root step title: custom Step Title -> field Label -> cascade default.
+   * (Service fields have no dedicated step-title input today, but `step_title` is honored
+   * if present so the rule is uniform across all step types.)
+   */
+  resolveServiceRootLabel(fieldId, cascadeRootLabel) {
+    const field = (this.fields || []).find((f) => f.id === fieldId);
+    const custom = String(field?.step_title || '').trim();
+    if (custom) return UnifiedFormSteps.formatStepLabel(custom);
+    const label = String(field?.label || '').trim();
+    if (label) return UnifiedFormSteps.formatStepLabel(label);
+    return cascadeRootLabel || 'Service';
+  }
+
+  getStepIndexForServiceField(fieldId) {
+    return this.steps.findIndex((step) =>
+      step.tokens?.some(
+        (token) =>
+          (token.type === 'service_categories' ||
+            token.type === 'service_options_level' ||
+            token.type === 'field') &&
+          token.fieldId === fieldId
+      )
+    );
+  }
+
+  /**
+   * MULTI-SERVICE NAVIGATION MODEL.
+   * Uses the form-page backbone (so every step — including not-yet-reached ones like the
+   * Final Quote — is visible up front), but the page slot occupied by Service Selectors is
+   * expanded so EACH selector owns its own permanent root node plus its revealed child
+   * steps. Nodes are never reused across selectors; completed selectors keep their child
+   * nodes visible with the existing completed styling.
+   */
+  buildMultiServiceNavModel() {
+    const baseLabels = this.formStepLabels || [];
+    const pageCount = Math.max(baseLabels.length, this.formPageStepCount || 0, 1);
+
+    const servicesByPage = new Map();
+    this.getAllServiceFieldIds().forEach((fieldId) => {
+      const page = this.fieldIdToPage?.get(fieldId);
+      const key = page == null ? -1 : page;
+      if (!servicesByPage.has(key)) servicesByPage.set(key, []);
+      servicesByPage.get(key).push(fieldId);
+    });
+
+    const nodes = [];
+
+    const pushServiceNodes = (fieldId) => {
+      const container = this.progressive?.getServiceContainer(fieldId);
+      const cascadeSteps = container
+        ? this.progressive.getCascadeNavigationSteps(container)
+        : [];
+
+      if (cascadeSteps.length) {
+        cascadeSteps.forEach((cascadeStep, cascadeNavIndex) => {
+          const label =
+            cascadeNavIndex === 0
+              ? this.resolveServiceRootLabel(fieldId, cascadeStep.label)
+              : cascadeStep.label;
+          nodes.push({ label, serviceFieldId: fieldId, cascadeNavIndex });
+        });
+      } else {
+        nodes.push({
+          label: this.resolveServiceRootLabel(fieldId, null),
+          serviceFieldId: fieldId,
+          cascadeNavIndex: 0,
+        });
+      }
+    };
+
+    if (servicesByPage.has(-1)) {
+      servicesByPage.get(-1).forEach(pushServiceNodes);
+    }
+
+    for (let page = 0; page < pageCount; page++) {
+      if (servicesByPage.has(page)) {
+        servicesByPage.get(page).forEach(pushServiceNodes);
+      } else {
+        nodes.push({ label: baseLabels[page] || `Step ${page + 1}`, formPageIndex: page });
+      }
+    }
+
+    return {
+      nodes,
+      labels: nodes.map((n) => n.label),
+      activeIndex: this.resolveMultiServiceActiveIndex(nodes),
+    };
+  }
+
+  resolveMultiServiceActiveIndex(nodes) {
+    const step = this.steps[this.currentStep];
+    let activeServiceId = null;
+
+    if (step) {
+      const serviceToken = step.tokens.find(
+        (t) =>
+          (t.type === 'service_categories' || t.type === 'service_options_level') &&
+          this.isServiceFieldId(t.fieldId)
+      );
+      if (serviceToken) activeServiceId = serviceToken.fieldId;
+    }
+
+    if (activeServiceId) {
+      const container = this.progressive?.getServiceContainer(activeServiceId);
+      const cascadeIndex = container
+        ? this.progressive.getCascadeNavigationActiveIndex(container)
+        : 0;
+
+      const exact = nodes.findIndex(
+        (n) => n.serviceFieldId === activeServiceId && n.cascadeNavIndex === cascadeIndex
+      );
+      if (exact >= 0) return exact;
+
+      let lastOfService = -1;
+      nodes.forEach((n, i) => {
+        if (n.serviceFieldId === activeServiceId) lastOfService = i;
+      });
+      if (lastOfService >= 0) return lastOfService;
+    }
+
+    const page = this.getDisplayFormPageIndex();
+    const formMatch = nodes.findIndex((n) => !n.serviceFieldId && n.formPageIndex === page);
+    if (formMatch >= 0) return formMatch;
+
+    // Post-service fields (e.g. dropdowns) can live on a Service Selector's own page.
+    // Their page has no form node, so highlight that selector's last node instead of
+    // falling back to an earlier page (which caused later steps to light up "Step 4").
+    const serviceIdsOnPage = this.getAllServiceFieldIds().filter(
+      (id) => this.fieldIdToPage?.get(id) === page
+    );
+    if (serviceIdsOnPage.length) {
+      const targetId = serviceIdsOnPage[serviceIdsOnPage.length - 1];
+      let lastOfService = -1;
+      nodes.forEach((n, i) => {
+        if (n.serviceFieldId === targetId) lastOfService = i;
+      });
+      if (lastOfService >= 0) return lastOfService;
+    }
+
+    let best = 0;
+    nodes.forEach((n, i) => {
+      if (!n.serviceFieldId && n.formPageIndex != null && n.formPageIndex <= page) best = i;
+    });
+    return best;
+  }
+
   getProgressDisplayState() {
+    if (this.isMultiServiceMode()) {
+      const model = this.buildMultiServiceNavModel();
+      return {
+        displayCount: Math.max(model.labels.length, 1),
+        labels: model.labels,
+        activeIndex: model.activeIndex,
+        isCascadeMode: true,
+        isMultiService: true,
+        nodes: model.nodes,
+        cascade: null,
+        servicePageIndex: -1,
+      };
+    }
+
     const cascade = this.getServiceCascadeProgress();
     const servicePageIndex = this.getServiceFormPageIndex();
     const baseLabels = this.formStepLabels || [];
@@ -1515,6 +1800,13 @@ class UnifiedFormSteps {
     this.ensurePostServiceFields();
     if (!this.postServiceFields.length) return false;
 
+    // If another Service Selector step still lies ahead, advance to it first instead of
+    // revealing post-service fields. After navigating backwards with Previous, a later
+    // selector's completion state persists, so isServiceReadyForPostFields() can be true
+    // while the user is only at an earlier selector — without this guard the forward flow
+    // would skip the later selector entirely.
+    if (this.hasServiceStepAfterCurrent()) return false;
+
     const step = this.steps[this.currentStep];
     const currentStepHasPostService = step?.tokens?.some(
       (token) => token.type === 'field' && this.isPostServiceFieldId(token.fieldId)
@@ -1566,6 +1858,16 @@ class UnifiedFormSteps {
     return true;
   }
 
+  /** True when a Service Selector root step exists strictly after the current step. */
+  hasServiceStepAfterCurrent() {
+    for (let i = this.currentStep + 1; i < this.steps.length; i++) {
+      if (this.steps[i]?.tokens?.some((token) => token.type === 'service_categories')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   getServiceStepIndex() {
     return this.steps.findIndex((step) =>
       step.tokens?.some((token) => token.type === 'service_categories')
@@ -1584,6 +1886,13 @@ class UnifiedFormSteps {
   }
 
   shouldRewindServiceFlow(stepIndex, targetIndex = this.currentStep) {
+    // With multiple Service Selectors each owns a permanent navigation node; do not
+    // auto-rewind/reset the whole service flow, so completed selectors and their
+    // child steps stay visible when navigating backward.
+    if (this.isMultiServiceMode()) {
+      return false;
+    }
+
     const step = this.steps[stepIndex];
     if (!step?.tokens?.some((token) => token.type === 'service_categories')) {
       return false;
