@@ -154,7 +154,6 @@ if (!window.Quotemate["admin_forms_builder_form_builder_main"].quotemate_form_da
                                 </div>
                             </div>
                             <div class="form-navigation quotemate-form-builder__form-footer">
-                                <button type="button" class="btn btn-primary quotemate-form-builder__submit-btn">Get Quote</button>
                             </div>
                         </div>
                     </form>

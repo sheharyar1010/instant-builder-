@@ -490,7 +490,7 @@ $form_width_class = DesignHelper::get_width_class($form_design);
 /* Checkbox and Radio */
 .checkbox-wrapper, .radio-wrapper {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.75rem;
     padding: 0.5rem 0;
 }
@@ -501,16 +501,66 @@ $form_width_class = DesignHelper::get_width_class($form_design);
     gap: 0.5rem;
 }
 
+.checkbox-group--horizontal,
+.radio-group--horizontal {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.5rem 1rem;
+}
+
+.checkbox-group--horizontal .checkbox-wrapper,
+.radio-group--horizontal .radio-wrapper {
+    flex: 0 1 auto;
+    max-width: 100%;
+}
+
+@media (max-width: 576px) {
+    .checkbox-group--horizontal,
+    .radio-group--horizontal {
+        gap: 0.5rem;
+    }
+
+    .checkbox-group--horizontal .checkbox-wrapper,
+    .radio-group--horizontal .radio-wrapper {
+        flex: 1 1 100%;
+    }
+}
+
 .form-checkbox, .form-radio {
     width: 18px;
     height: 18px;
+    margin-top: 0.2rem;
+    flex-shrink: 0;
     accent-color: var(--qm-accent-color, #667eea);
 }
 
 .checkbox-label, .radio-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
     font-weight: 500;
     color: var(--qm-label-color, #495057);
     cursor: pointer;
+}
+
+.choice-option-label {
+    white-space: pre-line;
+}
+
+.choice-option-price {
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.choice-option-description {
+    display: block;
+    font-size: 0.875em;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--qm-text-muted, #6c757d);
+    white-space: pre-line;
 }
 
 /* Quote Total Display */

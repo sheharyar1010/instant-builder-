@@ -88,6 +88,13 @@ class FormDisplayController
                 QUOTEMATE_VERSION,
                 true
             );
+            wp_enqueue_script(
+                'quotemate-field-style',
+                QUOTEMATE_URL . 'public/js/quotemate-field-style.js',
+                [],
+                QUOTEMATE_VERSION,
+                true
+            );
         }
         // Check if any fields have conditional logic
         $has_conditional_logic = false;
@@ -158,7 +165,7 @@ class FormDisplayController
             wp_enqueue_script(
                 'quotemate-progressive-service-selector',
                 QUOTEMATE_URL . 'public/js/progressive-service-selector.js',
-                ['quotemate-text-format'],
+                ['quotemate-text-format', 'quotemate-field-style'],
                 time(), // Force cache bust for debugging
                 true
             );
@@ -343,10 +350,16 @@ class FormDisplayController
                         $field_value = sanitize_textarea_field($field_value);
                         break;
                     case 'select':
-                    case 'radio':
                         $field_value = sanitize_text_field($field_value);
                         // Validate against allowed options
                         if (!empty($field['options']) && !in_array($field_value, $field['options'])) {
+                            $field_value = '';
+                        }
+                        break;
+                    case 'radio':
+                        $field_value = sanitize_textarea_field($field_value);
+                        // Validate against allowed options
+                        if (!empty($field['options']) && !in_array($field_value, $field['options'], true)) {
                             $field_value = '';
                         }
                         break;

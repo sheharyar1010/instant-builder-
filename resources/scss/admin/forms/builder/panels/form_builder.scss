@@ -67,10 +67,43 @@
   margin: 8px 0;
 }
 
+.quotemate-form-field__options .choice-option-label {
+  white-space: pre-line;
+}
+
+.quotemate-form-field__options .choice-option-price {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.quotemate-form-field__options .choice-option-description {
+  display: block;
+  margin: 4px 0 0 24px;
+  font-size: 0.875em;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #6b7280;
+  white-space: pre-line;
+}
+
 .quotemate-form-field__options input[type="checkbox"],
 .quotemate-form-field__options input[type="radio"] {
   width: auto;
   margin-right: 8px;
+}
+
+.quotemate-form-field__options--horizontal {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 16px;
+}
+
+.quotemate-form-field__options--horizontal label {
+  margin: 0;
+  flex: 0 1 auto;
+  max-width: 100%;
 }
 
 .quotemate-form-builder {
@@ -1231,15 +1264,18 @@
 }
 
 /* Style tab - same as Advance */
-#field-settings-style .quotemate-form-properties--style {
+#field-settings-style .quotemate-form-properties--style,
+#service-embedded-field-settings-style .quotemate-form-properties--style {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-#field-settings-style .quotemate-form-properties__section {
+#field-settings-style .quotemate-form-properties__section,
+#service-embedded-field-settings-style .quotemate-form-properties__section {
   margin-bottom: 20px;
 }
 
-#field-settings-style .quotemate-form-properties__label {
+#field-settings-style .quotemate-form-properties__label,
+#service-embedded-field-settings-style .quotemate-form-properties__label {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1249,7 +1285,8 @@
   margin: 0 0 8px 0;
 }
 
-#field-settings-style .quotemate-form-properties__label-icon {
+#field-settings-style .quotemate-form-properties__label-icon,
+#service-embedded-field-settings-style .quotemate-form-properties__label-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1264,7 +1301,9 @@
 }
 
 #field-settings-style .quotemate-form-properties .quotemate-form-field__input,
-#field-settings-style .quotemate-form-properties input.quotemate-style-layout-input {
+#field-settings-style .quotemate-form-properties input.quotemate-style-layout-input,
+#service-embedded-field-settings-style .quotemate-form-properties .quotemate-form-field__input,
+#service-embedded-field-settings-style .quotemate-form-properties input.quotemate-style-layout-input {
   width: 100%;
   min-width: 0;
   padding: 10px 12px;
@@ -1287,7 +1326,8 @@
   }
 }
 
-#field-settings-style .quotemate-form-builder__advance-placeholder {
+#field-settings-style .quotemate-form-builder__advance-placeholder,
+#service-embedded-field-settings-style .quotemate-form-builder__advance-placeholder {
   margin: 0;
   font-size: 14px;
   color: #6b7280;
@@ -1574,7 +1614,9 @@
   box-sizing: border-box;
 }
 
-#field-settings-advance .quotemate-form-field__select {
+#field-settings-advance .quotemate-form-field__select,
+#service-embedded-field-settings .quotemate-form-field__select,
+#service-embedded-field-settings-style .quotemate-form-field__select {
   appearance: none;
   background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
   background-repeat: no-repeat;
@@ -1585,11 +1627,13 @@
 }
 
 /* Field Options / Properties Panel - Match reference style */
-#field-settings-content .quotemate-form-properties {
+#field-settings-content .quotemate-form-properties,
+#service-embedded-field-settings .quotemate-form-properties {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-#field-settings-content .quotemate-form-properties__field-type-title {
+#field-settings-content .quotemate-form-properties__field-type-title,
+#service-embedded-field-settings .quotemate-form-properties__field-type-title {
   font-size: 15px;
   font-weight: 700;
   color: #374151;
@@ -1598,11 +1642,13 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-#field-settings-content .quotemate-form-properties__section {
+#field-settings-content .quotemate-form-properties__section,
+#service-embedded-field-settings .quotemate-form-properties__section {
   margin-bottom: 20px;
 }
 
-#field-settings-content .quotemate-form-properties__label {
+#field-settings-content .quotemate-form-properties__label,
+#service-embedded-field-settings .quotemate-form-properties__label {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1612,7 +1658,8 @@
   margin: 0 0 8px 0;
 }
 
-#field-settings-content .quotemate-form-properties__label-icon {
+#field-settings-content .quotemate-form-properties__label-icon,
+#service-embedded-field-settings .quotemate-form-properties__label-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1626,7 +1673,8 @@
   cursor: help;
 }
 
-#field-settings-content .quotemate-form-properties .quotemate-form-field__input {
+#field-settings-content .quotemate-form-properties .quotemate-form-field__input,
+#service-embedded-field-settings .quotemate-form-properties .quotemate-form-field__input {
   width: 100%;
   padding: 10px 12px;
   font-size: 14px;
@@ -1648,9 +1696,29 @@
   }
 }
 
-#field-settings-content .quotemate-form-properties textarea.quotemate-form-field__input {
+#field-settings-content .quotemate-form-properties textarea.quotemate-form-field__input,
+#service-embedded-field-settings .quotemate-form-properties textarea.quotemate-form-field__input {
   min-height: 80px;
   resize: vertical;
+}
+
+#field-settings-content .quotemate-form-properties .quotemate-form-field__select,
+#service-embedded-field-settings .quotemate-form-properties .quotemate-form-field__select {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #374151;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+  }
 }
 
 #field-settings-content .quotemate-form-properties__toggle-row {
@@ -1749,6 +1817,29 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+#field-settings-content .quotemate-form-properties__choice--rich {
+  align-items: flex-start;
+}
+
+#field-settings-content .quotemate-form-properties__choice-fields {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#field-settings-content .quotemate-form-properties__choice-fields .quotemate-form-field__input {
+  width: 100%;
+  min-height: 52px;
+  resize: vertical;
+}
+
+#field-settings-content .quotemate-form-properties__choice--rich .quotemate-form-field__input[type="number"],
+#field-settings-content .quotemate-form-properties__choice--rich .quotemate-form-properties__remove-choice {
+  margin-top: 4px;
 }
 
 #field-settings-content .quotemate-form-properties__choice .quotemate-form-field__input,
@@ -2686,4 +2777,24 @@
 
 .quotemate-form-summary-preview__nav {
   margin-top: 20px;
-}
+}
+
+#field-settings-content .quotemate-form-properties__radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  margin-bottom: 10px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  input[type="radio"] {
+    margin: 0;
+    width: auto;
+  }
+}

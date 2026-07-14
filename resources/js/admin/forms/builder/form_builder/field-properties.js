@@ -1,5 +1,6 @@
 import { HEADING_LEVELS, getDefaultPageBreakButtonColor, getDefaultPageBreakPrevButtonColor } from './design-vars.js';
 import { HEADING_FORMAT_TAGS_HTML } from './heading-format.js';
+import { parseVirtualPageContentFieldId } from '../../../../shared/page-break-content-fields.js';
 
 export class FieldProperties {
   static FORM_SUMMARY_CURRENCIES = [
@@ -65,6 +66,102 @@ export class FieldProperties {
 
   constructor(formBuilder) {
     this.formBuilder = formBuilder;
+  }
+
+  getFieldDataForProperties(fieldId) {
+    if (this.formBuilder?.resolveFieldDataById) {
+      return this.formBuilder.resolveFieldDataById(fieldId);
+    }
+    if (this.formBuilder?.virtualFields?.[fieldId]) {
+      return this.formBuilder.virtualFields[fieldId];
+    }
+    return this.formBuilder.formData.fields.find((field) => field.id === fieldId);
+  }
+
+  isVirtualFieldId(fieldId) {
+    return String(fieldId || '').startsWith('__svc_pb_');
+  }
+
+  activateFieldSettingsTab() {
+    const fieldSettingsTab = document.querySelector('.quotemate-form-builder__tab[data-tab="field-settings"]');
+    if (!fieldSettingsTab) return;
+
+    document.querySelectorAll('.quotemate-form-builder__tab').forEach((tab) => {
+      tab.classList.remove('active');
+    });
+    fieldSettingsTab.classList.add('active');
+
+    document.querySelectorAll('.quotemate-form-builder__tab-content').forEach((content) => {
+      content.classList.remove('active');
+    });
+
+    const fieldSettingsContent = document.getElementById('field-settings-content');
+    if (fieldSettingsContent) {
+      fieldSettingsContent.classList.add('active');
+    }
+  }
+
+  showEmbeddedVirtualProperties(virtualFieldId, titleLabel) {
+    const fieldData = this.getFieldDataForProperties(virtualFieldId);
+    if (!fieldData) return;
+
+    this.formBuilder.virtualFieldMeta = this.formBuilder.virtualFieldMeta || {};
+    this.formBuilder.virtualFieldMeta[virtualFieldId] = { title: titleLabel };
+
+    const root = document.getElementById('service-embedded-field-settings');
+    if (!root) return;
+
+    const fieldType = fieldData.type;
+    const titleEl = root.querySelector('.service-embedded-field-settings__title');
+    const generalContent = root.querySelector('.service-embedded-field-settings__general');
+    const styleContent = root.querySelector('.service-embedded-field-settings__style');
+
+    if (titleEl) titleEl.textContent = titleLabel;
+    if (generalContent) {
+      generalContent.innerHTML = this.generatePropertiesHtml(fieldType, virtualFieldId);
+    }
+    if (styleContent) {
+      styleContent.innerHTML = this.generateStylePropertiesHtml(fieldType, fieldData, virtualFieldId);
+    }
+
+    this.attachPropertyEventListeners();
+    this.formBuilder?.enhancedServiceManager?.switchEmbeddedFieldSettingsSubTab?.('general');
+  }
+
+  refreshVirtualPropertiesPanel(virtualFieldId, titleLabel) {
+    const embedded = document.getElementById('service-embedded-field-settings');
+    if (embedded && !embedded.hasAttribute('hidden')) {
+      this.showEmbeddedVirtualProperties(virtualFieldId, titleLabel);
+      return;
+    }
+
+    this.showVirtualProperties(virtualFieldId, titleLabel);
+  }
+
+  showVirtualProperties(virtualFieldId, titleLabel) {
+    const fieldData = this.getFieldDataForProperties(virtualFieldId);
+    if (!fieldData) return;
+
+    this.formBuilder.virtualFieldMeta = this.formBuilder.virtualFieldMeta || {};
+    this.formBuilder.virtualFieldMeta[virtualFieldId] = { title: titleLabel };
+
+    const propertiesContent = document.querySelector('.quotemate-form-builder__properties-content');
+    const advanceContent = document.querySelector('.quotemate-form-builder__advance-properties-content');
+    const fieldType = fieldData.type;
+
+    if (propertiesContent) {
+      propertiesContent.innerHTML = this.generatePropertiesHtml(fieldType, virtualFieldId);
+    }
+    if (advanceContent) {
+      advanceContent.innerHTML = this.generateAdvancePropertiesHtml(fieldType, fieldData, virtualFieldId);
+    }
+    const styleContent = document.querySelector('.quotemate-form-builder__style-properties-content');
+    if (styleContent) {
+      styleContent.innerHTML = this.generateStylePropertiesHtml(fieldType, fieldData, virtualFieldId);
+    }
+
+    this.activateFieldSettingsTab();
+    this.attachPropertyEventListeners();
   }
 
   getPageBreakIndex(fieldId) {
@@ -142,7 +239,7 @@ export class FieldProperties {
     const propertiesContent = document.querySelector(".quotemate-form-builder__properties-content");
     const advanceContent = document.querySelector(".quotemate-form-builder__advance-properties-content");
     const fieldId = fieldElement.dataset.fieldId;
-    const fieldData = this.formBuilder.formData.fields.find((f) => f.id === fieldId);
+    const fieldData = this.getFieldDataForProperties(fieldId);
     const fieldType = fieldElement.dataset.fieldType || fieldData?.type;
 
     // General tab content
@@ -161,39 +258,18 @@ export class FieldProperties {
     }
     
     // Activate field settings tab
-    const fieldSettingsTab = document.querySelector('.quotemate-form-builder__tab[data-tab="field-settings"]');
-    if (fieldSettingsTab) {
-      // Remove active class from all tabs
-      document.querySelectorAll('.quotemate-form-builder__tab').forEach(tab => {
-        tab.classList.remove('active');
-      });
-      
-      // Add active class to field settings tab
-      fieldSettingsTab.classList.add('active');
-      
-      // Hide all tab content
-      document.querySelectorAll('.quotemate-form-builder__tab-content').forEach(content => {
-        content.classList.remove('active');
-      });
-      
-      // Show field settings content
-      const fieldSettingsContent = document.getElementById('field-settings-content');
-      if (fieldSettingsContent) {
-        fieldSettingsContent.classList.add('active');
-      }
-    }
+    this.activateFieldSettingsTab();
 
     // Attach event listeners to the properties
     this.attachPropertyEventListeners();
   }
 
   generatePropertiesHtml(fieldType, fieldId) {
-    const fieldData = this.formBuilder.formData.fields.find(
-      (f) => f.id === fieldId
-    );
+    const fieldData = this.getFieldDataForProperties(fieldId);
 
     const fieldTypeLabel = this.formBuilder.getFieldLabel ? this.formBuilder.getFieldLabel(fieldType) : fieldType.replace(/_/g, " ");
-    const fieldTypeTitle = `${fieldTypeLabel} (ID #${(fieldId || "").replace("field_", "")})`;
+    const virtualTitle = this.formBuilder.virtualFieldMeta?.[fieldId]?.title;
+    const fieldTypeTitle = virtualTitle || `${fieldTypeLabel} (ID #${(fieldId || "").replace("field_", "")})`;
 
     if (fieldType === 'heading') {
       const level = fieldData?.heading_level || 'h2';
@@ -220,7 +296,7 @@ export class FieldProperties {
             <textarea class="quotemate-form-field__input" rows="4" placeholder="Heading" data-property="label" data-field-id="${fieldId}">${headingText}</textarea>
           </div>
           <div class="quotemate-form-properties__section">
-            <label class="quotemate-form-properties__label">Heading Level <span class="quotemate-form-properties__label-icon" title="HTML heading tag (H1–H5)">?</span></label>
+            <label class="quotemate-form-properties__label">Heading Level <span class="quotemate-form-properties__label-icon" title="HTML heading tag (H1–H6)">?</span></label>
             <select class="quotemate-form-field__input quotemate-form-field__select" data-property="heading_level" data-field-id="${fieldId}">
               ${levelOptions}
             </select>
@@ -236,6 +312,17 @@ export class FieldProperties {
     }
 
     if (fieldType === 'paragraph') {
+      const parsedVirtual = parseVirtualPageContentFieldId(fieldId);
+      const isPageBreakDescription = parsedVirtual?.contentKey === 'description';
+      const align = fieldData?.heading_align || 'center';
+      const alignSection = isPageBreakDescription ? `
+          <div class="quotemate-form-properties__section">
+            <label class="quotemate-form-properties__label">Alignment <span class="quotemate-form-properties__label-icon" title="Horizontal alignment of the description text">?</span></label>
+            <select class="quotemate-form-field__input quotemate-form-field__select" data-property="heading_align" data-field-id="${fieldId}">
+              ${this.buildPageBreakAlignOptions(align)}
+            </select>
+          </div>
+      ` : '';
       return `
         <div class="quotemate-form-properties">
           <div class="quotemate-form-properties__field-type-title">${fieldTypeTitle}</div>
@@ -243,6 +330,7 @@ export class FieldProperties {
             <label class="quotemate-form-properties__label">Paragraph Content <span class="quotemate-form-properties__label-icon" title="Text displayed on the form">?</span></label>
             <textarea class="quotemate-form-field__input" rows="5" placeholder="Enter paragraph text" data-property="paragraph_content" data-field-id="${fieldId}">${fieldData?.paragraph_content || ''}</textarea>
           </div>
+          ${alignSection}
         </div>
       `;
     }
@@ -369,6 +457,37 @@ export class FieldProperties {
         !!fieldData?.addPrice,
         'addPrice',
         fieldId
+      );
+    }
+
+    if (['radio', 'checkbox'].includes(fieldType) && fieldData?.addPrice) {
+      baseHtml += this.advanceSectionToggle(
+        'Show Price',
+        'Show option prices beside labels. Pricing and totals still apply when hidden.',
+        fieldData?.showPrice !== false,
+        'showPrice',
+        fieldId
+      );
+    }
+
+    if (['radio', 'checkbox'].includes(fieldType)) {
+      baseHtml += this.advanceSectionToggle(
+        'Add Description',
+        'Add an optional description under each option label',
+        !!fieldData?.addDescription,
+        'addDescription',
+        fieldId
+      );
+      baseHtml += this.advanceSectionSelect(
+        'Option Layout',
+        'Arrange options vertically or side-by-side',
+        fieldData?.optionLayout === 'horizontal' ? 'horizontal' : 'vertical',
+        'optionLayout',
+        fieldId,
+        [
+          { value: 'vertical', label: 'Vertical' },
+          { value: 'horizontal', label: 'Horizontal' },
+        ]
       );
     }
 
@@ -966,6 +1085,14 @@ export class FieldProperties {
     return html;
   }
 
+  escapeChoiceHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   generateStandardChoicesSection(fieldData, fieldId) {
     const options = fieldData?.options || [];
     const addPrice = !!fieldData?.addPrice;
@@ -983,7 +1110,51 @@ export class FieldProperties {
                 : '';
               return `
                 <div class="quotemate-form-properties__choice${addPrice ? ' quotemate-form-properties__choice--priced' : ''}">
-                  <input type="text" class="quotemate-form-field__input" value="${option}" data-choice-index="${index}" data-field-id="${fieldId}">
+                  <input type="text" class="quotemate-form-field__input" value="${this.escapeChoiceHtml(option)}" data-choice-index="${index}" data-field-id="${fieldId}">
+                  ${priceInput}
+                  <button type="button" class="quotemate-form-properties__remove-choice" data-remove-choice="${index}" data-field-id="${fieldId}">×</button>
+                </div>
+              `;
+            })
+            .join('')}
+        </div>
+        <button type="button" class="quotemate-btn quotemate-btn--secondary" data-add-choice data-field-id="${fieldId}">Add Choice</button>
+      </div>
+    `;
+  }
+
+  generateRichChoicesSection(fieldData, fieldId) {
+    const options = fieldData?.options || [];
+    const addPrice = !!fieldData?.addPrice;
+    const addDescription = !!fieldData?.addDescription;
+    const optionPrices = fieldData?.optionPrices || {};
+    const optionDescriptions = fieldData?.optionDescriptions || {};
+
+    return `
+      <div class="quotemate-form-properties__section">
+        <label class="quotemate-form-properties__label">Choices</label>
+        <div class="quotemate-form-properties__choices">
+          ${options
+            .map((option, index) => {
+              const label = typeof option === 'string' ? option : String(option ?? '');
+              const description = optionDescriptions[label] ?? '';
+              const price = optionPrices[label] ?? '';
+              const descriptionInput = addDescription
+                ? `<textarea class="quotemate-form-field__input quotemate-form-properties__choice-description" rows="2" placeholder="Option description (optional)" data-choice-description="${index}" data-field-id="${fieldId}">${this.escapeChoiceHtml(description)}</textarea>`
+                : '';
+              const priceInput = addPrice
+                ? `<input type="number" class="quotemate-form-field__input" value="${price}" placeholder="Price" min="0" step="0.01" data-choice-price="${index}" data-field-id="${fieldId}">`
+                : '';
+              const choiceMods = [
+                addDescription ? 'quotemate-form-properties__choice--described' : '',
+                addPrice ? 'quotemate-form-properties__choice--priced' : '',
+              ].filter(Boolean).join(' ');
+              return `
+                <div class="quotemate-form-properties__choice quotemate-form-properties__choice--rich${choiceMods ? ` ${choiceMods}` : ''}">
+                  <div class="quotemate-form-properties__choice-fields">
+                    <textarea class="quotemate-form-field__input" rows="2" placeholder="Option label" data-choice-index="${index}" data-field-id="${fieldId}">${this.escapeChoiceHtml(label)}</textarea>
+                    ${descriptionInput}
+                  </div>
                   ${priceInput}
                   <button type="button" class="quotemate-form-properties__remove-choice" data-remove-choice="${index}" data-field-id="${fieldId}">×</button>
                 </div>
@@ -1001,9 +1172,12 @@ export class FieldProperties {
 
     switch (fieldType) {
       case "select":
+        html = this.generateStandardChoicesSection(fieldData, fieldId);
+        break;
+
       case "radio":
       case "checkbox":
-        html = this.generateStandardChoicesSection(fieldData, fieldId);
+        html = this.generateRichChoicesSection(fieldData, fieldId);
         break;
 
       case "project_type":
@@ -1181,7 +1355,7 @@ export class FieldProperties {
 
   generateConditionalLogicSection(fieldData, fieldId) {
     // Ensure we get the conditional logic data from the actual field data in formData
-    const actualFieldData = this.formBuilder.formData.fields.find(f => f.id === fieldId);
+    const actualFieldData = this.getFieldDataForProperties(fieldId);
     
 
     
@@ -1356,7 +1530,7 @@ export class FieldProperties {
 
   generateConditionalLogicModal(fieldData, fieldId) {
     // Get the most up-to-date field data from the form builder
-    const actualFieldData = this.formBuilder.formData.fields.find(f => f.id === fieldId);
+    const actualFieldData = this.getFieldDataForProperties(fieldId);
     const conditions = actualFieldData && actualFieldData.conditionalLogic ? actualFieldData.conditionalLogic : {
       enabled: false,
       logicType: 'show',
@@ -1496,40 +1670,8 @@ export class FieldProperties {
   }
 
   attachPropertyEventListeners() {
-    // Property changes
-    document.querySelectorAll("[data-property]").forEach((input) => {
-      const eventType = (input.tagName === 'INPUT' && (input.type === 'checkbox' || input.type === 'radio')) || input.tagName === 'SELECT' ? 'change' : 'input';
-      input.addEventListener(eventType, (e) => {
-        const fieldId = e.target.dataset.fieldId;
-        const property = e.target.dataset.property;
-        const value =
-          e.target.type === "checkbox" ? e.target.checked : e.target.value;
-        this.formBuilder.updateFieldProperty(fieldId, property, value);
-        // Keep color swatch in sync when user types hex in panel
-        if (input.classList.contains('quotemate-color-input') && value && /^#[0-9A-Fa-f]{3,8}$/.test(String(value).trim())) {
-          const section = input.closest('.quotemate-color-field');
-          const swatch = section && section.querySelector('.quotemate-color-swatch');
-          if (swatch) swatch.style.backgroundColor = String(value).trim();
-        }
-      });
-    });
-
-    // Choice management
-    document.querySelectorAll("[data-choice-index]").forEach((input) => {
-      input.addEventListener("change", (e) => {
-        const fieldId = e.target.dataset.fieldId;
-        const index = parseInt(e.target.dataset.choiceIndex);
-        this.formBuilder.updateFieldChoice(fieldId, index, e.target.value);
-      });
-    });
-
-    document.querySelectorAll("[data-choice-price]").forEach((input) => {
-      input.addEventListener("change", (e) => {
-        const fieldId = e.target.dataset.fieldId;
-        const index = parseInt(e.target.dataset.choicePrice, 10);
-        this.formBuilder.updateFieldChoicePrice(fieldId, index, e.target.value);
-      });
-    });
+    // [data-property] inputs and choice edits ([data-choice-*]) are handled by
+    // initFieldPropertyDelegation() on #field-settings-content (input + change → live canvas).
 
     document.querySelectorAll("[data-remove-choice]").forEach((btn) => {
       btn.addEventListener("click", (e) => {
@@ -1602,7 +1744,7 @@ export class FieldProperties {
 
   openConditionalLogicModal(fieldId) {
     // Get the most up-to-date field data from the form builder
-    const fieldData = this.formBuilder.formData.fields.find(f => f.id === fieldId);
+    const fieldData = this.getFieldDataForProperties(fieldId);
     const modalHtml = this.generateConditionalLogicModal(fieldData, fieldId);
     
     // Remove existing modal if any
@@ -1709,6 +1851,9 @@ export class FieldProperties {
     const fieldElement = document.querySelector(`[data-field-id="${fieldId}"]`);
     if (fieldElement) {
       this.showProperties(fieldElement);
+    } else if (this.isVirtualFieldId(fieldId)) {
+      const title = this.formBuilder.virtualFieldMeta?.[fieldId]?.title || 'Page Content';
+      this.refreshVirtualPropertiesPanel(fieldId, title);
     }
     
     this.closeConditionalLogicModal(fieldId);
@@ -1719,7 +1864,7 @@ export class FieldProperties {
 
   updateRuleConnectors(fieldId) {
     const modal = document.getElementById(`conditional-modal-${fieldId}`);
-    const fieldData = this.formBuilder.formData.fields.find(f => f.id === fieldId);
+    const fieldData = this.getFieldDataForProperties(fieldId);
     const operator = fieldData.conditionalLogic?.operator || 'all';
     
     const connectors = modal.querySelectorAll('.quotemate-conditional-rule-connector');
@@ -1789,7 +1934,7 @@ export class FieldProperties {
   }
 
   addConditionalRule(fieldId) {
-    const fieldData = this.formBuilder.formData.fields.find(f => f.id === fieldId);
+    const fieldData = this.getFieldDataForProperties(fieldId);
     if (!fieldData.conditionalLogic) {
       fieldData.conditionalLogic = {
         enabled: true,
@@ -1811,7 +1956,7 @@ export class FieldProperties {
   }
 
   removeConditionalRule(fieldId, ruleIndex) {
-    const fieldData = this.formBuilder.formData.fields.find(f => f.id === fieldId);
+    const fieldData = this.getFieldDataForProperties(fieldId);
     if (fieldData.conditionalLogic && fieldData.conditionalLogic.conditions) {
       fieldData.conditionalLogic.conditions.splice(ruleIndex, 1);
       this.formBuilder.updateFormData();
@@ -1820,7 +1965,7 @@ export class FieldProperties {
   }
 
   updateConditionalRule(fieldId, ruleIndex, property, value) {
-    const fieldData = this.formBuilder.formData.fields.find(f => f.id === fieldId);
+    const fieldData = this.getFieldDataForProperties(fieldId);
     if (fieldData.conditionalLogic && fieldData.conditionalLogic.conditions[ruleIndex]) {
       fieldData.conditionalLogic.conditions[ruleIndex][property] = value;
       this.formBuilder.updateFormData();
@@ -1831,7 +1976,7 @@ export class FieldProperties {
   }
 
   updateModalConditionalValueInput(fieldId, ruleIndex) {
-    const fieldData = this.formBuilder.formData.fields.find(f => f.id === fieldId);
+    const fieldData = this.getFieldDataForProperties(fieldId);
     const condition = fieldData.conditionalLogic.conditions[ruleIndex];
     const availableFields = this.getAvailableFields(fieldId);
     
@@ -1850,7 +1995,7 @@ export class FieldProperties {
     if (!modal) return;
     
     // Get the most up-to-date field data
-    const fieldData = this.formBuilder.formData.fields.find(f => f.id === fieldId);
+    const fieldData = this.getFieldDataForProperties(fieldId);
     const conditions = fieldData && fieldData.conditionalLogic ? fieldData.conditionalLogic.conditions || [] : [];
     const availableFields = this.getAvailableFields(fieldId);
     
@@ -1889,7 +2034,7 @@ export class FieldProperties {
 
     const defaultPrevColor = getDefaultPageBreakPrevButtonColor();
     const defaultNextColor = getDefaultPageBreakButtonColor();
-    const buttonOrder = d('summaryButtonOrder', 'prev_submit');
+    const buttonOrder = d('summaryButtonOrder', 'submit_prev');
 
     return `
       <div class="quotemate-form-properties__section">
@@ -2025,16 +2170,16 @@ export class FieldProperties {
       <div class="quotemate-form-properties__section">
         <label class="quotemate-form-properties__label">Button Order</label>
         <label class="quotemate-form-properties__radio">
-          <input type="radio" name="summaryButtonOrder_${fieldId}" value="prev_submit"
-            ${buttonOrder !== 'submit_prev' ? 'checked' : ''}
+          <input type="radio" name="summaryButtonOrder_${fieldId}" value="submit_prev"
+            ${buttonOrder !== 'prev_submit' ? 'checked' : ''}
             data-property="summaryButtonOrder" data-field-id="${fieldId}">
-          Previous | Submit (Default)
+          Submit | Previous (Default)
         </label>
         <label class="quotemate-form-properties__radio">
-          <input type="radio" name="summaryButtonOrder_${fieldId}" value="submit_prev"
-            ${buttonOrder === 'submit_prev' ? 'checked' : ''}
+          <input type="radio" name="summaryButtonOrder_${fieldId}" value="prev_submit"
+            ${buttonOrder === 'prev_submit' ? 'checked' : ''}
             data-property="summaryButtonOrder" data-field-id="${fieldId}">
-          Submit | Previous
+          Previous | Submit
         </label>
       </div>
 

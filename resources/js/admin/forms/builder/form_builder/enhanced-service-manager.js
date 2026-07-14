@@ -2,11 +2,24 @@
  * Enhanced Service Configuration Manager
  * Supports unlimited nested hierarchies and dynamic pricing types with pricing tiers
  */
+import {
+  buildVirtualPageContentFieldId,
+  parseVirtualPageContentFieldId,
+  isVirtualPageContentFieldId,
+  isParentPageContentPath,
+  PARENT_PAGE_CONTENT_PATH,
+  ensureNodePageBreakFields,
+  clearNodePageBreakContentFields,
+  syncLegacyPageBreakStrings,
+  normalizeEnhancedStructurePageBreakFields,
+} from '../../../../shared/page-break-content-fields.js';
+
 export class EnhancedServiceManager {
   constructor(formBuilder) {
     this.formBuilder = formBuilder;
     this.currentFieldId = null;
     this.branchClipboard = null;
+    this.activePageContentSettingsKey = null;
 
     // Dynamic pricing types that users can configure
     this.defaultPricingTypes = [
@@ -104,6 +117,7 @@ export class EnhancedServiceManager {
       if (e.target.closest('.enhanced-service-modal-close')) {
         const isFooterGoBack = e.target.closest('.btn-secondary.enhanced-service-modal-close');
         if (isFooterGoBack && this.currentViewParentPath !== '') {
+          this.hideEmbeddedFieldSettingsPanel();
           this.currentViewParentPath = '';
           this.refreshModal(this.getFieldData(this.currentFieldId));
         } else {
@@ -142,6 +156,7 @@ export class EnhancedServiceManager {
       }
 
       if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-back-to-main-options]')) {
+        this.hideEmbeddedFieldSettingsPanel();
         this.currentViewParentPath = '';
         this.refreshModal(this.getFieldData(this.currentFieldId));
       }
@@ -191,6 +206,20 @@ export class EnhancedServiceManager {
         if (!button.disabled) {
           this.pasteBranch(button.dataset.servicePath);
         }
+      }
+
+      if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-page-content-field-settings]')) {
+        const button = e.target.closest('[data-page-content-field-settings]');
+        this.openPageContentFieldSettings(button.dataset.pageContentFieldSettings);
+      }
+
+      if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-back-to-service-structure]')) {
+        this.hideEmbeddedFieldSettingsPanel();
+      }
+
+      if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-embedded-sub-tab]')) {
+        const tabButton = e.target.closest('[data-embedded-sub-tab]');
+        this.switchEmbeddedFieldSettingsSubTab(tabButton.dataset.embeddedSubTab);
       }
 
       if (e.target.closest('.enhanced-service-config-modal') && e.target.closest('[data-save-enhanced-services]')) {
@@ -289,6 +318,7 @@ export class EnhancedServiceManager {
     }
 
     fieldData.enhancedServiceStructure = this.stripLegacyPageBreaks(fieldData.enhancedServiceStructure);
+    normalizeEnhancedStructurePageBreakFields(fieldData.enhancedServiceStructure);
 
     // If there are no categories yet, start with a single empty row
     if (fieldData.enhancedServiceStructure.length === 0) {
@@ -301,6 +331,7 @@ export class EnhancedServiceManager {
     }
 
     this.currentViewParentPath = '';
+    this.activePageContentSettingsKey = null;
 
     const modalHtml = this.generateServiceConfigModal(fieldData);
 
@@ -318,6 +349,116 @@ export class EnhancedServiceManager {
     requestAnimationFrame(() => {
       modal.classList.add('show');
     });
+    this.hideEmbeddedFieldSettingsPanel();
+    this.formBuilder?.ensureEmbeddedFieldSettingsDelegation?.();
+  }
+
+  getPageContentTarget(fieldData, servicePath) {
+    if (isParentPageContentPath(servicePath)) {
+      return fieldData || null;
+    }
+    return this.getServiceByPath(fieldData?.enhancedServiceStructure || [], servicePath);
+  }
+
+  generatePageContentSectionHtml({
+    servicePath,
+    heading = '',
+    description = '',
+    hidden = false,
+    parentSection = false,
+  } = {}) {
+    const hiddenAttr = hidden ? 'hidden' : '';
+    const parentClass = parentSection ? ' service-page-content-section--parent' : '';
+    const headingId = parentSection ? 'service-parent-page-break-heading-input' : 'service-page-break-heading-input';
+    const descriptionId = parentSection ? 'service-parent-page-break-description-input' : 'service-page-break-description-input';
+
+    if (parentSection) {
+      return `
+            <div class="service-page-content-section${parentClass}" ${hiddenAttr}>
+              <div class="service-options-label-input-wrap service-page-content-field-row">
+                <label for="${headingId}">Heading</label>
+                <div class="service-page-content-field-row__controls">
+                  <input
+                    id="${headingId}"
+                    type="text"
+                    class="service-input"
+                    placeholder="e.g. Fill out the form below to get your price quote instantly."
+                    value="${heading}"
+                    data-field="pageBreakHeading"
+                    data-service-path="${servicePath}">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-secondary service-page-content-field-settings-btn"
+                    data-page-content-field-settings="heading"
+                    title="Open heading field settings">
+                    Settings
+                  </button>
+                </div>
+              </div>
+              <div class="service-options-label-input-wrap service-page-content-field-row">
+                <label for="${descriptionId}">Description</label>
+                <div class="service-page-content-field-row__controls">
+                  <textarea
+                    id="${descriptionId}"
+                    class="service-input service-description-input"
+                    rows="2"
+                    placeholder="Optional description shown below the heading."
+                    data-field="pageBreakDescription"
+                    data-service-path="${servicePath}">${description}</textarea>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-secondary service-page-content-field-settings-btn"
+                    data-page-content-field-settings="description"
+                    title="Open description field settings">
+                    Settings
+                  </button>
+                </div>
+              </div>
+            </div>`;
+    }
+
+    return `
+            <div class="service-page-content-section${parentClass}" ${hiddenAttr}>
+              <div class="service-options-label-input-wrap service-page-content-field-row">
+                <div class="service-page-content-field-row__header">
+                  <label for="${headingId}">Heading</label>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-secondary service-page-content-field-settings-btn"
+                    data-page-content-field-settings="heading"
+                    title="Open heading field settings">
+                    Settings
+                  </button>
+                </div>
+                <input
+                  id="${headingId}"
+                  type="text"
+                  class="service-input service-label-input"
+                  placeholder="e.g. Fill out the form below to get your price quote instantly."
+                  value="${heading}"
+                  data-field="pageBreakHeading"
+                  data-service-path="${servicePath}">
+              </div>
+              <div class="service-options-label-input-wrap service-page-content-field-row">
+                <div class="service-page-content-field-row__header">
+                  <label for="${descriptionId}">Description</label>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-secondary service-page-content-field-settings-btn"
+                    data-page-content-field-settings="description"
+                    title="Open description field settings">
+                    Settings
+                  </button>
+                </div>
+                <textarea
+                  id="${descriptionId}"
+                  class="service-input service-description-input"
+                  rows="2"
+                  placeholder="Optional description shown below the heading."
+                  data-field="pageBreakDescription"
+                  data-service-path="${servicePath}">${description}</textarea>
+              </div>
+            </div>`;
   }
 
   generateServiceConfigModal(fieldData) {
@@ -325,6 +466,11 @@ export class EnhancedServiceManager {
     const customPricingTypes = fieldData?.customPricingTypes || [];
     const topLevelWithPaths = (services || []).map((s, i) => ({ service: s, path: String(i) })).filter(x => x.service.type !== 'page_break');
     const serviceLabel = fieldData?.serviceStructureLabel || '';
+    const parentPageBreakHeading = (fieldData?.pageBreakHeadingField?.label || fieldData?.pageBreakHeading || '').replace(/"/g, '&quot;');
+    const parentPageBreakDescription = (fieldData?.pageBreakDescriptionField?.paragraph_content || fieldData?.pageBreakDescription || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
     const maxDropdownsDesktop = Math.min(12, Math.max(1, parseInt(fieldData?.maxDropdownsPerPageDesktop, 10) || 3));
     const serviceMaxQuantity = parseInt(fieldData?.serviceMaxQuantity, 10) || '';
     const maxDropdownOptions = Array.from({ length: 12 }, (_, i) => i + 1)
@@ -341,12 +487,12 @@ export class EnhancedServiceManager {
           
           <div class="enhanced-service-modal-body">
             <div class="enhanced-service-tabs">
-              <button type="button" class="tab-button active" data-tab="general">General</button>
-              <button type="button" class="tab-button" data-tab="structure">Structure</button>
+              <button type="button" class="tab-button" data-tab="general">General</button>
+              <button type="button" class="tab-button active" data-tab="structure">Structure</button>
               <button type="button" class="tab-button" data-tab="pricing-types">Pricing Types</button>
             </div>
 
-            <div class="tab-panel active" data-panel="general">
+            <div class="tab-panel" data-panel="general">
               <div class="service-general-settings">
                 <h4>General Settings</h4>
                 <div class="service-general-field">
@@ -388,17 +534,42 @@ export class EnhancedServiceManager {
             </div>
 
             <!-- Structure Tab - Image design: Create Your Service Structure + Label + flat rows -->
-            <div class="tab-panel" data-panel="structure">
-              <div class="service-structure-create">
-                <h4>Create Your Service Structure</h4>
-                <div class="service-structure-label-field">
-                  <label>Label</label>
-                  <input type="text" class="service-input service-label-input" placeholder="e.g Cars, House, Year" value="${(serviceLabel || '').replace(/"/g, '&quot;')}" data-field="serviceStructureLabel">
+            <div class="tab-panel active" data-panel="structure">
+              <div class="service-structure-view" id="service-structure-view">
+                <div class="service-structure-create">
+                  <h4>Create Your Service Structure</h4>
+                  <div class="service-structure-label-field">
+                    <label>Label</label>
+                    <input type="text" class="service-input service-label-input" placeholder="e.g Cars, House, Year" value="${(serviceLabel || '').replace(/"/g, '&quot;')}" data-field="serviceStructureLabel">
+                  </div>
+                  ${this.generatePageContentSectionHtml({
+                    servicePath: PARENT_PAGE_CONTENT_PATH,
+                    heading: parentPageBreakHeading,
+                    description: parentPageBreakDescription,
+                    parentSection: true,
+                  })}
+                </div>
+                
+                <div class="enhanced-service-structure-container">
+                  ${topLevelWithPaths.length === 0 ? this.generateAddCategoryRowOnlyHtml() : this.generateFlatCategoryRowsHtml(topLevelWithPaths)}
                 </div>
               </div>
-              
-              <div class="enhanced-service-structure-container">
-                ${topLevelWithPaths.length === 0 ? this.generateAddCategoryRowOnlyHtml() : this.generateFlatCategoryRowsHtml(topLevelWithPaths)}
+
+              <div class="service-embedded-field-settings" id="service-embedded-field-settings" hidden>
+                <div class="service-embedded-field-settings__header">
+                  <button type="button" class="btn btn-sm btn-secondary" data-back-to-service-structure>← Back to Structure</button>
+                  <h4 class="service-embedded-field-settings__title">Page Content</h4>
+                </div>
+                <div class="quotemate-form-builder__sub-tabs service-embedded-field-settings__sub-tabs">
+                  <button type="button" class="quotemate-form-builder__sub-tab active" data-embedded-sub-tab="general">General</button>
+                  <button type="button" class="quotemate-form-builder__sub-tab" data-embedded-sub-tab="style">Style</button>
+                </div>
+                <div class="quotemate-form-builder__sub-tab-content active" id="service-embedded-field-settings-general">
+                  <div class="quotemate-form-builder__properties-content service-embedded-field-settings__general"></div>
+                </div>
+                <div class="quotemate-form-builder__sub-tab-content" id="service-embedded-field-settings-style">
+                  <div class="quotemate-form-builder__style-properties-content service-embedded-field-settings__style"></div>
+                </div>
               </div>
             </div>
             
@@ -1271,6 +1442,83 @@ export class EnhancedServiceManager {
         panel.classList.add('active');
       }
     });
+
+    if (tabName === 'structure') {
+      this.hideEmbeddedFieldSettingsPanel();
+    } else {
+      this.setEmbeddedFieldSettingsVisibility(false);
+    }
+  }
+
+  switchEmbeddedFieldSettingsSubTab(subTabName) {
+    const root = document.getElementById('service-embedded-field-settings');
+    if (!root || !subTabName) return;
+
+    if (this.formBuilder?.syncPropertiesFromPanel) {
+      this.formBuilder.syncPropertiesFromPanel();
+    }
+
+    root.querySelectorAll('[data-embedded-sub-tab]').forEach((tab) => {
+      tab.classList.toggle('active', tab.dataset.embeddedSubTab === subTabName);
+    });
+    root.querySelectorAll('.quotemate-form-builder__sub-tab-content').forEach((panel) => {
+      panel.classList.remove('active');
+    });
+    const activePanel = root.querySelector(`#service-embedded-field-settings-${subTabName}`);
+    if (activePanel) {
+      activePanel.classList.add('active');
+    }
+  }
+
+  setEmbeddedFieldSettingsVisibility(showEmbedded) {
+    const embeddedPanel = document.getElementById('service-embedded-field-settings');
+    const structureView = document.getElementById('service-structure-view');
+    if (!embeddedPanel || !structureView) return;
+
+    if (showEmbedded) {
+      embeddedPanel.removeAttribute('hidden');
+      structureView.setAttribute('hidden', '');
+    } else {
+      embeddedPanel.setAttribute('hidden', '');
+      structureView.removeAttribute('hidden');
+    }
+  }
+
+  showEmbeddedFieldSettingsPanel(switchToStructureTab = true) {
+    if (switchToStructureTab) {
+      this.switchTab('structure');
+    }
+    this.setEmbeddedFieldSettingsVisibility(true);
+    this.formBuilder?.ensureEmbeddedFieldSettingsDelegation?.();
+  }
+
+  hideEmbeddedFieldSettingsPanel() {
+    this.activePageContentSettingsKey = null;
+    this.setEmbeddedFieldSettingsVisibility(false);
+  }
+
+  refreshActiveEmbeddedFieldSettings() {
+    if (!this.activePageContentSettingsKey) {
+      return;
+    }
+
+    const fieldData = this.getFieldData(this.currentFieldId);
+    const servicePath = this.currentViewParentPath === '' ? PARENT_PAGE_CONTENT_PATH : this.currentViewParentPath;
+    const target = this.getPageContentTarget(fieldData, servicePath);
+    if (!target) return;
+
+    ensureNodePageBreakFields(target);
+    const virtualId = buildVirtualPageContentFieldId(servicePath, this.activePageContentSettingsKey);
+    this.formBuilder.virtualFields = this.formBuilder.virtualFields || {};
+    const fieldObjKey = this.activePageContentSettingsKey === 'heading'
+      ? 'pageBreakHeadingField'
+      : 'pageBreakDescriptionField';
+    this.formBuilder.virtualFields[virtualId] = target[fieldObjKey];
+    const title = this.activePageContentSettingsKey === 'heading'
+      ? 'Page Break Heading'
+      : 'Page Break Description';
+    this.formBuilder.fieldProperties.showEmbeddedVirtualProperties(virtualId, title);
+    this.showEmbeddedFieldSettingsPanel(false);
   }
 
   generateDefaultPricingTypesHtml() {
@@ -1706,6 +1954,8 @@ export class EnhancedServiceManager {
             : '';
         }
 
+        this.syncPageContentInputsToNode(parent, !!parent.pageBreakBeforeOptions);
+
         (parent.children || []).forEach((_, index) => {
           this.syncRowDataFromDOM(`${this.currentViewParentPath}.${index}`);
         });
@@ -1733,6 +1983,7 @@ export class EnhancedServiceManager {
 
     this.syncAllRowsFromDOM();
     this.currentViewParentPath = this.getParentServicePath(this.currentViewParentPath);
+    this.hideEmbeddedFieldSettingsPanel();
 
     const fieldData = this.getFieldData(this.currentFieldId);
     this.refreshModal(fieldData);
@@ -1790,6 +2041,13 @@ export class EnhancedServiceManager {
       target.pageBreakBeforeOptions = source.pageBreakBeforeOptions;
     }
     if (source.pageBreakTitle !== undefined) target.pageBreakTitle = source.pageBreakTitle;
+    if (source.pageBreakHeadingField !== undefined) {
+      target.pageBreakHeadingField = JSON.parse(JSON.stringify(source.pageBreakHeadingField));
+    }
+    if (source.pageBreakDescriptionField !== undefined) {
+      target.pageBreakDescriptionField = JSON.parse(JSON.stringify(source.pageBreakDescriptionField));
+    }
+    syncLegacyPageBreakStrings(target);
 
     const configKeys = [
       'pricingType',
@@ -1908,6 +2166,18 @@ export class EnhancedServiceManager {
 
     const service = this.getServiceByPath(fieldData.enhancedServiceStructure, servicePath);
 
+    if (isParentPageContentPath(servicePath)) {
+      ensureNodePageBreakFields(fieldData);
+      if (field === 'pageBreakHeading') {
+        fieldData.pageBreakHeadingField.label = input.value.trim();
+        syncLegacyPageBreakStrings(fieldData);
+      } else if (field === 'pageBreakDescription') {
+        fieldData.pageBreakDescriptionField.paragraph_content = input.value.trim();
+        syncLegacyPageBreakStrings(fieldData);
+      }
+      return;
+    }
+
     if (service) {
       const oldType = service.type;
 
@@ -1922,10 +2192,21 @@ export class EnhancedServiceManager {
         service.pageBreakBeforeOptions = input.checked;
         if (!input.checked) {
           service.pageBreakTitle = '';
+          clearNodePageBreakContentFields(service);
+        } else {
+          ensureNodePageBreakFields(service);
         }
         this.togglePageBreakTitleField(input.checked);
       } else if (field === 'pageBreakTitle') {
         service.pageBreakTitle = input.value.trim();
+      } else if (field === 'pageBreakHeading') {
+        ensureNodePageBreakFields(service);
+        service.pageBreakHeadingField.label = input.value.trim();
+        syncLegacyPageBreakStrings(service);
+      } else if (field === 'pageBreakDescription') {
+        ensureNodePageBreakFields(service);
+        service.pageBreakDescriptionField.paragraph_content = input.value.trim();
+        syncLegacyPageBreakStrings(service);
       } else {
         service[field] = input.value;
       }
@@ -1979,9 +2260,11 @@ export class EnhancedServiceManager {
 
   saveServiceConfiguration() {
     // Sync current view from DOM so we don't lose unsaved edits (labels and sub-category prices)
-    if (this.currentViewParentPath !== '') {
+    const fieldData = this.getFieldData(this.currentFieldId);
+    if (this.currentViewParentPath === '') {
+      this.syncPageContentInputsToTarget(fieldData, PARENT_PAGE_CONTENT_PATH);
+    } else if (this.currentViewParentPath !== '') {
       this.syncRowDataFromDOM(this.currentViewParentPath);
-      const fieldData = this.getFieldData(this.currentFieldId);
       const parent = this.getServiceByPath(fieldData?.enhancedServiceStructure || [], this.currentViewParentPath);
       if (parent) {
         const labelInput = document.querySelector(`.enhanced-service-structure-container input[data-field="optionsLabel"]`);
@@ -1992,6 +2275,7 @@ export class EnhancedServiceManager {
         if (pageBreakTitleInput) {
           parent.pageBreakTitle = parent.pageBreakBeforeOptions ? pageBreakTitleInput.value.trim() : '';
         }
+        this.syncPageContentInputsToTarget(parent, this.currentViewParentPath);
         // Sync every child option row (name, price type, price) from DOM so sub-category prices save
         (parent.children || []).forEach((_, index) => {
           this.syncRowDataFromDOM(`${this.currentViewParentPath}.${index}`);
@@ -1999,7 +2283,9 @@ export class EnhancedServiceManager {
       }
     }
 
-    const fieldData = this.getFieldData(this.currentFieldId);
+    if (!fieldData) {
+      return;
+    }
 
     // Validate configuration
     if (!fieldData.enhancedServiceStructure || fieldData.enhancedServiceStructure.length === 0) {
@@ -2017,6 +2303,18 @@ export class EnhancedServiceManager {
       // Persist top-level label (dropdown name for the first-level options)
       if (typeof fieldData.serviceStructureLabel !== 'undefined') {
         mainFieldData.serviceStructureLabel = fieldData.serviceStructureLabel;
+      }
+      if (fieldData.pageBreakHeadingField !== undefined) {
+        mainFieldData.pageBreakHeadingField = JSON.parse(JSON.stringify(fieldData.pageBreakHeadingField));
+      }
+      if (fieldData.pageBreakDescriptionField !== undefined) {
+        mainFieldData.pageBreakDescriptionField = JSON.parse(JSON.stringify(fieldData.pageBreakDescriptionField));
+      }
+      if (typeof fieldData.pageBreakHeading !== 'undefined') {
+        mainFieldData.pageBreakHeading = fieldData.pageBreakHeading;
+      }
+      if (typeof fieldData.pageBreakDescription !== 'undefined') {
+        mainFieldData.pageBreakDescription = fieldData.pageBreakDescription;
       }
       const maxDropdownsInput = document.querySelector(
         '.enhanced-service-config-modal [data-field="maxDropdownsPerPageDesktop"]'
@@ -2074,21 +2372,177 @@ export class EnhancedServiceManager {
       });
   }
 
+  isVirtualPageContentFieldId(fieldId) {
+    return isVirtualPageContentFieldId(fieldId);
+  }
+
+  openPageContentFieldSettings(contentKey) {
+    if (!this.currentFieldId) return;
+
+    const fieldData = this.getFieldData(this.currentFieldId);
+    const servicePath = this.currentViewParentPath === '' ? PARENT_PAGE_CONTENT_PATH : this.currentViewParentPath;
+    const target = this.getPageContentTarget(fieldData, servicePath);
+    if (!target) return;
+
+    ensureNodePageBreakFields(target);
+    const fieldObjKey = contentKey === 'heading' ? 'pageBreakHeadingField' : 'pageBreakDescriptionField';
+    const fieldObj = target[fieldObjKey];
+    if (!fieldObj) return;
+
+    const virtualId = buildVirtualPageContentFieldId(servicePath, contentKey);
+    this.formBuilder.virtualFields = this.formBuilder.virtualFields || {};
+    this.formBuilder.virtualFields[virtualId] = fieldObj;
+    const title = contentKey === 'heading' ? 'Page Break Heading' : 'Page Break Description';
+
+    this.activePageContentSettingsKey = contentKey;
+    this.formBuilder.fieldProperties.showEmbeddedVirtualProperties(virtualId, title);
+    this.showEmbeddedFieldSettingsPanel();
+  }
+
+  applyVirtualPageContentFieldProperty(fieldObj, property, value) {
+    if (!fieldObj) return;
+
+    if (property.includes('.')) {
+      const parts = property.split('.');
+      let target = fieldObj;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const key = parts[i];
+        if (!target[key] || typeof target[key] !== 'object') {
+          target[key] = {};
+        }
+        target = target[key];
+      }
+      target[parts[parts.length - 1]] = value;
+      return;
+    }
+
+    fieldObj[property] = value;
+  }
+
+  updateVirtualPageContentFieldProperty(fieldId, property, value) {
+    const parsed = parseVirtualPageContentFieldId(fieldId);
+    if (!parsed) return false;
+
+    const fieldObj = this.formBuilder.resolveFieldDataById(fieldId);
+    if (!fieldObj) return false;
+
+    this.applyVirtualPageContentFieldProperty(fieldObj, property, value);
+
+    const fieldData = this.getFieldData(this.currentFieldId);
+    const target = this.getPageContentTarget(fieldData, parsed.servicePath);
+    if (target) {
+      syncLegacyPageBreakStrings(target);
+      this.updatePageContentInputValues(parsed.servicePath);
+    }
+
+    this.formBuilder.updateFormData();
+
+    const shouldRefreshPanel =
+      (fieldObj.type === 'heading' && ['heading_level', 'heading_align', 'label'].includes(property)) ||
+      (fieldObj.type === 'paragraph' && ['paragraph_content', 'heading_align'].includes(property));
+
+    if (shouldRefreshPanel) {
+      const title = this.formBuilder.virtualFieldMeta?.[fieldId]?.title || 'Page Content';
+      this.formBuilder.fieldProperties.refreshVirtualPropertiesPanel(fieldId, title);
+    }
+
+    return true;
+  }
+
+  updatePageContentInputValues(servicePath) {
+    const activePath = this.currentViewParentPath === '' ? PARENT_PAGE_CONTENT_PATH : this.currentViewParentPath;
+    if (servicePath !== activePath) return;
+
+    const fieldData = this.getFieldData(this.currentFieldId);
+    const target = this.getPageContentTarget(fieldData, servicePath);
+    if (!target) return;
+
+    ensureNodePageBreakFields(target);
+
+    const headingInput = document.querySelector(
+      `.enhanced-service-config-modal [data-field="pageBreakHeading"][data-service-path="${servicePath}"]`
+    );
+    const descriptionInput = document.querySelector(
+      `.enhanced-service-config-modal [data-field="pageBreakDescription"][data-service-path="${servicePath}"]`
+    );
+
+    if (headingInput) {
+      headingInput.value = target.pageBreakHeadingField?.label || '';
+    }
+    if (descriptionInput) {
+      descriptionInput.value = target.pageBreakDescriptionField?.paragraph_content || '';
+    }
+  }
+
+  syncPageContentInputsToTarget(target, servicePath, pageBreakEnabled = true) {
+    if (!target) return;
+
+    const headingInput = document.querySelector(
+      `.enhanced-service-config-modal [data-field="pageBreakHeading"][data-service-path="${servicePath}"]`
+    );
+    const descriptionInput = document.querySelector(
+      `.enhanced-service-config-modal [data-field="pageBreakDescription"][data-service-path="${servicePath}"]`
+    );
+
+    if (!pageBreakEnabled && !isParentPageContentPath(servicePath)) {
+      clearNodePageBreakContentFields(target);
+      return;
+    }
+
+    ensureNodePageBreakFields(target);
+
+    if (headingInput) {
+      target.pageBreakHeadingField.label = headingInput.value.trim();
+    }
+    if (descriptionInput) {
+      target.pageBreakDescriptionField.paragraph_content = descriptionInput.value.trim();
+    }
+
+    syncLegacyPageBreakStrings(target);
+  }
+
+  syncPageContentInputsToNode(parent, pageBreakEnabled) {
+    this.syncPageContentInputsToTarget(parent, this.currentViewParentPath, pageBreakEnabled);
+  }
+
   togglePageBreakTitleField(show) {
-    const wrap = document.querySelector('.service-page-break-title-field');
-    if (!wrap) return;
-    if (show) {
-      wrap.removeAttribute('hidden');
-    } else {
-      wrap.setAttribute('hidden', '');
-      const input = wrap.querySelector('input[data-field="pageBreakTitle"]');
-      if (input) input.value = '';
+    const wrap = document.querySelector('.enhanced-service-structure-container .service-page-break-title-field');
+    const contentSection = document.querySelector('.enhanced-service-structure-container .service-page-content-section:not(.service-page-content-section--parent)');
+    if (wrap) {
+      if (show) {
+        wrap.removeAttribute('hidden');
+      } else {
+        wrap.setAttribute('hidden', '');
+        const input = wrap.querySelector('input[data-field="pageBreakTitle"]');
+        if (input) input.value = '';
+      }
+    }
+    if (contentSection) {
+      if (show) {
+        contentSection.removeAttribute('hidden');
+      } else {
+        contentSection.setAttribute('hidden', '');
+        const headingInput = contentSection.querySelector('input[data-field="pageBreakHeading"]');
+        const descriptionInput = contentSection.querySelector('textarea[data-field="pageBreakDescription"]');
+        if (headingInput) headingInput.value = '';
+        if (descriptionInput) descriptionInput.value = '';
+
+        const fieldData = this.getFieldData(this.currentFieldId);
+        const parent = this.getServiceByPath(
+          fieldData?.enhancedServiceStructure || [],
+          this.currentViewParentPath
+        );
+        if (parent) {
+          clearNodePageBreakContentFields(parent);
+        }
+      }
     }
   }
 
   refreshModal(fieldData) {
     if (fieldData?.enhancedServiceStructure) {
       fieldData.enhancedServiceStructure = this.stripLegacyPageBreaks(fieldData.enhancedServiceStructure);
+      normalizeEnhancedStructurePageBreakFields(fieldData.enhancedServiceStructure);
     }
 
     // Toggle child-options view styling on modal body
@@ -2106,10 +2560,16 @@ export class EnhancedServiceManager {
     if (structureContainer) {
       if (this.currentViewParentPath !== '') {
         const parent = this.getServiceByPath(fieldData.enhancedServiceStructure, this.currentViewParentPath);
+        ensureNodePageBreakFields(parent);
         const childLabel = (parent?.optionsLabel || '').replace(/"/g, '&quot;');
         const pageBreakBefore = parent?.pageBreakBeforeOptions ? 'checked' : '';
         const pageBreakTitle = (parent?.pageBreakTitle || '').replace(/"/g, '&quot;');
-        const pageBreakTitleHidden = parent?.pageBreakBeforeOptions ? '' : 'hidden';
+        const pageBreakHeading = (parent?.pageBreakHeadingField?.label || parent?.pageBreakHeading || '').replace(/"/g, '&quot;');
+        const pageBreakDescription = (parent?.pageBreakDescriptionField?.paragraph_content || parent?.pageBreakDescription || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        const pageBreakFieldsHidden = parent?.pageBreakBeforeOptions ? '' : 'hidden';
         const children = parent?.children || [];
         const childrenWithPaths = children
           .map((service, index) => ({ service, path: `${this.currentViewParentPath}.${index}` }));
@@ -2141,7 +2601,7 @@ export class EnhancedServiceManager {
                     <span class="service-page-break-toggle-card__hint">Show this dropdown on a new page</span>
                   </span>
                 </label>
-                <div class="service-page-break-title-field" ${pageBreakTitleHidden}>
+                <div class="service-page-break-title-field" ${pageBreakFieldsHidden}>
                   <label for="service-page-break-title-input">Page Title</label>
                   <input
                     id="service-page-break-title-input"
@@ -2154,6 +2614,12 @@ export class EnhancedServiceManager {
                 </div>
               </div>
             </div>
+            ${this.generatePageContentSectionHtml({
+              servicePath: this.currentViewParentPath,
+              heading: pageBreakHeading,
+              description: pageBreakDescription,
+              hidden: !parent?.pageBreakBeforeOptions,
+            })}
           </div>
           <div class="service-options-view-rows">
             ${this.generateFlatCategoryRowsHtml(childrenWithPaths, { isChildView: true, parentPath: this.currentViewParentPath })}
@@ -2202,9 +2668,26 @@ export class EnhancedServiceManager {
     }
 
     this.updateAllAddCategoryVisibility(fieldData);
+
+    const parentContentSection = document.querySelector('.service-page-content-section--parent');
+    if (parentContentSection) {
+      if (this.currentViewParentPath !== '') {
+        parentContentSection.setAttribute('hidden', '');
+      } else {
+        parentContentSection.removeAttribute('hidden');
+        this.updatePageContentInputValues(PARENT_PAGE_CONTENT_PATH);
+      }
+    }
+
+    if (this.currentViewParentPath !== '') {
+      this.hideEmbeddedFieldSettingsPanel();
+    } else if (this.activePageContentSettingsKey) {
+      this.refreshActiveEmbeddedFieldSettings();
+    }
   }
 
   closeServiceConfigModal() {
+    this.hideEmbeddedFieldSettingsPanel();
     const modal = document.querySelector('.enhanced-service-config-modal-overlay');
     if (modal) {
       modal.remove();

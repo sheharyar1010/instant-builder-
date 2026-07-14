@@ -677,6 +677,30 @@ body:not(.wp-admin) .inline-cascade-page.active-page {
   display: block;
 }
 
+.quotemate-frontend-form .inline-cascade-page-content,
+body:not(.wp-admin) .inline-cascade-page-content {
+  text-align: center;
+  margin: 0 0 1.5rem;
+}
+
+.quotemate-frontend-form .inline-cascade-page-content .inline-cascade-page-heading,
+body:not(.wp-admin) .inline-cascade-page-content .inline-cascade-page-heading {
+  margin: 0 0 1rem;
+}
+
+.quotemate-frontend-form .inline-cascade-page-content .inline-cascade-page-description,
+body:not(.wp-admin) .inline-cascade-page-content .inline-cascade-page-description {
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+.quotemate-frontend-form .inline-cascade-page-content .inline-cascade-page-heading:last-child,
+body:not(.wp-admin) .inline-cascade-page-content .inline-cascade-page-heading:last-child,
+.quotemate-frontend-form .inline-cascade-page-content .inline-cascade-page-description:last-child,
+body:not(.wp-admin) .inline-cascade-page-content .inline-cascade-page-description:last-child {
+  margin-bottom: 0;
+}
+
 .quotemate-frontend-form .inline-cascade-row,
 body:not(.wp-admin) .inline-cascade-row {
   display: grid;

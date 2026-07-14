@@ -109,7 +109,7 @@ class HeadingHelper
      */
     public static function resolve_heading_tag(array $field): string
     {
-        $allowed = ['h1', 'h2', 'h3', 'h4', 'h5'];
+        $allowed = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
         $level = $field['heading_level'] ?? 'h2';
 
         return in_array($level, $allowed, true) ? $level : 'h2';

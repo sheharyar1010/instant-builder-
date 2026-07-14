@@ -359,10 +359,17 @@ class FormsController
             }
         }
 
+        if (isset($field['optionLayout'])) {
+            $option_layout = sanitize_key((string) $field['optionLayout']);
+            if (in_array($option_layout, ['vertical', 'horizontal'], true)) {
+                $sanitized['optionLayout'] = $option_layout;
+            }
+        }
+
         if (($field['type'] ?? '') === 'heading') {
             if (isset($field['heading_level'])) {
                 $level = sanitize_key($field['heading_level']);
-                $sanitized['heading_level'] = in_array($level, ['h1', 'h2', 'h3', 'h4', 'h5'], true) ? $level : 'h2';
+                $sanitized['heading_level'] = in_array($level, ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], true) ? $level : 'h2';
             }
             if (isset($field['heading_align'])) {
                 $align = sanitize_key($field['heading_align']);
@@ -452,7 +459,7 @@ class FormsController
             'showSubtotal', 'showGrandTotal', 'showQuantity', 'showPricingType', 'showPath',
             'showDeliveryTime', 'showSavingsHighlight', 'showTax', 'showDiscount',
             'showTermsCheckbox', 'termsRequired', 'showPrintButton',
-            'addPrice',
+            'addPrice', 'addDescription', 'showPrice',
         ];
         foreach ($bool_props as $prop) {
             if (isset($field[$prop])) {
@@ -513,11 +520,23 @@ class FormsController
         if (isset($field['optionPrices']) && is_array($field['optionPrices'])) {
             $sanitized['optionPrices'] = [];
             foreach ($field['optionPrices'] as $label => $price) {
-                $clean_label = sanitize_text_field((string) $label);
+                $clean_label = sanitize_textarea_field((string) $label);
                 if ($clean_label === '') {
                     continue;
                 }
                 $sanitized['optionPrices'][$clean_label] = is_numeric($price) ? (float) $price : 0;
+            }
+        }
+
+        if (isset($field['optionDescriptions']) && is_array($field['optionDescriptions'])) {
+            $sanitized['optionDescriptions'] = [];
+            foreach ($field['optionDescriptions'] as $label => $description) {
+                $clean_label = sanitize_textarea_field((string) $label);
+                $clean_description = sanitize_textarea_field((string) $description);
+                if ($clean_label === '' || $clean_description === '') {
+                    continue;
+                }
+                $sanitized['optionDescriptions'][$clean_label] = $clean_description;
             }
         }
 
@@ -540,6 +559,30 @@ class FormsController
             $max_quantity = (int) $field['serviceMaxQuantity'];
             if ($max_quantity >= 1) {
                 $sanitized['serviceMaxQuantity'] = $max_quantity;
+            }
+        }
+
+        if (($field['type'] ?? '') === 'service') {
+            if (isset($field['pageBreakHeading'])) {
+                $sanitized['pageBreakHeading'] = sanitize_text_field($field['pageBreakHeading']);
+            }
+
+            if (isset($field['pageBreakDescription'])) {
+                $sanitized['pageBreakDescription'] = sanitize_textarea_field($field['pageBreakDescription']);
+            }
+
+            if (isset($field['pageBreakHeadingField']) && is_array($field['pageBreakHeadingField'])) {
+                $sanitized['pageBreakHeadingField'] = $this->sanitize_embedded_content_field($field['pageBreakHeadingField'], 'heading');
+                if (!empty($sanitized['pageBreakHeadingField']['label'])) {
+                    $sanitized['pageBreakHeading'] = sanitize_text_field($sanitized['pageBreakHeadingField']['label']);
+                }
+            }
+
+            if (isset($field['pageBreakDescriptionField']) && is_array($field['pageBreakDescriptionField'])) {
+                $sanitized['pageBreakDescriptionField'] = $this->sanitize_embedded_content_field($field['pageBreakDescriptionField'], 'paragraph');
+                if (!empty($sanitized['pageBreakDescriptionField']['paragraph_content'])) {
+                    $sanitized['pageBreakDescription'] = sanitize_textarea_field($sanitized['pageBreakDescriptionField']['paragraph_content']);
+                }
             }
         }
 
@@ -579,8 +622,8 @@ class FormsController
                     'price' => isset($item['price']) ? (float) $item['price'] : 0
                 ];
             } else {
-                // For simple arrays like options
-                $sanitized[] = sanitize_text_field($item);
+                // For simple arrays like options (preserve multi-line labels)
+                $sanitized[] = sanitize_textarea_field((string) $item);
             }
         }
 
@@ -634,6 +677,66 @@ class FormsController
         return $sanitized;
     }
 
+    /**
+     * Sanitize embedded heading/paragraph field objects stored on service structure nodes.
+     */
+    private function sanitize_embedded_content_field(array $field, string $type): array
+    {
+        $sanitized = [
+            'type' => $type,
+            'id' => sanitize_key($field['id'] ?? ($type === 'heading' ? 'page_break_heading' : 'page_break_description')),
+            'required' => false,
+        ];
+
+        $optional_props = [
+            'description', 'placeholder', 'cssClass', 'defaultValue',
+            'fieldSize', 'styleLabelColor', 'styleLabelSize', 'styleInputColor', 'styleInputBg',
+            'styleBorderWidth', 'styleBorderColor', 'styleBorderRadius', 'stylePadding',
+            'styleBorderRadiusTopLeft', 'styleBorderRadiusTopRight', 'styleBorderRadiusBottomRight', 'styleBorderRadiusBottomLeft', 'styleBorderRadiusUnit',
+            'styleMarginTop', 'styleMarginRight', 'styleMarginBottom', 'styleMarginLeft', 'styleMarginUnit',
+            'stylePaddingTop', 'stylePaddingRight', 'stylePaddingBottom', 'stylePaddingLeft', 'stylePaddingUnit',
+            'styleFontFamily', 'styleFontSize', 'styleFontWeight', 'styleTextTransform', 'styleFontStyle', 'styleTextDecoration',
+            'styleLineHeight', 'styleLetterSpacing', 'styleWordSpacing',
+            'styleInputFontFamily', 'styleInputFontSize', 'styleInputFontWeight',
+            'heading_level', 'heading_align',
+        ];
+
+        foreach ($optional_props as $prop) {
+            if (isset($field[$prop])) {
+                $sanitized[$prop] = sanitize_text_field($field[$prop]);
+            }
+        }
+
+        if ($type === 'heading') {
+            $sanitized['label'] = isset($field['label'])
+                ? sanitize_textarea_field($field['label'])
+                : '';
+            if (isset($field['heading_level'])) {
+                $level = sanitize_key($field['heading_level']);
+                $sanitized['heading_level'] = in_array($level, ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], true) ? $level : 'h2';
+            }
+            if (isset($field['heading_align'])) {
+                $align = sanitize_key($field['heading_align']);
+                $sanitized['heading_align'] = in_array($align, ['left', 'center', 'right'], true) ? $align : 'center';
+            }
+        }
+
+        if ($type === 'paragraph' && isset($field['paragraph_content'])) {
+            $sanitized['paragraph_content'] = sanitize_textarea_field($field['paragraph_content']);
+        }
+
+        if ($type === 'paragraph' && isset($field['heading_align'])) {
+            $align = sanitize_key($field['heading_align']);
+            $sanitized['heading_align'] = in_array($align, ['left', 'center', 'right'], true) ? $align : 'center';
+        }
+
+        if (isset($field['conditionalLogic']) && is_array($field['conditionalLogic'])) {
+            $sanitized['conditionalLogic'] = $this->sanitize_conditional_logic($field['conditionalLogic']);
+        }
+
+        return $sanitized;
+    }
+
     private function sanitize_enhanced_service_structure($enhanced_service_structure)
     {
         $sanitized = [];
@@ -676,6 +779,28 @@ class FormsController
 
             if (isset($item['pageBreakTitle'])) {
                 $sanitized_item['pageBreakTitle'] = sanitize_text_field($item['pageBreakTitle']);
+            }
+
+            if (isset($item['pageBreakHeading'])) {
+                $sanitized_item['pageBreakHeading'] = sanitize_text_field($item['pageBreakHeading']);
+            }
+
+            if (isset($item['pageBreakDescription'])) {
+                $sanitized_item['pageBreakDescription'] = sanitize_textarea_field($item['pageBreakDescription']);
+            }
+
+            if (isset($item['pageBreakHeadingField']) && is_array($item['pageBreakHeadingField'])) {
+                $sanitized_item['pageBreakHeadingField'] = $this->sanitize_embedded_content_field($item['pageBreakHeadingField'], 'heading');
+                if (!empty($sanitized_item['pageBreakHeadingField']['label'])) {
+                    $sanitized_item['pageBreakHeading'] = sanitize_text_field($sanitized_item['pageBreakHeadingField']['label']);
+                }
+            }
+
+            if (isset($item['pageBreakDescriptionField']) && is_array($item['pageBreakDescriptionField'])) {
+                $sanitized_item['pageBreakDescriptionField'] = $this->sanitize_embedded_content_field($item['pageBreakDescriptionField'], 'paragraph');
+                if (!empty($sanitized_item['pageBreakDescriptionField']['paragraph_content'])) {
+                    $sanitized_item['pageBreakDescription'] = sanitize_textarea_field($sanitized_item['pageBreakDescriptionField']['paragraph_content']);
+                }
             }
 
             $this->apply_enhanced_item_pricing_fields($sanitized_item, $item);

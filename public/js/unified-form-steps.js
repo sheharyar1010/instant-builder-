@@ -1975,7 +1975,9 @@ class UnifiedFormSteps {
     const step = this.steps[index];
     const { fieldIds, serviceStates } = this.getFieldGroupsForStep(step);
 
-    this.form.querySelectorAll('.form-group').forEach((group) => {
+    // Only top-level builder fields (data-field-id). Nested Service Selector
+    // Page Content blocks also use .form-group and must not be hidden here.
+    this.form.querySelectorAll('.form-group[data-field-id]').forEach((group) => {
       const fieldId = group.dataset.fieldId;
       const isServiceGroup = group.querySelector('.progressive-service-selector');
       const show = fieldIds.has(fieldId);
@@ -2004,7 +2006,9 @@ class UnifiedFormSteps {
     });
 
     this.form.querySelectorAll('.form-section').forEach((section) => {
-      const visibleGroups = section.querySelectorAll('.form-group:not([data-unified-hidden])');
+      const visibleGroups = section.querySelectorAll(
+        '.form-group[data-field-id]:not([data-unified-hidden])'
+      );
       const hasVisibleGroup = visibleGroups.length > 0;
       const onlyService =
         visibleGroups.length === 1 &&
@@ -2228,49 +2232,6 @@ class UnifiedFormSteps {
     }
   }
 
-  applySummaryButtonSpacing(summaryField) {
-    if (!summaryField) return;
-
-    const applySpacing = (button, variant) => {
-      if (!button) return;
-      const spacing = UnifiedFormSteps.getPageBreakButtonSpacingStyle(summaryField, variant);
-      // Clear existing margin styles first
-      ['marginTop', 'marginRight', 'marginBottom', 'marginLeft'].forEach((key) => {
-        button.style[key] = '';
-      });
-      if (!spacing) return;
-      spacing.split(';').filter(Boolean).forEach((rule) => {
-        const [prop, val] = rule.split(':');
-        if (!prop || val == null) return;
-        // ONLY apply margin properties as requested
-        if (prop.trim().startsWith('margin-')) {
-          const camel = prop.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-          button.style[camel] = val.trim();
-        }
-      });
-    };
-
-    if (this.submitBtn) {
-      applySpacing(this.submitBtn, 'next');
-    }
-    if (this.prevBtn) {
-      applySpacing(this.prevBtn, 'prev');
-    }
-  }
-
-  clearSummaryButtonSpacing() {
-    if (this.submitBtn) {
-      ['marginTop', 'marginRight', 'marginBottom', 'marginLeft'].forEach((key) => {
-        this.submitBtn.style[key] = '';
-      });
-    }
-    if (this.prevBtn) {
-      ['marginTop', 'marginRight', 'marginBottom', 'marginLeft'].forEach((key) => {
-        this.prevBtn.style[key] = '';
-      });
-    }
-  }
-
   getValidationMessage() {
     if (this.currentStepIncludesService() && !this.isCurrentServiceReadyForAdvance()) {
       return 'Please select a service option before proceeding.';
@@ -2356,9 +2317,6 @@ class UnifiedFormSteps {
 
     if (summaryField) {
       this.applySummarySubmitButtonText(summaryField);
-      this.applySummaryButtonSpacing(summaryField);
-    } else if (!pageBreak) {
-      this.clearSummaryButtonSpacing();
     }
 
     this.form.querySelectorAll('.submit-btn').forEach((btn) => {
@@ -2623,7 +2581,7 @@ class UnifiedFormSteps {
   syncFormStepContainers() {
     const visibleFormSteps = new Set();
 
-    this.form.querySelectorAll('.form-group').forEach((group) => {
+    this.form.querySelectorAll('.form-group[data-field-id]').forEach((group) => {
       if (group.dataset.unifiedHidden === '1') return;
       if (group.style.display === 'none') return;
 

@@ -102,14 +102,32 @@ $form_group_class = trim($field_size_class . ($is_content_block ? ' form-group--
 
                                                 case 'checkbox':
                                                     $choice_add_price = !empty($field['addPrice']);
+                                                    $choice_show_price = $choice_add_price && (!array_key_exists('showPrice', $field) || !empty($field['showPrice']));
+                                                    $choice_add_description = !empty($field['addDescription']);
                                                     $choice_option_prices = is_array($field['optionPrices'] ?? null) ? $field['optionPrices'] : [];
+                                                    $choice_option_descriptions = $choice_add_description && is_array($field['optionDescriptions'] ?? null)
+                                                        ? $field['optionDescriptions']
+                                                        : [];
                                                     if (!empty($field['options']) && is_array($field['options'])):
-                                                        echo '<div class="checkbox-group">';
+                                                        $choice_layout = (($field['optionLayout'] ?? 'vertical') === 'horizontal') ? 'horizontal' : 'vertical';
+                                                        $choice_layout_class = $choice_layout === 'horizontal' ? ' checkbox-group--horizontal' : '';
+                                                        echo '<div class="checkbox-group' . $choice_layout_class . '">';
                                                         foreach ($field['options'] as $option):
+                                                            $option_price = $choice_add_price && isset($choice_option_prices[$option])
+                                                                ? (float) $choice_option_prices[$option]
+                                                                : 0;
                                                             $price_attrs = '';
                                                             if ($choice_add_price) {
-                                                                $option_price = isset($choice_option_prices[$option]) ? (float) $choice_option_prices[$option] : 0;
                                                                 $price_attrs = ' data-option-price="' . esc_attr((string) $option_price) . '" data-option-label="' . esc_attr($option) . '"';
+                                                            }
+                                                            $option_description = isset($choice_option_descriptions[$option])
+                                                                ? trim((string) $choice_option_descriptions[$option])
+                                                                : '';
+                                                            $option_label_lines = preg_split('/\r\n|\r|\n/', (string) $option) ?: [(string) $option];
+                                                            $option_label_html = implode("\n", array_map([TextFormatHelper::class, 'format_display_name'], $option_label_lines));
+                                                            $option_price_html = '';
+                                                            if ($choice_show_price) {
+                                                                $option_price_html = ' <span class="choice-option-price">(+$' . esc_html((string) $option_price) . ')</span>';
                                                             }
                                                             ?>
                                                             <div class="checkbox-wrapper">
@@ -119,7 +137,10 @@ $form_group_class = trim($field_size_class . ($is_content_block ? ' form-group--
                                                                     value="<?php echo esc_attr($option); ?>"
                                                                     class="form-checkbox <?php echo esc_attr($field['cssClass'] ?? ''); ?>"<?php echo $price_attrs; ?> />
                                                                 <label for="<?php echo esc_attr($field['id'] . '_' . sanitize_title($option)); ?>" class="checkbox-label">
-                                                                    <?php echo esc_html(TextFormatHelper::format_display_name($option)); ?>
+                                                                    <span class="choice-option-label"><?php echo esc_html($option_label_html); ?><?php echo $option_price_html; ?></span>
+                                                                    <?php if ($choice_add_description && $option_description !== ''): ?>
+                                                                        <span class="choice-option-description"><?php echo esc_html($option_description); ?></span>
+                                                                    <?php endif; ?>
                                                                 </label>
                                                             </div>
                                                         <?php endforeach;
@@ -143,13 +164,31 @@ $form_group_class = trim($field_size_class . ($is_content_block ? ' form-group--
                                                 case 'radio':
                                                     if (!empty($field['options']) && is_array($field['options'])):
                                                         $choice_add_price = !empty($field['addPrice']);
+                                                        $choice_show_price = $choice_add_price && (!array_key_exists('showPrice', $field) || !empty($field['showPrice']));
+                                                        $choice_add_description = !empty($field['addDescription']);
                                                         $choice_option_prices = is_array($field['optionPrices'] ?? null) ? $field['optionPrices'] : [];
-                                                        echo '<div class="radio-group">';
+                                                        $choice_option_descriptions = $choice_add_description && is_array($field['optionDescriptions'] ?? null)
+                                                            ? $field['optionDescriptions']
+                                                            : [];
+                                                        $choice_layout = (($field['optionLayout'] ?? 'vertical') === 'horizontal') ? 'horizontal' : 'vertical';
+                                                        $choice_layout_class = $choice_layout === 'horizontal' ? ' radio-group--horizontal' : '';
+                                                        echo '<div class="radio-group' . $choice_layout_class . '">';
                                                         foreach ($field['options'] as $option):
+                                                            $option_price = $choice_add_price && isset($choice_option_prices[$option])
+                                                                ? (float) $choice_option_prices[$option]
+                                                                : 0;
                                                             $price_attrs = '';
                                                             if ($choice_add_price) {
-                                                                $option_price = isset($choice_option_prices[$option]) ? (float) $choice_option_prices[$option] : 0;
                                                                 $price_attrs = ' data-option-price="' . esc_attr((string) $option_price) . '" data-option-label="' . esc_attr($option) . '"';
+                                                            }
+                                                            $option_description = isset($choice_option_descriptions[$option])
+                                                                ? trim((string) $choice_option_descriptions[$option])
+                                                                : '';
+                                                            $option_label_lines = preg_split('/\r\n|\r|\n/', (string) $option) ?: [(string) $option];
+                                                            $option_label_html = implode("\n", array_map([TextFormatHelper::class, 'format_display_name'], $option_label_lines));
+                                                            $option_price_html = '';
+                                                            if ($choice_show_price) {
+                                                                $option_price_html = ' <span class="choice-option-price">(+$' . esc_html((string) $option_price) . ')</span>';
                                                             }
                                                             ?>
                                                             <div class="radio-wrapper">
@@ -160,7 +199,10 @@ $form_group_class = trim($field_size_class . ($is_content_block ? ' form-group--
                                                                     class="form-radio"
                                                                     <?php if (!empty($field['required'])) echo 'required'; ?><?php echo $price_attrs; ?> />
                                                                 <label for="<?php echo esc_attr($field['id'] . '_' . sanitize_title($option)); ?>" class="radio-label">
-                                                                    <?php echo esc_html(TextFormatHelper::format_display_name($option)); ?>
+                                                                    <span class="choice-option-label"><?php echo esc_html($option_label_html); ?><?php echo $option_price_html; ?></span>
+                                                                    <?php if ($choice_add_description && $option_description !== ''): ?>
+                                                                        <span class="choice-option-description"><?php echo esc_html($option_description); ?></span>
+                                                                    <?php endif; ?>
                                                                 </label>
                                                             </div>
                                                         <?php endforeach;

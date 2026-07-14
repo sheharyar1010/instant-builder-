@@ -122,7 +122,8 @@ body:not(.wp-admin) .quotemate-form-wrapper > .form-header {
 .quotemate-form-wrapper .quotemate-form-column {
     display: flex;
     flex-direction: column;
-    gap: var(--qm-field-spacing, 1.5rem);
+    /* Match admin builder: spacing comes from each field's saved Bottom Margin */
+    gap: 0;
     min-width: 0;
 }
 
@@ -131,7 +132,8 @@ body:not(.wp-admin) .quotemate-form-wrapper > .form-header {
 .quotemate-form-builder__form-preview .quotemate-form-column > .form-group {
     align-self: flex-start;
     max-width: 100%;
-    margin-bottom: 0;
+    /* Fallback for legacy fields without styleMarginBottom; inline style overrides when set */
+    margin-bottom: var(--qm-field-spacing, 1.5rem);
 }
 
 .quotemate-form-wrapper .quotemate-form-column > .form-group.quotemate-form-field--size-small,
@@ -452,6 +454,13 @@ body:not(.wp-admin) .quotemate-form-wrapper > .form-header {
 .quotemate-form-heading--h5,
 .quotemate-form-field__heading--h5 {
     font-size: 1.125rem;
+    line-height: 1.4;
+    font-weight: 600;
+}
+
+.quotemate-form-heading--h6,
+.quotemate-form-field__heading--h6 {
+    font-size: 1rem;
     line-height: 1.4;
     font-weight: 600;
 }

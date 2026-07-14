@@ -496,6 +496,10 @@ class QuoteSummaryEngine {
       return String(element.textContent || '').trim();
     }
     const wrapper = element.closest('.radio-wrapper, .checkbox-wrapper');
+    const optionLabel = wrapper?.querySelector('.choice-option-label');
+    if (optionLabel) {
+      return String(optionLabel.textContent || '').trim();
+    }
     const label = wrapper?.querySelector('label');
     return String(label?.textContent || element.value || '').trim();
   }

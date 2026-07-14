@@ -1,6 +1,9 @@
 /**
  * Shared design CSS variable builder — mirrors PHP DesignHelper for admin preview.
  */
+import { getFieldStyleVars } from '../../../../shared/field-style-vars.js';
+
+export { getFieldStyleVars };
 
 const FONT_FAMILIES = {
   system: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -229,7 +232,7 @@ export function applyDesignCssVars(target, design = {}) {
   });
 }
 
-export const HEADING_LEVELS = ['h1', 'h2', 'h3', 'h4', 'h5'];
+export const HEADING_LEVELS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
 
 export function resolveHeadingLevel(level) {
   return HEADING_LEVELS.includes(level) ? level : 'h2';
@@ -387,6 +390,41 @@ export function buildPageBreakPreviewHtml(fieldData = {}, options = {}) {
       </div>
     </div>
   `.trim();
+}
+
+const PAGE_BREAK_BUTTON_TEXT_PROPS = new Set(['page_title', 'page_prev_title']);
+
+/** Whether a page_break property controls Previous / Next button label text. */
+export function isPageBreakButtonTextProperty(property) {
+  return PAGE_BREAK_BUTTON_TEXT_PROPS.has(property);
+}
+
+/**
+ * Live-update page break button labels on the admin canvas without rebuilding the preview.
+ * Returns false when the target button is not in the DOM yet (caller should refresh preview HTML).
+ */
+export function syncPageBreakButtonTextInCanvas(fieldElement, property, value, fieldData = {}) {
+  if (!fieldElement || !isPageBreakButtonTextProperty(property)) {
+    return false;
+  }
+
+  let selector;
+  let fallback;
+  if (property === 'page_title') {
+    selector = '.quotemate-form-field__page-break-btn--next';
+    fallback = fieldData?.page_title || 'Next Page';
+  } else {
+    selector = '.quotemate-form-field__page-break-slot--prev .prev-step';
+    fallback = fieldData?.page_prev_title || 'Previous';
+  }
+
+  const button = fieldElement.querySelector(selector);
+  if (!button) {
+    return false;
+  }
+
+  button.textContent = value != null && String(value).length > 0 ? String(value) : String(fallback);
+  return true;
 }
 
 const STEP_LABEL_FIRST = 'Getting Started';
@@ -671,6 +709,41 @@ function buildSummaryPrevButtonHtml(text, fieldData = {}) {
   return `<button type="button" class="btn btn-secondary prev-step quotemate-form-summary-preview__prev-btn" disabled${styleAttr ? ` style="${styleAttr}"` : ''}>${text}</button>`;
 }
 
+const FORM_SUMMARY_BUTTON_TEXT_PROPS = new Set(['summary_prev_title', 'submitButtonText']);
+
+/** Whether a form_summary property controls Previous / Submit button label text. */
+export function isFormSummaryButtonTextProperty(property) {
+  return FORM_SUMMARY_BUTTON_TEXT_PROPS.has(property);
+}
+
+/**
+ * Live-update Summary nav button labels on the admin canvas without rebuilding the preview.
+ * Returns false when the target button is not in the DOM yet (caller should refresh nav HTML).
+ */
+export function syncFormSummaryButtonTextInCanvas(fieldElement, property, value, fieldData = {}) {
+  if (!fieldElement || !isFormSummaryButtonTextProperty(property)) {
+    return false;
+  }
+
+  let selector;
+  let fallback;
+  if (property === 'summary_prev_title') {
+    selector = '.quotemate-form-summary-preview__prev-btn';
+    fallback = fieldData?.summary_prev_title || 'Previous';
+  } else {
+    selector = '.quotemate-form-summary-preview__submit-btn';
+    fallback = fieldData?.submitButtonText || 'Submit Quote Request';
+  }
+
+  const button = fieldElement.querySelector(selector);
+  if (!button) {
+    return false;
+  }
+
+  button.textContent = value != null && String(value).length > 0 ? String(value) : String(fallback);
+  return true;
+}
+
 /** Admin canvas preview for Summary field Previous / Submit navigation buttons. */
 export function buildFormSummaryNavPreviewHtml(fieldData = {}) {
   const order = fieldData?.summaryButtonOrder === 'submit_prev' ? 'submit_prev' : 'prev_submit';
@@ -678,17 +751,24 @@ export function buildFormSummaryNavPreviewHtml(fieldData = {}) {
   const submitText = escapePageBreakText(fieldData?.submitButtonText || 'Submit Quote Request');
   const prevBtn = buildSummaryPrevButtonHtml(prevText, fieldData);
   const submitBtn = buildSummarySubmitButtonHtml(submitText, fieldData);
-  const buttons = order === 'submit_prev' ? [submitBtn, prevBtn] : [prevBtn, submitBtn];
-  const alignClass = getPageBreakAlignClass(fieldData?.summary_submit_align || 'center');
+  const submitAlignClass = getPageBreakAlignClass(fieldData?.summary_submit_align || 'center');
+  const prevAlignClass = getPageBreakAlignClass(fieldData?.summary_prev_align || 'center');
+  const groupAlignClass = getPageBreakAlignClass(fieldData?.summary_submit_align || 'center');
+
+  const submitSlot = `
+    <div class="quotemate-form-field__page-break-slot quotemate-form-field__page-break-slot--next ${submitAlignClass}">
+      ${submitBtn}
+    </div>`;
+  const prevSlot = `
+    <div class="quotemate-form-field__page-break-slot quotemate-form-field__page-break-slot--prev ${prevAlignClass}">
+      ${prevBtn}
+    </div>`;
+  const slots = order === 'submit_prev' ? [submitSlot, prevSlot] : [prevSlot, submitSlot];
 
   return `
-    <div class="quotemate-form-field__page-break quotemate-form-field__page-break--dual quotemate-form-summary-preview__nav ${alignClass}">
+    <div class="quotemate-form-field__page-break quotemate-form-field__page-break--dual quotemate-form-summary-preview__nav ${groupAlignClass}">
       <div class="quotemate-form-field__page-break-actions">
-        ${buttons.map((buttonHtml, index) => `
-          <div class="quotemate-form-field__page-break-slot quotemate-form-field__page-break-slot--${index === 0 ? 'next' : 'prev'}">
-            ${buttonHtml}
-          </div>
-        `).join('')}
+        ${slots.join('')}
       </div>
     </div>
   `.trim();

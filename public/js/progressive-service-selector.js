@@ -21,6 +21,16 @@ class ProgressiveServiceSelector {
     this.attachEventListeners();
     this.attachCascadeResizeListener();
     this.initUnifiedSteps();
+    this.refreshAllParentPageContent();
+    document.addEventListener('quotemate-form-data-ready', () => {
+      this.refreshAllParentPageContent();
+    });
+  }
+
+  refreshAllParentPageContent() {
+    document.querySelectorAll('.progressive-service-selector').forEach((container) => {
+      this.applyParentPageContent(container);
+    });
   }
 
   attachCascadeResizeListener() {
@@ -138,6 +148,7 @@ class ProgressiveServiceSelector {
     });
 
     document.querySelectorAll('.progressive-service-selector').forEach((container) => {
+      this.applyParentPageContent(container);
       this.applyCascadeLayoutVars(container);
       this.applyFieldSizeToContainer(container);
     });
@@ -211,6 +222,8 @@ class ProgressiveServiceSelector {
       firstPage.dataset.pageTitle = this.getCascadeDefaultFirstTitle(fieldData);
     }
 
+    this.applyParentPageContent(container, fieldData);
+
     this.applyCascadeLayoutVars(container);
     this.applyFieldSizeToContainer(container);
     this.updateInternalNavigation(container);
@@ -239,6 +252,229 @@ class ProgressiveServiceSelector {
 
   getNodePageBreakTitle(node) {
     return this.formatDisplayText((node?.pageBreakTitle || '').trim());
+  }
+
+  getNodePageBreakContent(node) {
+    const headingField = this.resolvePageBreakHeadingField(node);
+    const descriptionField = this.resolvePageBreakDescriptionField(node);
+    return {
+      headingField,
+      descriptionField,
+      heading: headingField?.label
+        ? String(headingField.label).trim()
+        : String(node?.pageBreakHeading || '').trim(),
+      description: descriptionField?.paragraph_content
+        ? String(descriptionField.paragraph_content).trim()
+        : String(node?.pageBreakDescription || '').trim(),
+    };
+  }
+
+  getFieldParentPageBreakContent(fieldData) {
+    if (!fieldData) {
+      return { headingField: null, descriptionField: null, heading: '', description: '' };
+    }
+    return this.getNodePageBreakContent(fieldData);
+  }
+
+  applyParentPageContent(container, fieldData = null) {
+    const resolvedFieldData = fieldData || this.getFieldData(container?.dataset?.fieldId);
+    const hostStep = container?.querySelector('.step-container.step-1');
+    const firstPage = hostStep?.querySelector('.inline-cascade-page[data-page-index="0"]')
+      || container?.querySelector('.inline-cascade-page[data-page-index="0"]');
+    if (!firstPage) return;
+
+    const pageContent = this.getFieldParentPageBreakContent(resolvedFieldData);
+    this.applyInlinePageContent(
+      firstPage,
+      pageContent.headingField,
+      pageContent.descriptionField
+    );
+  }
+
+  resolvePageBreakHeadingField(node) {
+    if (node?.pageBreakHeadingField && typeof node.pageBreakHeadingField === 'object') {
+      const label = String(node.pageBreakHeadingField.label || '').trim();
+      if (label) {
+        return node.pageBreakHeadingField;
+      }
+    }
+    const text = String(node?.pageBreakHeading || '').trim();
+    if (!text) return null;
+    return {
+      type: 'heading',
+      label: text,
+      heading_level: 'h2',
+      heading_align: 'center',
+    };
+  }
+
+  resolvePageBreakDescriptionField(node) {
+    if (node?.pageBreakDescriptionField && typeof node.pageBreakDescriptionField === 'object') {
+      const content = String(node.pageBreakDescriptionField.paragraph_content || '').trim();
+      if (content) {
+        return node.pageBreakDescriptionField;
+      }
+    }
+    const text = String(node?.pageBreakDescription || '').trim();
+    if (!text) return null;
+    return {
+      type: 'paragraph',
+      paragraph_content: text,
+      heading_align: 'center',
+    };
+  }
+
+  coercePageBreakHeadingField(input) {
+    if (input && typeof input === 'object' && input.type === 'heading') {
+      return input;
+    }
+    const text = String(input || '').trim();
+    if (!text) return null;
+    return {
+      type: 'heading',
+      label: text,
+      heading_level: 'h2',
+      heading_align: 'center',
+    };
+  }
+
+  coercePageBreakDescriptionField(input) {
+    if (input && typeof input === 'object' && input.type === 'paragraph') {
+      return input;
+    }
+    const text = String(input || '').trim();
+    if (!text) return null;
+    return {
+      type: 'paragraph',
+      paragraph_content: text,
+      heading_align: 'center',
+    };
+  }
+
+  parseDatasetPageBreakField(raw) {
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  buildInlinePageContentHtml(headingField, descriptionField) {
+    const styleApi = window.QuoteMateFieldStyle || {};
+    const getFieldStyleVars = styleApi.getFieldStyleVars || (() => '');
+    const resolveHeadingLevel = styleApi.resolveHeadingLevel || (() => 'h2');
+    const getHeadingAlignClass = styleApi.getHeadingAlignClass || (() => 'quotemate-form-heading--align-center quotemate-form-field__heading--align-center');
+    const formatHeadingText = styleApi.formatHeadingText
+      || ((text) => this.escapeHtml(this.formatDisplayText(text)));
+
+    const parts = [];
+    const resolvedHeadingField = this.coercePageBreakHeadingField(headingField);
+    const resolvedDescriptionField = this.coercePageBreakDescriptionField(descriptionField);
+
+    if (resolvedHeadingField) {
+      const headingText = String(resolvedHeadingField.label || '').trim();
+      if (headingText) {
+        const tag = resolveHeadingLevel(resolvedHeadingField.heading_level);
+        const alignClass = getHeadingAlignClass(resolvedHeadingField.heading_align);
+        const styleAttr = getFieldStyleVars(resolvedHeadingField);
+        const cssClass = resolvedHeadingField.cssClass
+          ? ` ${this.escapeHtml(resolvedHeadingField.cssClass)}`
+          : '';
+        parts.push(
+          `<div class="form-group form-group--content-block inline-cascade-page-heading-wrap"${styleAttr ? ` style="${styleAttr}"` : ''}>` +
+            `<${tag} class="inline-cascade-page-heading quotemate-form-heading quotemate-form-field__heading quotemate-form-heading--${tag} ${alignClass}${cssClass}">` +
+            `${formatHeadingText(headingText)}` +
+            `</${tag}>` +
+          `</div>`
+        );
+      }
+    }
+
+    if (resolvedDescriptionField) {
+      const descriptionText = String(resolvedDescriptionField.paragraph_content || '').trim();
+      if (descriptionText) {
+        const alignClass = getHeadingAlignClass(resolvedDescriptionField.heading_align);
+        const styleAttr = getFieldStyleVars(resolvedDescriptionField);
+        const cssClass = resolvedDescriptionField.cssClass
+          ? ` ${this.escapeHtml(resolvedDescriptionField.cssClass)}`
+          : '';
+        const formatted = this.escapeHtml(descriptionText).replace(/\r\n/g, '\n').replace(/\n/g, '<br>');
+        parts.push(
+          `<div class="form-group form-group--content-block inline-cascade-page-description-wrap"${styleAttr ? ` style="${styleAttr}"` : ''}>` +
+            `<div class="inline-cascade-page-description quotemate-form-paragraph ${alignClass}${cssClass}">${formatted}</div>` +
+          `</div>`
+        );
+      }
+    }
+
+    return parts.join('');
+  }
+
+  pickPageBreakHeadingField(primary, fallback) {
+    const primaryField = this.coercePageBreakHeadingField(primary);
+    const primaryText = primaryField?.label ? String(primaryField.label).trim() : '';
+    if (primaryText) return primaryField;
+    return this.coercePageBreakHeadingField(fallback);
+  }
+
+  pickPageBreakDescriptionField(primary, fallback) {
+    const primaryField = this.coercePageBreakDescriptionField(primary);
+    const primaryText = primaryField?.paragraph_content
+      ? String(primaryField.paragraph_content).trim()
+      : '';
+    if (primaryText) return primaryField;
+    return this.coercePageBreakDescriptionField(fallback);
+  }
+
+  applyInlinePageContent(page, headingInput, descriptionInput) {
+    if (!page) return;
+
+    const headingField = this.coercePageBreakHeadingField(headingInput);
+    const descriptionField = this.coercePageBreakDescriptionField(descriptionInput);
+    const headingText = headingField?.label ? String(headingField.label).trim() : '';
+    const descriptionText = descriptionField?.paragraph_content
+      ? String(descriptionField.paragraph_content).trim()
+      : '';
+
+    if (headingField && headingText) {
+      page.dataset.pageBreakHeadingField = JSON.stringify(headingField);
+      page.dataset.pageBreakHeading = headingText;
+    } else {
+      delete page.dataset.pageBreakHeadingField;
+      delete page.dataset.pageBreakHeading;
+    }
+
+    if (descriptionField && descriptionText) {
+      page.dataset.pageBreakDescriptionField = JSON.stringify(descriptionField);
+      page.dataset.pageBreakDescription = descriptionText;
+    } else {
+      delete page.dataset.pageBreakDescriptionField;
+      delete page.dataset.pageBreakDescription;
+    }
+
+    const existing = page.querySelector('.inline-cascade-page-content');
+    if (!headingText && !descriptionText) {
+      existing?.remove();
+      return;
+    }
+
+    const html = this.buildInlinePageContentHtml(headingField, descriptionField);
+    if (existing) {
+      existing.innerHTML = html;
+      return;
+    }
+
+    const contentEl = document.createElement('div');
+    contentEl.className = 'inline-cascade-page-content';
+    contentEl.innerHTML = html;
+    const row = page.querySelector('.inline-cascade-row');
+    if (row) {
+      page.insertBefore(contentEl, row);
+    } else {
+      page.appendChild(contentEl);
+    }
   }
 
   getCascadeNavigationSteps(container) {
@@ -416,9 +652,20 @@ class ProgressiveServiceSelector {
 
     const oldPages = this.getInlinePagesForStep(hostStep);
     const segmentTitles = [];
+    const segmentContent = [];
     oldPages.forEach((page, idx) => {
       if (idx === 0 || page.dataset.pageBreakStart === '1') {
         segmentTitles.push(page.dataset.pageTitle || '');
+        segmentContent.push({
+          headingField:
+            this.parseDatasetPageBreakField(page.dataset.pageBreakHeadingField) ||
+            this.coercePageBreakHeadingField(page.dataset.pageBreakHeading || ''),
+          descriptionField:
+            this.parseDatasetPageBreakField(page.dataset.pageBreakDescriptionField) ||
+            this.coercePageBreakDescriptionField(page.dataset.pageBreakDescription || ''),
+          heading: page.dataset.pageBreakHeading || '',
+          description: page.dataset.pageBreakDescription || '',
+        });
       }
     });
 
@@ -444,6 +691,18 @@ class ProgressiveServiceSelector {
             const container = hostStep.closest('.progressive-service-selector');
             const fieldData = container ? this.getFieldData(container.dataset.fieldId) : null;
             page.dataset.pageTitle = this.getCascadeDefaultFirstTitle(fieldData);
+          }
+          const content = segmentContent[segIdx] || {};
+          if (segIdx === 0) {
+            const fieldData = container ? this.getFieldData(container.dataset.fieldId) : null;
+            const parentContent = this.getFieldParentPageBreakContent(fieldData);
+            this.applyInlinePageContent(
+              page,
+              this.pickPageBreakHeadingField(content.headingField, parentContent.headingField),
+              this.pickPageBreakDescriptionField(content.descriptionField, parentContent.descriptionField)
+            );
+          } else {
+            this.applyInlinePageContent(page, content.headingField, content.descriptionField);
           }
           builtPages.push(page);
           row = page.querySelector('.inline-cascade-row');
@@ -841,9 +1100,12 @@ class ProgressiveServiceSelector {
     if (this.hasPageBreakBefore(selectedCategory)) {
       this.clearUnifiedPendingState(container);
       const inlinePageBefore = this.getActivePageInfo(container).pageIndex;
+      const pageContent = this.getNodePageBreakContent(selectedCategory);
       this.renderInlineLevel(container, 1, 2, childItems, step2Label, {
         forceNewPage: true,
         pageTitle: this.getNodePageBreakTitle(selectedCategory),
+        pageHeadingField: pageContent.headingField,
+        pageDescriptionField: pageContent.descriptionField,
       });
       this.keepInlinePageAtIndex(container, 1, inlinePageBefore);
       this.showStep(container, 1);
@@ -928,9 +1190,12 @@ class ProgressiveServiceSelector {
           this.clearUnifiedPendingState(container);
           const hostStep = activeStepNumber;
           const inlinePageBefore = this.getActivePageInfo(container).pageIndex;
+          const pageContent = this.getNodePageBreakContent(serviceData);
           this.renderInlineLevel(container, hostStep, nextStep, childItems, nextLabel, {
             forceNewPage: true,
             pageTitle: this.getNodePageBreakTitle(serviceData),
+            pageHeadingField: pageContent.headingField,
+            pageDescriptionField: pageContent.descriptionField,
           });
           this.keepInlinePageAtIndex(container, hostStep, inlinePageBefore);
           this.showStep(container, hostStep);
@@ -1155,6 +1420,7 @@ class ProgressiveServiceSelector {
     const sizeContainer = hostStep?.closest('.progressive-service-selector');
     if (sizeContainer) {
       this.applyFieldSizeToContainer(sizeContainer);
+      this.applyParentPageContent(sizeContainer);
     }
   }
 
@@ -1233,7 +1499,15 @@ class ProgressiveServiceSelector {
   }
 
   resolveTargetInlinePage(hostStep, options = {}) {
-    const { forceNewPage = false, pageTitle = '', allowOverflow = false } = options;
+    const {
+      forceNewPage = false,
+      pageTitle = '',
+      pageHeadingField = null,
+      pageDescriptionField = null,
+      pageHeading = '',
+      pageDescription = '',
+      allowOverflow = false,
+    } = options;
     this.ensureInlinePagesLayout(hostStep);
 
     const container = hostStep?.closest('.progressive-service-selector');
@@ -1260,6 +1534,11 @@ class ProgressiveServiceSelector {
         if (title) {
           newPage.dataset.pageTitle = this.formatDisplayText(title);
         }
+        this.applyInlinePageContent(
+          newPage,
+          pageHeadingField || pageHeading,
+          pageDescriptionField || pageDescription
+        );
       }
       if (container) this.applyCascadeLayoutVars(container);
       return { page: newPage, autoShow: false };
@@ -2261,6 +2540,12 @@ class ProgressiveServiceSelector {
         return;
       }
 
+      // Page Content heading/description blocks live inside the selector and
+      // must stay visible with their cascade page — not treated as host fields.
+      if (group.closest('.progressive-service-selector')) {
+        return;
+      }
+
       if (hideHostFields) {
         group.style.display = 'none';
         group.dataset.progressiveHidden = '1';
@@ -2618,6 +2903,7 @@ class ProgressiveServiceSelector {
       }
 
       this.rebuildCategorySelect(container, categories);
+      this.applyParentPageContent(container, this.getFieldData(state.fieldId));
 
       if (
         !container.dataset.pendingInternalStep &&
@@ -2664,8 +2950,14 @@ class ProgressiveServiceSelector {
         `.inline-cascade-level[data-cascade-level="${levelNumber}"] select.service-select`
       );
       if (!existingLevel) {
+        const pageContent = this.getNodePageBreakContent(parent);
         const options = this.hasPageBreakBefore(parent)
-          ? { forceNewPage: true, pageTitle: this.getNodePageBreakTitle(parent) }
+          ? {
+              forceNewPage: true,
+              pageTitle: this.getNodePageBreakTitle(parent),
+              pageHeadingField: pageContent.headingField,
+              pageDescriptionField: pageContent.descriptionField,
+            }
           : {};
         this.renderInlineLevel(container, 1, levelNumber, children, label, options);
       } else {
@@ -2754,6 +3046,8 @@ class ProgressiveServiceSelector {
         `;
         select = step1.querySelector('.category-select');
       }
+      const fieldData = this.getFieldData(container.dataset.fieldId);
+      this.applyParentPageContent(container, fieldData);
     }
 
     if (!select) return;
@@ -2778,6 +3072,7 @@ class ProgressiveServiceSelector {
     const sizeContainer = select.closest('.progressive-service-selector');
     if (sizeContainer) {
       this.applyFieldSizeToContainer(sizeContainer);
+      this.applyParentPageContent(sizeContainer, this.getFieldData(container.dataset.fieldId));
     }
   }
 

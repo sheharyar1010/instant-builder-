@@ -393,6 +393,50 @@
       }
     }
   }
+
+  .service-page-content-section--parent {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+
+    &[hidden] {
+      display: none !important;
+    }
+
+    .service-options-label-input-wrap {
+      > label {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        color: #4a5568;
+        margin-bottom: 6px;
+      }
+    }
+
+    .service-page-content-field-row__controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      .service-input {
+        flex: 1;
+        min-width: 0;
+        width: auto;
+        max-width: none;
+      }
+
+      .service-description-input {
+        min-height: 44px;
+        resize: vertical;
+      }
+
+      .service-page-content-field-settings-btn {
+        flex-shrink: 0;
+        align-self: center;
+      }
+    }
+  }
 }
 
 /* Flat category rows (image design) */
@@ -750,6 +794,45 @@
       &::placeholder {
         color: #a0aec0;
       }
+    }
+  }
+
+  .service-page-content-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+
+    &[hidden] {
+      display: none !important;
+    }
+
+    .service-options-label-input-wrap {
+      .service-description-input {
+        margin-top: 0;
+        padding: 10px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+      }
+    }
+
+    .service-page-content-field-row__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+
+      > label {
+        margin-bottom: 0;
+      }
+    }
+
+    .service-page-content-field-settings-btn {
+      flex-shrink: 0;
+      padding: 4px 10px;
+      font-size: 12px;
+      line-height: 1.2;
     }
   }
 
@@ -2038,4 +2121,55 @@
     border-color: #c05621;
     transform: translateY(-1px);
   }
+}
+
+.service-embedded-field-settings {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 0 16px;
+
+  &[hidden] {
+    display: none !important;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 16px;
+    padding: 4px 16px 0;
+
+    > .service-embedded-field-settings__title {
+      order: 1;
+    }
+
+    [data-back-to-service-structure] {
+      order: 2;
+      margin-left: auto;
+    }
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #2d3748;
+  }
+
+  &__sub-tabs {
+    flex-shrink: 0;
+    margin-bottom: 0;
+  }
+
+  .quotemate-form-builder__sub-tab-content {
+    flex: 1;
+    min-height: 0;
+    max-height: min(52vh, 520px);
+    overflow: auto;
+  }
+}
+
+#service-structure-view[hidden] {
+  display: none !important;
 }
