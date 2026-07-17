@@ -368,7 +368,9 @@ class QuotemateFormBuilder {
       const rowEl = document.createElement('div');
       rowEl.className = 'quotemate-form-builder__row';
       rowEl.dataset.rowId = row.id;
-      rowEl.style.gridTemplateColumns = 'repeat(' + (row.columns || []).length + ', 1fr)';
+      const rowColCount = Math.max(1, colCount);
+      rowEl.style.setProperty('--qm-row-columns', String(rowColCount));
+      rowEl.style.gridTemplateColumns = 'repeat(' + rowColCount + ', minmax(0, 1fr))';
       row.columns.forEach((col, colIndex) => {
         const colEl = document.createElement('div');
         colEl.className = 'quotemate-form-builder__column';
@@ -987,9 +989,10 @@ class QuotemateFormBuilder {
     const prices = fieldData.optionPrices || {};
     const showDescription = !!fieldData.addDescription;
     const showPrice = !!fieldData.addPrice && fieldData.showPrice !== false;
-    const layoutClass = fieldData.optionLayout === 'horizontal'
-      ? ' quotemate-form-field__options--horizontal'
-      : '';
+    const layoutClass = [
+      fieldData.optionLayout === 'horizontal' ? ' quotemate-form-field__options--horizontal' : '',
+      fieldData.optionStyle === 'standard' ? ' quotemate-form-field__options--style-standard' : '',
+    ].join('');
 
     const innerHtml = options
       .map((option) => {
@@ -2542,8 +2545,8 @@ class QuotemateFormBuilder {
 
       this.updateFormData();
 
-      // Keep the edited property authoritative after panel sync (layout/showPrice must stick).
-      if (['optionLayout', 'showPrice'].includes(property)) {
+      // Keep the edited property authoritative after panel sync (layout/style/showPrice must stick).
+      if (['optionLayout', 'optionStyle', 'showPrice'].includes(property)) {
         fieldData[property] = value;
       }
 

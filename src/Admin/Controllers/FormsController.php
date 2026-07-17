@@ -366,6 +366,13 @@ class FormsController
             }
         }
 
+        if (isset($field['optionStyle'])) {
+            $option_style = sanitize_key((string) $field['optionStyle']);
+            if (in_array($option_style, ['default', 'standard'], true)) {
+                $sanitized['optionStyle'] = $option_style;
+            }
+        }
+
         if (($field['type'] ?? '') === 'heading') {
             if (isset($field['heading_level'])) {
                 $level = sanitize_key($field['heading_level']);

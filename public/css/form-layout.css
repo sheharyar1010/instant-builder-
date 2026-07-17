@@ -18,8 +18,57 @@ body:not(.wp-admin) .quotemate-form-wrapper > .form-header {
     max-width: 100%;
 }
 
+/* Unified multi-step: 1440px content + 100px side padding (shell max 1640px) */
+.quotemate-form-wrapper:has(> form.quotemate-form.quotemate-frontend-form.multi-step-form) {
+    width: 100%;
+    max-width: 1640px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 100px;
+    padding-right: 100px;
+    box-sizing: border-box;
+}
+
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form {
+    width: 100%;
+    max-width: 1440px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .form-content,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .form-step,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .form-section,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .section-fields,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .quotemate-form-row,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .quotemate-form-column,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .form-group,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .field-input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .form-step {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+@media (max-width: 1200px) {
+    .quotemate-form-wrapper:has(> form.quotemate-form.quotemate-frontend-form.multi-step-form) {
+        padding-left: 48px;
+        padding-right: 48px;
+    }
+}
+
 @media (max-width: 768px) {
     .quotemate-form-wrapper {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .quotemate-form-wrapper:has(> form.quotemate-form.quotemate-frontend-form.multi-step-form) {
         padding-left: 20px;
         padding-right: 20px;
     }
@@ -73,22 +122,26 @@ body:not(.wp-admin) .quotemate-form-wrapper > .form-header {
     min-width: 0;
 }
 
-/* Admin builder: stack fields vertically; field size sets width within the column */
-.quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field {
-    align-self: flex-start;
+/* Admin builder: columns share row width equally; fields fill their column */
+.quotemate-form-builder__drop-zone .quotemate-form-builder__row {
+    width: 100%;
+    grid-template-columns: repeat(var(--qm-row-columns, 1), minmax(0, 1fr));
+}
+
+.quotemate-form-builder__drop-zone .quotemate-form-builder__column {
+    width: 100%;
+    min-width: 0;
     max-width: 100%;
 }
 
-.quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field--size-small {
-    width: calc(100% / 3);
-}
-
-.quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field--size-medium {
-    width: calc(200% / 3);
-}
-
+.quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field,
+.quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field--size-small,
+.quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field--size-medium,
 .quotemate-form-builder__drop-zone .quotemate-form-builder__column .quotemate-form-field--size-large {
+    align-self: stretch;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 /* Default vertical spacing between fields (overridden by per-field margin in style attr) */
@@ -127,28 +180,29 @@ body:not(.wp-admin) .quotemate-form-wrapper > .form-header {
     min-width: 0;
 }
 
-/* Row/column layout: field size sets width within the column (mirrors admin builder) */
-.quotemate-form-wrapper .quotemate-form-column > .form-group,
-.quotemate-form-builder__form-preview .quotemate-form-column > .form-group {
-    align-self: flex-start;
+/* Row/column layout: columns share row width equally; fields fill their column */
+.quotemate-form-wrapper .quotemate-form-column,
+.quotemate-form-builder__form-preview .quotemate-form-column {
+    width: 100%;
+    min-width: 0;
     max-width: 100%;
-    /* Fallback for legacy fields without styleMarginBottom; inline style overrides when set */
-    margin-bottom: var(--qm-field-spacing, 1.5rem);
+    align-items: stretch;
 }
 
+.quotemate-form-wrapper .quotemate-form-column > .form-group,
+.quotemate-form-builder__form-preview .quotemate-form-column > .form-group,
 .quotemate-form-wrapper .quotemate-form-column > .form-group.quotemate-form-field--size-small,
-.quotemate-form-builder__form-preview .quotemate-form-column > .form-group.quotemate-form-field--size-small {
-    width: calc(100% / 3);
-}
-
+.quotemate-form-builder__form-preview .quotemate-form-column > .form-group.quotemate-form-field--size-small,
 .quotemate-form-wrapper .quotemate-form-column > .form-group.quotemate-form-field--size-medium,
-.quotemate-form-builder__form-preview .quotemate-form-column > .form-group.quotemate-form-field--size-medium {
-    width: calc(200% / 3);
-}
-
+.quotemate-form-builder__form-preview .quotemate-form-column > .form-group.quotemate-form-field--size-medium,
 .quotemate-form-wrapper .quotemate-form-column > .form-group.quotemate-form-field--size-large,
 .quotemate-form-builder__form-preview .quotemate-form-column > .form-group.quotemate-form-field--size-large {
+    align-self: stretch;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    /* Fallback for legacy fields without styleMarginBottom; inline style overrides when set */
+    margin-bottom: var(--qm-field-spacing, 1.5rem);
 }
 
 .section-fields--layout .quotemate-form-column > .form-group:last-child {

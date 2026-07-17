@@ -92,20 +92,6 @@
   margin-right: 8px;
 }
 
-.quotemate-form-field__options--horizontal {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 8px 16px;
-}
-
-.quotemate-form-field__options--horizontal label {
-  margin: 0;
-  flex: 0 1 auto;
-  max-width: 100%;
-}
-
 .quotemate-form-builder {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: #f1f1f1;
@@ -919,14 +905,21 @@
 
 .quotemate-form-builder__row {
   display: grid;
-  /* grid-template-columns set per row via inline style for dynamic column count */
+  /* Equal columns: 1 → 100%, 2 → 50%, 3 → 33.33%, etc. (also set inline via --qm-row-columns) */
+  grid-template-columns: repeat(var(--qm-row-columns, 1), minmax(0, 1fr));
   gap: 1rem;
   align-items: start;
+  justify-items: stretch;
   padding: 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Columns: fields stack vertically; row column count controls side-by-side layout */
 .quotemate-form-builder__column {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 40px;
   padding: 0.75rem 0;
   border: none;
@@ -937,12 +930,43 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  align-items: stretch;
   align-content: stretch;
+  box-sizing: border-box;
 
   .quotemate-form-field {
     width: 100%;
     max-width: 100%;
+    min-width: 0;
     flex: 0 0 auto;
+    align-self: stretch;
+    box-sizing: border-box;
+  }
+
+  .quotemate-form-field__label,
+  .field-label,
+  .quotemate-form-field__description,
+  .quotemate-form-field__break-text,
+  .quotemate-form-field__break-description {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .quotemate-form-field__body {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    align-self: stretch;
+    box-sizing: border-box;
+  }
+
+  .field-input {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: 1 1 100%;
+    box-sizing: border-box;
   }
 
   .quotemate-form-builder__section:hover & {
@@ -1933,14 +1957,19 @@
     align-items: center;
     gap: 8px;
     width: 100%;
+    max-width: 100%;
     min-width: 0;
+    align-self: stretch;
     position: relative;
+    box-sizing: border-box;
   }
 
   .field-input {
     flex: 1 1 100%;
     min-width: 0;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   &--break {
@@ -2236,17 +2265,141 @@
   &__options {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 8px 16px;
 
     label {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 8px;
+      margin: 0;
+      flex: 0 0 auto;
+      max-width: 100%;
       cursor: pointer;
 
       input[type="radio"],
       input[type="checkbox"] {
         margin: 0;
+      }
+    }
+
+    // Use interpolation so Sass does not treat "--horizontal" as a CSS custom property
+    &#{"--horizontal"} {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 8px 16px;
+      max-width: 100%;
+
+      > label {
+        margin: 0;
+        flex: 0 0 auto;
+        max-width: 100%;
+        align-items: flex-start;
+      }
+    }
+
+    // Standard option style (pill + checkmark) — Default keeps native inputs
+    &#{"--style-standard"} {
+      align-items: flex-start;
+      gap: 10px 12px;
+      width: 100%;
+      max-width: 100%;
+
+      > label {
+        position: relative;
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        align-self: flex-start;
+        column-gap: 10px;
+        row-gap: 4px;
+        margin: 0;
+        padding: 12px 20px;
+        border-radius: 999px;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        color: #111827;
+        font-weight: 500;
+        line-height: 1.3;
+        width: max-content;
+        max-width: 100%;
+        flex: 0 0 auto;
+        box-sizing: border-box;
+        transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        user-select: none;
+
+        &::before {
+          content: "✓";
+          flex: 0 0 22px;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: #4b5563;
+          color: #fff;
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 22px;
+          text-align: center;
+          flex-shrink: 0;
+          transition: background-color 0.15s ease, color 0.15s ease;
+        }
+
+        &:hover {
+          background: #e5e7eb;
+          border-color: #d1d5db;
+        }
+
+        &:has(input:checked) {
+          background: #ffd740;
+          border-color: #ffd740;
+
+          &::before {
+            background: #111827;
+            color: #ffd740;
+          }
+
+          &:hover {
+            background: #ffcf20;
+            border-color: #ffcf20;
+          }
+        }
+
+        &:has(input:disabled) {
+          opacity: 0.55;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
+      }
+
+      input[type="radio"],
+      input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+        margin: 0;
+        pointer-events: none;
+      }
+
+      .choice-option-label {
+        flex: 0 0 auto;
+        min-width: auto;
+        white-space: nowrap;
+      }
+
+      .choice-option-description {
+        flex: 1 0 100%;
+        margin: 0;
+        padding-left: 32px;
+        color: #6b7280;
+        white-space: pre-line;
+      }
+
+      .choice-option-price {
+        color: inherit;
+        white-space: nowrap;
       }
     }
   }

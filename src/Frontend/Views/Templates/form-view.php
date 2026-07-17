@@ -224,6 +224,67 @@ $form_width_class = DesignHelper::get_width_class($form_design);
     max-width: 100%;
 }
 
+/*
+ * Unified multi-step form page layout:
+ * - Content area max 1440px
+ * - 100px horizontal page padding outside that content
+ * - Total shell max = 1640px (1440 + 100 + 100), width 100% below that
+ */
+.quotemate-form-wrapper:has(> form.quotemate-form.quotemate-frontend-form.multi-step-form) {
+    width: 100%;
+    max-width: 1640px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 100px;
+    padding-right: 100px;
+    box-sizing: border-box;
+}
+
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form {
+    width: 100%;
+    max-width: 1440px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .form-content,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .form-step,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .form-section,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .section-fields,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .quotemate-form-row,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .quotemate-form-column,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .form-group,
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .field-input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .quotemate-form-column {
+    min-width: 0;
+    align-items: stretch;
+}
+
+.quotemate-form.quotemate-frontend-form.multi-step-form.unified-multi-step-form .form-step {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+@media (max-width: 1200px) {
+    .quotemate-form-wrapper:has(> form.quotemate-form.quotemate-frontend-form.multi-step-form) {
+        padding-left: 48px;
+        padding-right: 48px;
+    }
+}
+
+@media (max-width: 768px) {
+    .quotemate-form-wrapper:has(> form.quotemate-form.quotemate-frontend-form.multi-step-form) {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+}
+
 .form-header {
     text-align: center;
     margin-bottom: 2rem;
@@ -493,12 +554,17 @@ $form_width_class = DesignHelper::get_width_class($form_design);
     align-items: flex-start;
     gap: 0.75rem;
     padding: 0.5rem 0;
+    flex: 0 0 auto;
+    max-width: 100%;
 }
 
+.checkbox-group,
 .radio-group {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 0.5rem 1rem;
 }
 
 .checkbox-group--horizontal,
@@ -508,24 +574,13 @@ $form_width_class = DesignHelper::get_width_class($form_design);
     flex-wrap: wrap;
     align-items: flex-start;
     gap: 0.5rem 1rem;
+    max-width: 100%;
 }
 
 .checkbox-group--horizontal .checkbox-wrapper,
 .radio-group--horizontal .radio-wrapper {
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     max-width: 100%;
-}
-
-@media (max-width: 576px) {
-    .checkbox-group--horizontal,
-    .radio-group--horizontal {
-        gap: 0.5rem;
-    }
-
-    .checkbox-group--horizontal .checkbox-wrapper,
-    .radio-group--horizontal .radio-wrapper {
-        flex: 1 1 100%;
-    }
 }
 
 .form-checkbox, .form-radio {
@@ -561,6 +616,147 @@ $form_width_class = DesignHelper::get_width_class($form_design);
     line-height: 1.4;
     color: var(--qm-text-muted, #6c757d);
     white-space: pre-line;
+}
+
+/* Standard option style (pill + checkmark) — Default keeps native controls */
+.checkbox-group--style-standard,
+.radio-group--style-standard {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 10px 12px;
+    width: 100%;
+    max-width: 100%;
+}
+
+.checkbox-group--style-standard.checkbox-group--horizontal,
+.radio-group--style-standard.radio-group--horizontal {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px 12px;
+    max-width: 100%;
+}
+
+.checkbox-group--style-standard .checkbox-wrapper,
+.radio-group--style-standard .radio-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: stretch;
+    align-self: flex-start;
+    margin: 0;
+    padding: 0;
+    gap: 0;
+    flex: 0 0 auto;
+    width: max-content;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.checkbox-group--style-standard .form-checkbox,
+.radio-group--style-standard .form-radio {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    pointer-events: none;
+}
+
+.checkbox-group--style-standard .checkbox-label,
+.radio-group--style-standard .radio-label {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    align-self: flex-start;
+    column-gap: 10px;
+    row-gap: 4px;
+    margin: 0;
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    color: #111827;
+    font-weight: 500;
+    line-height: 1.3;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    user-select: none;
+    width: max-content;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.checkbox-group--style-standard .checkbox-label::before,
+.radio-group--style-standard .radio-label::before {
+    content: "✓";
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #4b5563;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 22px;
+    text-align: center;
+    flex-shrink: 0;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.checkbox-group--style-standard .checkbox-label:hover,
+.radio-group--style-standard .radio-label:hover {
+    background: #e5e7eb;
+    border-color: #d1d5db;
+}
+
+.checkbox-group--style-standard .form-checkbox:checked + .checkbox-label,
+.radio-group--style-standard .form-radio:checked + .radio-label {
+    background: var(--qm-accent-color, #667eea);
+    border-color: var(--qm-accent-color, #667eea);
+}
+
+.checkbox-group--style-standard .form-checkbox:checked + .checkbox-label:hover,
+.radio-group--style-standard .form-radio:checked + .radio-label:hover {
+    background: color-mix(in srgb, var(--qm-accent-color, #667eea) 85%, #000000);
+    border-color: color-mix(in srgb, var(--qm-accent-color, #667eea) 85%, #000000);
+}
+
+.checkbox-group--style-standard .form-checkbox:checked + .checkbox-label::before,
+.radio-group--style-standard .form-radio:checked + .radio-label::before {
+    background: #111827;
+    color: #ffffff;
+}
+
+.checkbox-group--style-standard .form-checkbox:disabled + .checkbox-label,
+.radio-group--style-standard .form-radio:disabled + .radio-label {
+    opacity: 0.55;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.checkbox-group--style-standard .choice-option-label,
+.radio-group--style-standard .choice-option-label {
+    flex: 0 0 auto;
+    min-width: auto;
+    color: inherit;
+    white-space: nowrap;
+}
+
+.checkbox-group--style-standard .choice-option-description,
+.radio-group--style-standard .choice-option-description {
+    flex: 1 0 100%;
+    margin: 0;
+    padding-left: 32px;
+    color: #6b7280;
+    white-space: pre-line;
+}
+
+.checkbox-group--style-standard .choice-option-price,
+.radio-group--style-standard .choice-option-price {
+    color: inherit;
+    white-space: nowrap;
 }
 
 /* Quote Total Display */

@@ -489,6 +489,17 @@ export class FieldProperties {
           { value: 'horizontal', label: 'Horizontal' },
         ]
       );
+      baseHtml += this.advanceSectionSelect(
+        'Option Style',
+        'Choose how options are displayed',
+        fieldData?.optionStyle === 'standard' ? 'standard' : 'default',
+        'optionStyle',
+        fieldId,
+        [
+          { value: 'default', label: 'Default' },
+          { value: 'standard', label: 'Standard' },
+        ]
+      );
     }
 
     // Field type specific properties
