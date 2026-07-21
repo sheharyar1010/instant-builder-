@@ -152,6 +152,16 @@ class ProgressiveServiceSelector {
       this.applyCascadeLayoutVars(container);
       this.applyFieldSizeToContainer(container);
     });
+
+    // Preload the complete dynamic step list up front so all Service Selector steps are
+    // visible from the beginning (matching the Admin Canvas). Deferred so unified
+    // multi-step init can finish first; syncCascadeStepProgress routes unified forms to
+    // their own progress builder and standalone forms to the cascade progress bar.
+    setTimeout(() => {
+      document.querySelectorAll('.progressive-service-selector').forEach((container) => {
+        this.syncCascadeStepProgress(container);
+      });
+    }, 0);
   }
 
   convertToProgressiveSelector(fieldElement, fieldData) {
@@ -377,6 +387,8 @@ class ProgressiveServiceSelector {
       const headingText = String(resolvedHeadingField.label || '').trim();
       if (headingText) {
         const tag = resolveHeadingLevel(resolvedHeadingField.heading_level);
+        const isSubheading = ['h3', 'h4', 'h5', 'h6'].includes(tag);
+        const roleClass = isSubheading ? ' inline-cascade-page-subheading' : '';
         const alignClass = getHeadingAlignClass(resolvedHeadingField.heading_align);
         const styleAttr = getFieldStyleVars(resolvedHeadingField);
         const cssClass = resolvedHeadingField.cssClass
@@ -384,7 +396,7 @@ class ProgressiveServiceSelector {
           : '';
         parts.push(
           `<div class="form-group form-group--content-block inline-cascade-page-heading-wrap"${styleAttr ? ` style="${styleAttr}"` : ''}>` +
-            `<${tag} class="inline-cascade-page-heading quotemate-form-heading quotemate-form-field__heading quotemate-form-heading--${tag} ${alignClass}${cssClass}">` +
+            `<${tag} class="inline-cascade-page-heading quotemate-form-heading quotemate-form-field__heading quotemate-form-heading--${tag}${roleClass} ${alignClass}${cssClass}">` +
             `${formatHeadingText(headingText)}` +
             `</${tag}>` +
           `</div>`
@@ -501,6 +513,67 @@ class ProgressiveServiceSelector {
     return steps;
   }
 
+  /**
+   * Full predicted cascade step labels from the field structure (root + one label per
+   * cascade depth that opens a new page). Mirrors the Admin Canvas step logic so the
+   * frontend can preload the complete dynamic step list from the beginning.
+   *
+   * Sibling options at the same depth are alternate user choices sharing one navigation
+   * slot, so they de-duplicate to a single step per depth (first flagged node wins).
+   * This DOES NOT drive navigation — only the rendered step list.
+   */
+  getCascadePredictedStepLabels(container) {
+    const fieldData = this.getFieldData(container?.dataset?.fieldId);
+    if (!fieldData) return [];
+
+    const structure = fieldData.enhancedServiceStructure || fieldData.serviceStructure || [];
+    const labels = [this.getCascadeDefaultFirstTitle(fieldData)];
+    const slotTitles = new Map();
+
+    const walk = (items, depth) => {
+      this.getSelectableItems(items).forEach((item) => {
+        const kids = this.getSelectableItems(item?.children);
+        if (this.hasPageBreakBefore(item) && kids.length > 0 && !slotTitles.has(depth)) {
+          const title =
+            this.getNodePageBreakTitle(item) ||
+            this.formatDisplayText(String(item?.name || '').trim()) ||
+            `Step ${depth + 1}`;
+          slotTitles.set(depth, title);
+        }
+        if (kids.length > 0) walk(item.children, depth + 1);
+      });
+    };
+
+    walk(structure, 1);
+
+    Array.from(slotTitles.keys())
+      .sort((a, b) => a - b)
+      .forEach((depth) => labels.push(slotTitles.get(depth)));
+
+    return labels;
+  }
+
+  /**
+   * Steps used for RENDERING the progress UI: the live navigable steps (real pages) plus
+   * any not-yet-reached predicted steps appended so the full list shows from the start.
+   * Live steps keep their real pageIndex (navigable); predicted-only steps get pageIndex -1
+   * (never navigated to directly — navigation still flows through Next/Previous).
+   */
+  getCascadeDisplaySteps(container) {
+    const navSteps = this.getCascadeNavigationSteps(container);
+    const predicted = this.getCascadePredictedStepLabels(container);
+
+    if (predicted.length <= navSteps.length) {
+      return navSteps;
+    }
+
+    const steps = navSteps.slice();
+    for (let i = navSteps.length; i < predicted.length; i++) {
+      steps.push({ pageIndex: -1, label: predicted[i], predicted: true });
+    }
+    return steps;
+  }
+
   getCascadeNavigationActiveIndex(container) {
     const { pageIndex } = this.getActivePageInfo(container);
     const steps = this.getCascadeNavigationSteps(container);
@@ -557,16 +630,16 @@ class ProgressiveServiceSelector {
     const form = container?.closest('form');
     if (!form || form.classList.contains('unified-multi-step-form')) return;
 
-    const navSteps = this.getCascadeNavigationSteps(container);
+    const displaySteps = this.getCascadeDisplaySteps(container);
     const existing = form.querySelector('.service-cascade-step-progress');
 
-    if (navSteps.length <= 1) {
+    if (displaySteps.length <= 1) {
       existing?.remove();
       return;
     }
 
     const activeIndex = this.getCascadeNavigationActiveIndex(container);
-    const labels = navSteps.map((step) => step.label);
+    const labels = displaySteps.map((step) => step.label);
     let progress = existing;
 
     if (!progress) {
@@ -599,7 +672,9 @@ class ProgressiveServiceSelector {
 
   syncRowGridColumns(row) {
     if (!row) return;
-    const count = row.children.length;
+    const count = Array.from(row.children).filter(
+      (el) => !el.classList?.contains('inline-cascade-level--terminal-hidden') && !el.hidden
+    ).length;
     if (count > 0) {
       row.style.setProperty('--qm-row-columns', String(count));
       if (count === 1) {
@@ -1087,6 +1162,32 @@ class ProgressiveServiceSelector {
       return;
     }
 
+    const soleTerminalChild = this.getAutoSelectableTerminalPerChild(selectedCategory);
+    if (soleTerminalChild) {
+      this.clearInlineCascade(container, 1, 2);
+      this.clearSeparateStepsFrom(container, 2);
+      window.quotemateUnifiedSteps?.removeDynamicStepsFrom?.(window.quotemateUnifiedSteps.currentStep);
+      window.quotemateUnifiedSteps?.resetPostServiceFieldsFrom?.(
+        window.quotemateUnifiedSteps?.currentStep ?? 0
+      );
+      this.clearUnifiedPendingState(container);
+      this.createDynamicHiddenInput(
+        container,
+        fieldId,
+        'service',
+        soleTerminalChild.name,
+        soleTerminalChild
+      );
+      this.completeLeafSelection(container, soleTerminalChild, {
+        hostStepNumber: 1,
+        levelNumber: 2,
+      });
+      this.hideStepsAfter(container, 1);
+      this.notifyUnifiedStepsChanged(container);
+      this.updateInternalNavigation(container);
+      return;
+    }
+
     const childItems = this.getSelectableItems(selectedCategory.children);
     const step2Label = (selectedCategory.optionsLabel || 'option').trim();
 
@@ -1171,6 +1272,38 @@ class ProgressiveServiceSelector {
       this.createDynamicHiddenInput(container, fieldId, inputName, serviceData.name, serviceData);
 
       if (this.shouldRenderChildDropdown(serviceData)) {
+        const soleTerminalChild = this.getAutoSelectableTerminalPerChild(serviceData);
+        if (soleTerminalChild) {
+          this.clearSeparateStepsFrom(container, nextStep);
+          if (isInlineSelect) {
+            const hostStep = serviceSelect.closest('.step-container');
+            this.clearInlineCascadeFrom(hostStep, nextStep);
+          } else {
+            this.clearInlineCascade(container, activeStepNumber, nextStep);
+          }
+          window.quotemateUnifiedSteps?.removeDynamicStepsFrom?.(window.quotemateUnifiedSteps.currentStep);
+          window.quotemateUnifiedSteps?.resetPostServiceFieldsFrom?.(
+            window.quotemateUnifiedSteps?.currentStep ?? 0
+          );
+          this.clearUnifiedPendingState(container);
+          const soleInputName = nextStep === 2 ? 'service' : `subservice_${nextStep}`;
+          this.createDynamicHiddenInput(
+            container,
+            fieldId,
+            soleInputName,
+            soleTerminalChild.name,
+            soleTerminalChild
+          );
+          this.completeLeafSelection(container, soleTerminalChild, {
+            hostStepNumber: activeStepNumber,
+            levelNumber: nextStep,
+            isInlineSelect,
+            serviceSelect,
+            hideTerminalSelect: false,
+          });
+          return;
+        }
+
         const childItems = this.getSelectableItems(serviceData.children);
         const nextLabel = (serviceData.optionsLabel || 'option').trim();
 
@@ -1223,6 +1356,7 @@ class ProgressiveServiceSelector {
           levelNumber: nextStep,
           isInlineSelect,
           serviceSelect,
+          hideTerminalSelect: this.isTerminalPerPricingNode(serviceData),
         });
       }
     } catch (error) {
@@ -1372,7 +1506,9 @@ class ProgressiveServiceSelector {
     if (!row) return 0;
     let count = 0;
     if (row.querySelector('.inline-cascade-slot--category')) count += 1;
-    count += row.querySelectorAll('.inline-cascade-level').length;
+    count += row.querySelectorAll(
+      '.inline-cascade-level:not(.inline-cascade-level--terminal-hidden)'
+    ).length;
     return count;
   }
 
@@ -1664,6 +1800,35 @@ class ProgressiveServiceSelector {
 
     const label = this.formatPricingType(pricingType);
     return typeof label === 'string' && label.startsWith('Per ');
+  }
+
+  /** Terminal Per* node: priced per-unit and not rendered as a further dropdown branch. */
+  isTerminalPerPricingNode(item) {
+    if (!item || !this.isPerPricingType(item.pricingType)) return false;
+    return !this.shouldRenderChildDropdown(item);
+  }
+
+  /**
+   * When a parent has exactly one selectable child that is a terminal Per* node,
+   * skip rendering that child as a dropdown and use it as the leaf label + quantity.
+   */
+  getAutoSelectableTerminalPerChild(parent) {
+    const kids = this.getSelectableItems(parent?.children);
+    if (kids.length !== 1) return null;
+    return this.isTerminalPerPricingNode(kids[0]) ? kids[0] : null;
+  }
+
+  /** Hide the cascade dropdown level that selected a terminal Per* leaf (keep in DOM for state). */
+  hideTerminalPerSelectLevel(opts = {}) {
+    const select = opts.serviceSelect;
+    if (!select) return;
+    const level = select.closest('.inline-cascade-level');
+    if (!level || level.classList.contains('inline-cascade-level--quantity')) return;
+    level.classList.add('inline-cascade-level--terminal-hidden');
+    level.setAttribute('aria-hidden', 'true');
+    level.hidden = true;
+    const row = level.closest('.inline-cascade-row');
+    if (row) this.syncRowGridColumns(row);
   }
 
   shouldRenderChildDropdown(item) {
@@ -2061,6 +2226,11 @@ class ProgressiveServiceSelector {
 
     this.markServiceSelectionComplete(container, serviceData);
 
+    // Terminal Per* nodes selected from a leaf dropdown: hide that dropdown (keep in DOM).
+    if (isPerType && opts.hideTerminalSelect && opts.serviceSelect) {
+      this.hideTerminalPerSelectLevel(opts);
+    }
+
     if (!this.isUnifiedMode(container)) {
       const activeStep = container.querySelector('.step-container.active');
       const useInlineLeaf = isInlineSelect || !!activeStep?.querySelector('.inline-cascade-level');
@@ -2091,7 +2261,15 @@ class ProgressiveServiceSelector {
     } else {
       this.clearSeparateStepsFrom(container, levelNumber);
       if (isInlineSelect && opts.serviceSelect) {
-        this.clearInlineCascadeFrom(opts.serviceSelect.closest('.step-container'), levelNumber);
+        // Keep the hidden terminal select level; only clear levels after it.
+        const hostStep = opts.serviceSelect.closest('.step-container');
+        const terminalLevel = opts.serviceSelect.closest('.inline-cascade-level');
+        const terminalCascade = parseInt(terminalLevel?.dataset.cascadeLevel, 10);
+        if (hostStep && Number.isFinite(terminalCascade)) {
+          this.clearInlineCascadeFrom(hostStep, terminalCascade + 1);
+        } else {
+          this.clearInlineCascadeFrom(hostStep, levelNumber);
+        }
       } else {
         this.clearInlineCascade(container, hostStepNumber, levelNumber);
       }
@@ -2150,26 +2328,29 @@ class ProgressiveServiceSelector {
       const initialTotal = unitPrice * initialQty;
       const unitTitle = this.getUnitLabelTitle(serviceData.pricingType);
       const perSuffix = this.formatPerUnitSuffix(serviceData.pricingType);
-      const labelClass = inline
-        ? 'field-label quantity-label quantity-label--sr-only'
-        : 'field-label quantity-label';
+      const leafTitle = this.escapeHtml(
+        this.formatDisplayText(serviceData.name || unitTitle || 'Quantity')
+      );
+      const qtyId = `qty-${fieldId || 'service'}`;
 
       return `
-        ${serviceData.description ? `<p class="service-desc quotemate-pricing-calculator__desc">${serviceData.description}</p>` : ''}
+        ${serviceData.description ? `<p class="service-desc quotemate-pricing-calculator__desc">${this.escapeHtml(this.formatDisplayText(serviceData.description))}</p>` : ''}
         <div class="quantity-section quotemate-pricing-calculator${inline ? ' quotemate-pricing-calculator--inline' : ''}">
-          <label class="${labelClass}" for="qty-${fieldId || 'service'}">${unitTitle}</label>
           <div class="quotemate-pricing-row">
+            <span class="quotemate-pricing-leaf-title" id="${qtyId}-title">${leafTitle}</span>
             <div class="quotemate-pricing-row__input-wrap">
               <input
                 type="number"
-                id="qty-${fieldId || 'service'}"
+                id="${qtyId}"
                 class="quantity-input form-control"
                 min="${minQty}"
                 value="${initialQty}"
                 max="${maxQty || ''}"
                 inputmode="numeric"
+                aria-labelledby="${qtyId}-title"
                 ${maxQty ? `data-max-quantity="${maxQty}"` : ''}>
             </div>
+            <label class="field-label quantity-label quantity-label--sr-only" for="${qtyId}">${this.escapeHtml(unitTitle)}</label>
             <div class="quotemate-pricing-row__formula" aria-live="polite">
               <span class="quotemate-pricing-row__op" aria-hidden="true">×</span>
               <span class="quotemate-pricing-row__rate">
@@ -2386,6 +2567,10 @@ class ProgressiveServiceSelector {
     const deliveryEstimate = pricingScope.querySelector('.delivery-estimate');
 
     if (this.isPerPricingType(serviceData.pricingType)) {
+      const leafTitle = pricingScope.querySelector('.quotemate-pricing-leaf-title');
+      if (leafTitle) {
+        leafTitle.textContent = this.formatDisplayText(serviceData.name || this.getUnitLabelTitle(serviceData.pricingType));
+      }
       if (quantityLabel) {
         quantityLabel.textContent = this.getUnitLabelTitle(serviceData.pricingType);
       }
@@ -2939,6 +3124,28 @@ class ProgressiveServiceSelector {
         );
         if (!existingQty) {
           this.renderInlineQuantity(container, 1, levelNumber, parent);
+        }
+        this.showStep(container, 1);
+        this.updateProgressClasses(container, 1);
+        return;
+      }
+
+      const soleTerminalChild = this.getAutoSelectableTerminalPerChild(parent);
+      if (soleTerminalChild) {
+        const existingQty = container.querySelector('.inline-cascade-level--quantity');
+        if (!existingQty) {
+          this.createDynamicHiddenInput(
+            container,
+            container.dataset.fieldId,
+            'service',
+            soleTerminalChild.name,
+            soleTerminalChild
+          );
+          this.completeLeafSelection(container, soleTerminalChild, {
+            hostStepNumber: 1,
+            levelNumber,
+            hideTerminalSelect: false,
+          });
         }
         this.showStep(container, 1);
         this.updateProgressClasses(container, 1);

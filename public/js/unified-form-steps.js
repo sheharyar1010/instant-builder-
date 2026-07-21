@@ -1066,7 +1066,7 @@ class UnifiedFormSteps {
     const container = this.progressive.getServiceContainer(activeId);
     if (!container) return null;
 
-    const navSteps = this.progressive.getCascadeNavigationSteps(container);
+    const navSteps = this.progressive.getCascadeDisplaySteps(container);
     if (!navSteps.length) return null;
 
     return {
@@ -1245,7 +1245,7 @@ class UnifiedFormSteps {
     const pushServiceNodes = (fieldId) => {
       const container = this.progressive?.getServiceContainer(fieldId);
       const cascadeSteps = container
-        ? this.progressive.getCascadeNavigationSteps(container)
+        ? this.progressive.getCascadeDisplaySteps(container)
         : [];
 
       if (cascadeSteps.length) {

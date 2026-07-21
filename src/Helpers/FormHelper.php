@@ -494,6 +494,38 @@ class FormHelper
      * @param array $field Field data with optional style* keys
      * @return string Empty or semicolon-separated CSS declarations (e.g. for style="...")
      */
+    private static function append_field_border_radius_vars(array &$v, array $field, string $prefix, string $css_prefix): void
+    {
+        $radius_unit = $field[$prefix . 'Unit'] ?? 'px';
+        $u_radius = function ($val) use ($radius_unit) {
+            if ($val === '' || $val === null) {
+                return '';
+            }
+            $num = preg_replace('/[^\d.-]/', '', (string) $val);
+            return $num !== '' ? $num . $radius_unit : '';
+        };
+        $legacy_r = $prefix === 'styleBorderRadius' ? ($field['styleBorderRadius'] ?? '') : '';
+        $rtl = $u_radius($field[$prefix . 'TopLeft'] ?? $legacy_r) ?: '0';
+        $rtr = $u_radius($field[$prefix . 'TopRight'] ?? $legacy_r) ?: '0';
+        $rbr = $u_radius($field[$prefix . 'BottomRight'] ?? $legacy_r) ?: '0';
+        $rbl = $u_radius($field[$prefix . 'BottomLeft'] ?? $legacy_r) ?: '0';
+        $any_radius = array_filter([
+            $field[$prefix . 'TopLeft'] ?? null,
+            $field[$prefix . 'TopRight'] ?? null,
+            $field[$prefix . 'BottomRight'] ?? null,
+            $field[$prefix . 'BottomLeft'] ?? null,
+            $legacy_r !== '' ? $legacy_r : null,
+        ], function ($val) {
+            return $val !== '' && $val !== null;
+        });
+        if (!empty($any_radius)) {
+            $v[] = $css_prefix . '-tl:' . esc_attr($rtl);
+            $v[] = $css_prefix . '-tr:' . esc_attr($rtr);
+            $v[] = $css_prefix . '-br:' . esc_attr($rbr);
+            $v[] = $css_prefix . '-bl:' . esc_attr($rbl);
+        }
+    }
+
     public static function get_field_style_attr(array $field): string
     {
         $v = [];
@@ -512,6 +544,36 @@ class FormHelper
             $val = $u($field[$k] ?? '', $paddingUnit);
             if ($val !== '') $v[] = $css . ':' . $val;
         }
+
+        if (!empty($field['styleFieldBg'])) {
+            $field_bg = (string) $field['styleFieldBg'];
+            if (isset($field['styleFieldBgOpacity']) && $field['styleFieldBgOpacity'] !== '') {
+                $opacity = (float) preg_replace('/[^\d.-]/', '', (string) $field['styleFieldBgOpacity']);
+                if (preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $field_bg)) {
+                    $hex = ltrim($field_bg, '#');
+                    if (strlen($hex) === 3) {
+                        $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+                    }
+                    $r = hexdec(substr($hex, 0, 2));
+                    $g = hexdec(substr($hex, 2, 2));
+                    $b = hexdec(substr($hex, 4, 2));
+                    $alpha = max(0, min(1, $opacity / 100));
+                    $v[] = '--qm-field-bg:rgba(' . $r . ',' . $g . ',' . $b . ',' . $alpha . ')';
+                } else {
+                    $v[] = '--qm-field-bg:' . esc_attr($field_bg);
+                }
+            } else {
+                $v[] = '--qm-field-bg:' . esc_attr($field_bg);
+            }
+        }
+        if (!empty($field['styleFieldBorderWidth'])) $v[] = '--qm-field-border-width:' . esc_attr($field['styleFieldBorderWidth']);
+        if (!empty($field['styleFieldBorderColor'])) $v[] = '--qm-field-border-color:' . esc_attr($field['styleFieldBorderColor']);
+        self::append_field_border_radius_vars($v, $field, 'styleFieldBorderRadius', '--qm-field-border-radius');
+        if (!empty($field['styleFieldShadow'])) $v[] = '--qm-field-shadow:' . esc_attr($field['styleFieldShadow']);
+        if (!empty($field['styleFieldGap'])) $v[] = '--qm-field-gap:' . esc_attr($field['styleFieldGap']);
+        if (!empty($field['styleDescriptionColor'])) $v[] = '--qm-description-color:' . esc_attr($field['styleDescriptionColor']);
+        if (!empty($field['stylePlaceholderColor'])) $v[] = '--qm-placeholder-color:' . esc_attr($field['stylePlaceholderColor']);
+
         if (!empty($field['styleLabelColor'])) $v[] = '--qm-label-color:' . esc_attr($field['styleLabelColor']);
         $labelSize = $field['styleFontSize'] ?? $field['styleLabelSize'] ?? '';
         if ($labelSize !== '') $v[] = '--qm-label-size:' . esc_attr($labelSize);
@@ -530,24 +592,7 @@ class FormHelper
         if (!empty($field['styleInputBg'])) $v[] = '--qm-input-bg:' . esc_attr($field['styleInputBg']);
         if (!empty($field['styleBorderWidth'])) $v[] = '--qm-border-width:' . esc_attr($field['styleBorderWidth']);
         if (!empty($field['styleBorderColor'])) $v[] = '--qm-border-color:' . esc_attr($field['styleBorderColor']);
-        $radiusUnit = $field['styleBorderRadiusUnit'] ?? 'px';
-        $u_radius = function ($val) use ($radiusUnit) {
-            if ($val === '' || $val === null) return '';
-            $num = preg_replace('/[^\d.-]/', '', (string) $val);
-            return $num !== '' ? $num . $radiusUnit : '';
-        };
-        $legacy_r = $field['styleBorderRadius'] ?? '';
-        $rtl = $u_radius($field['styleBorderRadiusTopLeft'] ?? $legacy_r) ?: '0';
-        $rtr = $u_radius($field['styleBorderRadiusTopRight'] ?? $legacy_r) ?: '0';
-        $rbr = $u_radius($field['styleBorderRadiusBottomRight'] ?? $legacy_r) ?: '0';
-        $rbl = $u_radius($field['styleBorderRadiusBottomLeft'] ?? $legacy_r) ?: '0';
-        $any_radius = array_filter([$field['styleBorderRadiusTopLeft'] ?? null, $field['styleBorderRadiusTopRight'] ?? null, $field['styleBorderRadiusBottomRight'] ?? null, $field['styleBorderRadiusBottomLeft'] ?? null, $legacy_r], function ($v) { return $v !== '' && $v !== null; });
-        if (!empty($any_radius)) {
-            $v[] = '--qm-border-radius-tl:' . esc_attr($rtl);
-            $v[] = '--qm-border-radius-tr:' . esc_attr($rtr);
-            $v[] = '--qm-border-radius-br:' . esc_attr($rbr);
-            $v[] = '--qm-border-radius-bl:' . esc_attr($rbl);
-        }
+        self::append_field_border_radius_vars($v, $field, 'styleBorderRadius', '--qm-border-radius');
         if (!empty($field['stylePadding'])) $v[] = '--qm-input-padding:' . esc_attr($field['stylePadding']);
         return implode(';', $v);
     }

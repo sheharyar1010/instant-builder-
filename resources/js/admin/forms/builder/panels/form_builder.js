@@ -212,7 +212,7 @@ class QuotemateFormBuilder {
       <div class="quotemate-form-field" data-field-id="${fieldId}" data-field-type="${fieldType}">
         <div class="quotemate-form-field__actions">
           <button type="button" class="quotemate-form-field__action" data-action="edit-field" data-field-id="${fieldId}">Edit</button>
-          <button type="button" class="quotemate-form-field__action" data-action="duplicate-field" data-field-id="${fieldId}">Copy</button>
+          <button type="button" class="quotemate-form-field__action" data-action="duplicate-field" data-field-id="${fieldId}">Duplicate</button>
           <button type="button" class="quotemate-form-field__action" data-action="delete-field" data-field-id="${fieldId}">Delete</button>
         </div>
         <label class="quotemate-form-field__label">
@@ -466,7 +466,7 @@ class QuotemateFormBuilder {
         <div class="quotemate-form-field" data-field-id="${fieldId}" data-field-type="${fieldType}">
             <div class="quotemate-form-field__actions">
                 <button type="button" class="quotemate-form-field__action" data-action="edit-field" data-field-id="${fieldId}">Edit</button>
-                <button type="button" class="quotemate-form-field__action" data-action="duplicate-field" data-field-id="${fieldId}">Copy</button>
+                <button type="button" class="quotemate-form-field__action" data-action="duplicate-field" data-field-id="${fieldId}">Duplicate</button>
                 <button type="button" class="quotemate-form-field__action" data-action="delete-field" data-field-id="${fieldId}">Delete</button>
             </div>
             <label class="quotemate-form-field__label">

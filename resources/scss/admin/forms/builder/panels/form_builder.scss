@@ -63,12 +63,23 @@
 }
 
 .quotemate-form-field__options label {
-  display: block;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 10px;
   margin: 8px 0;
 }
 
 .quotemate-form-field__options .choice-option-label {
-  white-space: pre-line;
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+  margin: 0;
+  padding: 0;
 }
 
 .quotemate-form-field__options .choice-option-price {
@@ -78,7 +89,8 @@
 
 .quotemate-form-field__options .choice-option-description {
   display: block;
-  margin: 4px 0 0 24px;
+  flex: 1 0 100%;
+  margin: 4px 0 0 28px;
   font-size: 0.875em;
   font-weight: 400;
   line-height: 1.4;
@@ -86,10 +98,17 @@
   white-space: pre-line;
 }
 
+.quotemate-form-field__options label:has(.choice-option-description) {
+  flex-wrap: wrap !important;
+}
+
 .quotemate-form-field__options input[type="checkbox"],
 .quotemate-form-field__options input[type="radio"] {
-  width: auto;
-  margin-right: 8px;
+  width: 18px;
+  height: 18px;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+  align-self: center !important;
 }
 
 .quotemate-form-builder {
@@ -611,6 +630,227 @@
   background: var(--qm-button-bg, linear-gradient(135deg, var(--qm-button-color, #667eea), var(--qm-button-color-end, #764ba2)));
   color: var(--qm-button-text, #ffffff);
   box-shadow: 0 4px 12px var(--qm-step-shadow, rgba(102, 126, 234, 0.4));
+}
+
+/* Numbered theme canvas — Figma Process colors (completed #FF7600, current #000, pending #C3C3C3) */
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] {
+  --qm-numbered-accent: #ff7600;
+  --qm-numbered-completed: #ff7600;
+  --qm-numbered-active: #000000;
+  --qm-numbered-pending: #c3c3c3;
+  --qm-numbered-connector: #ff7600;
+  --qm-numbered-active-underline: #ff7600;
+  --qm-numbered-active-underline-weight: 3px;
+  --qm-numbered-active-underline-offset: 10px;
+  --qm-numbered-select-height: 56px;
+  --qm-numbered-select-padding-x: 24px;
+  --qm-numbered-input-bg: #f9f9f9;
+  --qm-numbered-input-border: #e8e8e8;
+
+  .step-progress,
+  .unified-step-progress {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .step-indicators {
+    width: 100%;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .step-indicator {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 17px;
+    opacity: 1;
+    align-items: center;
+    text-align: center;
+  }
+
+  .step-progress .step-number,
+  .unified-step-progress .step-number {
+    border-radius: 40px;
+    box-shadow: none;
+    background: var(--qm-numbered-pending);
+    color: #ffffff;
+  }
+
+  .step-indicator.active .step-number {
+    background: var(--qm-numbered-active);
+    color: #ffffff;
+  }
+
+  .step-indicator.completed:not(.active) .step-number {
+    background: var(--qm-numbered-completed);
+  }
+
+  .step-indicator.completed:not(.active) .step-label {
+    color: var(--qm-numbered-completed);
+  }
+
+  .step-indicator.active .step-label,
+  .step-indicator.completed.active .step-label {
+    color: var(--qm-numbered-active);
+    border-bottom: none;
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    text-decoration-color: var(--qm-numbered-active-underline);
+    text-decoration-thickness: var(--qm-numbered-active-underline-weight);
+    text-underline-offset: var(--qm-numbered-active-underline-offset);
+    text-decoration-skip-ink: none;
+    -webkit-text-decoration-color: var(--qm-numbered-active-underline);
+  }
+
+  .progress-fill {
+    background: var(--qm-numbered-connector);
+  }
+
+  /* Tech Stack dropdown trigger reinforce */
+  select,
+  .quotemate-form-field__select,
+  .quotemate-service-select,
+  .progressive-select,
+  .step-select {
+    min-height: var(--qm-numbered-select-height);
+    height: var(--qm-numbered-select-height);
+    background-color: var(--qm-input-bg, var(--qm-numbered-input-bg));
+    border: 1px solid var(--qm-border-color, var(--qm-numbered-input-border));
+    border-radius: 0;
+    color: var(--qm-input-color, #000000);
+  }
+
+  /* Service Selector page Heading / Subheading / Description — Figma Tech Stack */
+  .progressive-service-selector .inline-cascade-page-content,
+  .quotemate-service-dropdowns .inline-cascade-page-content {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    text-align: center;
+    margin: 0 0 48px;
+    padding: 0;
+    width: 100%;
+    max-width: none;
+    flex: 1 1 100%;
+    box-sizing: border-box;
+    font-family: var(--qm-font-family, inherit);
+  }
+
+  .progressive-service-selector .inline-cascade-page-content:empty,
+  .quotemate-service-dropdowns .inline-cascade-page-content:empty {
+    display: none;
+    margin: 0;
+  }
+
+  .progressive-service-selector .inline-cascade-page-content .form-group--content-block,
+  .quotemate-service-dropdowns .inline-cascade-page-content .form-group--content-block {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: none;
+  }
+
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+    color: var(--qm-numbered-text, #000000);
+    font-family: var(--qm-font-family, inherit);
+    font-size: clamp(2.25rem, 4.5vw, 4rem);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    text-align: center;
+  }
+
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-left,
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-left,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-left,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-left {
+    text-align: left;
+  }
+
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-center,
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-center,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-center,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-center {
+    text-align: center;
+  }
+
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-right,
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-right,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-right,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-right {
+    text-align: right;
+  }
+
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h3,
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h4,
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h5,
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h6,
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-subheading,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h3,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h4,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h5,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h6,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-subheading {
+    width: 100%;
+    max-width: none;
+    font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading-wrap + .inline-cascade-page-heading-wrap,
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading-wrap + .inline-cascade-page-description-wrap,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading-wrap + .inline-cascade-page-heading-wrap,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading-wrap + .inline-cascade-page-description-wrap {
+    margin-top: 12px;
+  }
+
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    color: var(--qm-numbered-muted, rgba(0, 0, 0, 0.6));
+    font-family: var(--qm-font-family, inherit);
+    font-size: clamp(1rem, 1.4vw, 1.125rem);
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0;
+    text-align: center;
+  }
+
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-left,
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-left,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-left,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-left {
+    text-align: left;
+  }
+
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-center,
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-center,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-center,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-center {
+    text-align: center;
+  }
+
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-right,
+  .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-right,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-right,
+  .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-right {
+    text-align: right;
+  }
 }
 
 /* Non-sidebar themes: never use sidebar grid / vertical step column in builder */
@@ -2028,7 +2268,7 @@
     }
   }
 
-  /* Toolbar (drag handle + Edit/Copy/Delete) – overlaid on hover/select, no layout shift */
+  /* Toolbar (drag handle + Edit/Duplicate/Delete) – overlaid on hover/select, no layout shift */
   &__toolbar {
     display: none;
     position: absolute;
@@ -2040,7 +2280,7 @@
     align-items: center;
     justify-content: flex-end;
     gap: 6px;
-    z-index: 5;
+    z-index: 20;
     margin: 0;
     padding: 2px 4px;
     background: rgba(255, 255, 255, 0.98);
@@ -2182,6 +2422,44 @@
     padding: var(--qm-input-padding);
   }
 
+  &[style*="--qm-field-bg"] {
+    background-color: var(--qm-field-bg);
+  }
+  &[style*="--qm-field-border-width"] {
+    border-style: solid;
+    border-width: var(--qm-field-border-width);
+    box-sizing: border-box;
+  }
+  &[style*="--qm-field-border-color"] {
+    border-color: var(--qm-field-border-color);
+    box-sizing: border-box;
+  }
+  &[style*="--qm-field-border-radius-tl"] {
+    border-top-left-radius: var(--qm-field-border-radius-tl);
+    border-top-right-radius: var(--qm-field-border-radius-tr);
+    border-bottom-right-radius: var(--qm-field-border-radius-br);
+    border-bottom-left-radius: var(--qm-field-border-radius-bl);
+    box-sizing: border-box;
+  }
+  &[style*="--qm-field-shadow"] {
+    box-shadow: var(--qm-field-shadow);
+  }
+  &[style*="--qm-field-gap"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--qm-field-gap);
+  }
+  &[style*="--qm-description-color"] &__description,
+  &[style*="--qm-description-color"] .field-description {
+    color: var(--qm-description-color);
+  }
+  &[style*="--qm-placeholder-color"] &__input::placeholder,
+  &[style*="--qm-placeholder-color"] input::placeholder,
+  &[style*="--qm-placeholder-color"] textarea::placeholder {
+    color: var(--qm-placeholder-color);
+    opacity: 1;
+  }
+
   /* Field (control) styles applied to choice option labels (checkbox/radio text) */
   &[style*="--qm-input-color"] &__options label {
     color: var(--qm-input-color);
@@ -2194,6 +2472,29 @@
   }
   &[style*="--qm-input-font-weight"] &__options label {
     font-weight: var(--qm-input-font-weight);
+  }
+  &[style*="--qm-input-bg"] &__options label {
+    background-color: var(--qm-input-bg);
+  }
+  &[style*="--qm-border-width"] &__options label {
+    border-style: solid;
+    border-width: var(--qm-border-width);
+    box-sizing: border-box;
+  }
+  &[style*="--qm-border-color"] &__options label {
+    border-color: var(--qm-border-color);
+    box-sizing: border-box;
+  }
+  &[style*="--qm-border-radius-tl"] &__options label {
+    border-top-left-radius: var(--qm-border-radius-tl);
+    border-top-right-radius: var(--qm-border-radius-tr);
+    border-bottom-right-radius: var(--qm-border-radius-br);
+    border-bottom-left-radius: var(--qm-border-radius-bl);
+    box-sizing: border-box;
+  }
+  &[style*="--qm-input-padding"] &__options label {
+    padding: var(--qm-input-padding);
+    box-sizing: border-box;
   }
 
   &__divider {
@@ -2270,9 +2571,11 @@
     gap: 8px 16px;
 
     label {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
+      display: flex !important;
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      gap: 10px;
       margin: 0;
       flex: 0 0 auto;
       max-width: 100%;
@@ -2280,7 +2583,13 @@
 
       input[type="radio"],
       input[type="checkbox"] {
-        margin: 0;
+        margin: 0 !important;
+        flex-shrink: 0 !important;
+        align-self: center !important;
+      }
+
+      &:has(.choice-option-description) {
+        flex-wrap: wrap !important;
       }
     }
 
@@ -2296,73 +2605,114 @@
         margin: 0;
         flex: 0 0 auto;
         max-width: 100%;
-        align-items: flex-start;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
       }
     }
 
-    // Standard option style (pill + checkmark) — Default keeps native inputs
+    // Standard option style — Figma pill (#F9F9F9 / #E8E8E8 / 56px / radius 50)
     &#{"--style-standard"} {
       align-items: flex-start;
-      gap: 10px 12px;
+      gap: 10px;
       width: 100%;
       max-width: 100%;
 
       > label {
         position: relative;
-        display: inline-flex;
-        flex-wrap: wrap;
-        align-items: center;
+        display: inline-flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
         align-self: flex-start;
         column-gap: 10px;
         row-gap: 4px;
+        gap: 4px 10px;
         margin: 0;
-        padding: 12px 20px;
-        border-radius: 999px;
-        background: #f3f4f6;
-        border: 1px solid #e5e7eb;
-        color: #111827;
-        font-weight: 500;
-        line-height: 1.3;
+        min-height: 56px;
+        padding: var(--qm-input-padding, 16px 40px);
+        border-style: solid;
+        border-width: var(--qm-border-width, 1px);
+        border-color: var(--qm-border-color, #e8e8e8);
+        border-top-left-radius: var(--qm-border-radius-tl, 50px);
+        border-top-right-radius: var(--qm-border-radius-tr, 50px);
+        border-bottom-right-radius: var(--qm-border-radius-br, 50px);
+        border-bottom-left-radius: var(--qm-border-radius-bl, 50px);
+        background: var(--qm-input-bg, #f9f9f9);
+        color: var(--qm-input-color, #1f2937);
+        font-weight: var(--qm-input-font-weight, 500);
+        font-size: var(--qm-input-font-size, 14px);
+        line-height: 24px;
         width: max-content;
         max-width: 100%;
-        flex: 0 0 auto;
+        flex: 0 1 auto;
         box-sizing: border-box;
-        transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
         user-select: none;
 
+        &:has(.choice-option-description) {
+          flex-wrap: wrap !important;
+        }
+
+        // Figma fi_18875612: 24×24 frame, 20×20 circular check @ #1F2937 60%
         &::before {
-          content: "✓";
-          flex: 0 0 22px;
-          width: 22px;
-          height: 22px;
-          border-radius: 50%;
-          background: #4b5563;
-          color: #fff;
-          font-size: 12px;
-          font-weight: 700;
-          line-height: 22px;
-          text-align: center;
+          content: "";
+          flex: 0 0 24px;
+          width: 24px;
+          height: 24px;
+          margin: 0;
+          border: none;
+          border-radius: 0;
+          background-color: transparent;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='10' fill='%231F2937' fill-opacity='0.6'/%3E%3Cpath d='M5.5 10.25l3.1 3.1 5.9-5.9' stroke='%23ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+          background-size: 20px 20px;
+          background-position: 2px 2px;
+          background-repeat: no-repeat;
+          -webkit-mask-image: none;
+          mask-image: none;
           flex-shrink: 0;
-          transition: background-color 0.15s ease, color 0.15s ease;
+          align-self: center;
+          transition: opacity 0.15s ease, filter 0.15s ease;
         }
 
         &:hover {
-          background: #e5e7eb;
-          border-color: #d1d5db;
+          background: color-mix(in srgb, var(--qm-input-bg, #f9f9f9) 94%, #000000);
+          border-color: color-mix(in srgb, var(--qm-border-color, #e8e8e8) 88%, #000000);
+        }
+
+        &:active {
+          background: color-mix(in srgb, var(--qm-input-bg, #f9f9f9) 90%, #000000);
+          border-color: color-mix(in srgb, var(--qm-border-color, #e8e8e8) 82%, #000000);
+        }
+
+        &:has(input:focus-visible) {
+          outline: 2px solid var(--qm-accent-color, #667eea);
+          outline-offset: 2px;
         }
 
         &:has(input:checked) {
-          background: #ffd740;
-          border-color: #ffd740;
+          background: var(--qm-accent-color, #ffd740);
+          border-color: var(--qm-accent-color, #ffd740);
+          color: #ffffff;
 
           &::before {
-            background: #111827;
-            color: #ffd740;
+            background-color: transparent;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='10' fill='%23ffffff'/%3E%3Cpath d='M5.5 10.25l3.1 3.1 5.9-5.9' stroke='%231F2937' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
           }
 
           &:hover {
-            background: #ffcf20;
-            border-color: #ffcf20;
+            background: color-mix(in srgb, var(--qm-accent-color, #ffd740) 88%, #000000);
+            border-color: color-mix(in srgb, var(--qm-accent-color, #ffd740) 88%, #000000);
+          }
+
+          &:active {
+            background: color-mix(in srgb, var(--qm-accent-color, #ffd740) 78%, #000000);
+            border-color: color-mix(in srgb, var(--qm-accent-color, #ffd740) 78%, #000000);
+          }
+
+          .choice-option-description {
+            color: rgba(255, 255, 255, 0.85);
           }
         }
 
@@ -2384,16 +2734,158 @@
       }
 
       .choice-option-label {
-        flex: 0 0 auto;
-        min-width: auto;
+        flex: 1 1 auto;
+        min-width: 0;
+        line-height: 24px;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .choice-option-description {
         flex: 1 0 100%;
         margin: 0;
-        padding-left: 32px;
+        padding-left: 34px;
         color: #6b7280;
+        white-space: pre-line;
+      }
+
+      .choice-option-price {
+        color: inherit;
+        white-space: nowrap;
+      }
+    }
+
+    // Modern option style — dual-circle control, theme-driven colors, gap 24 / 16
+    &#{"--style-modern"} {
+      --qm-modern-option-ring: var(--qm-border-color, #ced4da);
+      --qm-modern-option-fill: var(--qm-border-color, #ced4da);
+      --qm-modern-option-ring-hover: var(--qm-focus-color, var(--qm-accent-color, #667eea));
+      --qm-modern-option-ring-checked: var(--qm-accent-color, #667eea);
+      --qm-modern-option-fill-checked: var(--qm-accent-color, #667eea);
+      --qm-modern-option-label: var(--qm-text-muted, #6c757d);
+      --qm-modern-option-label-checked: var(--qm-text-color, #333333);
+      --qm-modern-option-focus: var(--qm-focus-color, var(--qm-accent-color, #667eea));
+      --qm-modern-option-desc: var(--qm-text-muted, #6c757d);
+
+      align-items: stretch;
+      gap: 24px;
+      width: 100%;
+      max-width: 100%;
+
+      > label {
+        position: relative;
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        align-self: stretch;
+        gap: 16px;
+        margin: 0;
+        min-height: 24px;
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        color: var(--qm-modern-option-label);
+        font-weight: 400;
+        font-size: var(--qm-font-size, 16px);
+        line-height: 24px;
+        width: 100%;
+        max-width: 100%;
+        flex: 0 0 auto;
+        box-sizing: border-box;
+        transition: color 0.15s ease;
+        user-select: none;
+        cursor: pointer;
+
+        &:has(.choice-option-description) {
+          flex-wrap: wrap !important;
+          align-items: flex-start !important;
+        }
+
+        &::before {
+          content: "";
+          flex: 0 0 24px;
+          width: 24px;
+          height: 24px;
+          margin: 0;
+          border-radius: 50%;
+          border: 1px solid var(--qm-modern-option-ring);
+          background: radial-gradient(
+            circle,
+            var(--qm-modern-option-fill) 0,
+            var(--qm-modern-option-fill) 57%,
+            transparent 57%
+          );
+          box-sizing: border-box;
+          flex-shrink: 0;
+          align-self: center;
+          pointer-events: none;
+          transition: border-color 0.15s ease, background 0.15s ease;
+        }
+
+        &:hover {
+          color: var(--qm-modern-option-label-checked);
+
+          &::before {
+            border-color: var(--qm-modern-option-ring-hover);
+          }
+        }
+
+        &:has(input:focus-visible) {
+          outline: 2px solid var(--qm-modern-option-focus);
+          outline-offset: 4px;
+          border-radius: 4px;
+        }
+
+        &:has(input:checked) {
+          color: var(--qm-modern-option-label-checked);
+
+          &::before {
+            border-color: var(--qm-modern-option-ring-checked);
+            background: radial-gradient(
+              circle,
+              var(--qm-modern-option-fill-checked) 0,
+              var(--qm-modern-option-fill-checked) 57%,
+              transparent 57%
+            );
+          }
+        }
+
+        &:has(input:disabled) {
+          opacity: 0.55;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
+      }
+
+      input[type="radio"],
+      input[type="checkbox"] {
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 24px;
+        height: 24px;
+        margin: 0;
+        opacity: 0;
+        cursor: pointer;
+        z-index: 1;
+      }
+
+      .choice-option-label {
+        flex: 1 1 auto;
+        min-width: 0;
+        color: inherit;
+        line-height: 24px;
+      }
+
+      .choice-option-description {
+        flex: 1 0 100%;
+        margin: 0;
+        padding-left: 40px;
+        color: var(--qm-modern-option-desc);
         white-space: pre-line;
       }
 

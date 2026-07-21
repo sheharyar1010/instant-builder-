@@ -480,13 +480,87 @@ function getPageBreaksInOrder(fields = []) {
   return (fields || []).filter((field) => field?.type === 'page_break' || field?.type === 'page-break');
 }
 
+function hasServicePageBreakBefore(node) {
+  const value = node?.pageBreakBeforeOptions;
+  return value === true || value === 1 || value === '1' || value === 'true';
+}
+
+function getServiceSelectableStructureItems(items) {
+  return (items || []).filter(
+    (item) =>
+      item &&
+      item.type !== 'page_break' &&
+      item.type !== 'page-break' &&
+      (item.name || item.basePrice || item.type)
+  );
+}
+
+/**
+ * Admin Canvas steps for one Service Selector field:
+ * 1) root step (field label)
+ * 2) one step per cascade depth that opens a new page (a node with
+ *    pageBreakBeforeOptions AND selectable children), matching how the frontend
+ *    creates a dynamic page on selection.
+ *
+ * Sibling options at the same depth are alternate user choices that occupy the SAME
+ * navigation slot, so they are de-duplicated to a single step per depth (first flagged
+ * node wins the title). This keeps every valid dynamic step exactly once, in order.
+ */
+function getServiceSelectorAdminSteps(field, pageIndex) {
+  if (!field || !isBuilderServiceField(field)) {
+    return [];
+  }
+
+  const steps = [];
+  const rootLabel = String(field.label || field.serviceStructureLabel || '').trim() || 'Service Selection';
+  steps.push({
+    label: rootLabel,
+    fieldId: field.id,
+    sourcePageIndex: pageIndex,
+    stepKind: 'service',
+  });
+
+  // depth -> title (first flagged node at that depth wins; one step per cascade level)
+  const slotTitles = new Map();
+
+  const walk = (items, depth) => {
+    getServiceSelectableStructureItems(items).forEach((item) => {
+      const hasChildPage = getServiceSelectableStructureItems(item.children).length > 0;
+      if (hasServicePageBreakBefore(item) && hasChildPage && !slotTitles.has(depth)) {
+        const title =
+          String(item.pageBreakTitle || '').trim() ||
+          String(item.name || '').trim() ||
+          'Step';
+        slotTitles.set(depth, title);
+      }
+      if (hasChildPage) {
+        walk(item.children, depth + 1);
+      }
+    });
+  };
+
+  walk(field.enhancedServiceStructure || field.serviceStructure || [], 1);
+
+  Array.from(slotTitles.keys())
+    .sort((a, b) => a - b)
+    .forEach((depth) => {
+      steps.push({
+        label: slotTitles.get(depth),
+        fieldId: field.id,
+        sourcePageIndex: pageIndex,
+        stepKind: 'service_page_break',
+      });
+    });
+
+  return steps;
+}
+
 /**
  * Admin builder preview steps for a single page (after a page break).
- * A Service Selector always contributes exactly ONE root step. A Page Break always
- * owns its own step positioned in canvas order: the leading (non-service) content
- * before the first Service Selector forms the page-break step (which may be empty
- * when the break sits directly before a Service Selector). Post-service fields on the
- * same page never steal the page-break title, so ordering follows the canvas exactly.
+ * A Service Selector contributes its root step plus any internal page-break steps.
+ * A form Page Break owns its own step positioned in canvas order: the leading
+ * (non-service) content before the first Service Selector forms the page-break step
+ * (which may be empty when the break sits directly before a Service Selector).
  */
 function getAdminPreviewLabelsForMiddlePage(pageFields, pageIndex, precedingPageBreak) {
   const customTitle = String(precedingPageBreak?.step_title || '').trim();
@@ -515,11 +589,7 @@ function getAdminPreviewLabelsForMiddlePage(pageFields, pageIndex, precedingPage
   }
 
   serviceFields.forEach((field) => {
-    steps.push({
-      label: (field.label || '').trim() || 'Service Selection',
-      fieldId: field.id,
-      sourcePageIndex: pageIndex,
-    });
+    steps.push(...getServiceSelectorAdminSteps(field, pageIndex));
   });
 
   if (!steps.length) {
@@ -533,6 +603,33 @@ function getAdminPreviewLabelsForMiddlePage(pageFields, pageIndex, precedingPage
   return steps;
 }
 
+function getAdminPreviewLabelsForFirstPage(pageFields) {
+  const steps = [];
+  const visibleFields = (pageFields || []).filter(
+    (field) => !STEP_LABEL_SKIP_TYPES.has(field?.type)
+  );
+  const firstServiceIndex = visibleFields.findIndex((field) => isBuilderServiceField(field));
+  const hasService = firstServiceIndex !== -1;
+  const leadingFields = hasService
+    ? visibleFields.slice(0, firstServiceIndex)
+    : visibleFields;
+  const serviceFields = visibleFields.filter((field) => isBuilderServiceField(field));
+
+  // Page 0 always keeps the Getting Started slot for leading / first-page content.
+  steps.push({
+    label: STEP_LABEL_FIRST,
+    fieldId: leadingFields[0]?.id || null,
+    sourcePageIndex: 0,
+  });
+
+  // Previously page 0 returned early and skipped Service Selector entirely — restore it.
+  serviceFields.forEach((field) => {
+    steps.push(...getServiceSelectorAdminSteps(field, 0));
+  });
+
+  return steps;
+}
+
 function buildAdminPreviewSteps(fields = []) {
   // ADMIN BUILDER CANVAS ONLY — do not use for frontend runtime navigation.
   const pages = groupFieldsIntoPages(fields);
@@ -542,7 +639,10 @@ function buildAdminPreviewSteps(fields = []) {
 
   pages.forEach((pageFields, pageIndex) => {
     if (pageIndex === 0) {
-      steps.push({ label: STEP_LABEL_FIRST, fieldId: null, sourcePageIndex: 0 });
+      const pageFieldsForSteps = pageCount === 1
+        ? pageFields.filter((field) => field?.type !== 'form_summary')
+        : pageFields;
+      steps.push(...getAdminPreviewLabelsForFirstPage(pageFieldsForSteps));
       return;
     }
 

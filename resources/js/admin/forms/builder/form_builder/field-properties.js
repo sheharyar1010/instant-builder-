@@ -492,12 +492,15 @@ export class FieldProperties {
       baseHtml += this.advanceSectionSelect(
         'Option Style',
         'Choose how options are displayed',
-        fieldData?.optionStyle === 'standard' ? 'standard' : 'default',
+        ['default', 'standard', 'modern'].includes(fieldData?.optionStyle)
+          ? fieldData.optionStyle
+          : 'default',
         'optionStyle',
         fieldId,
         [
           { value: 'default', label: 'Default' },
           { value: 'standard', label: 'Standard' },
+          { value: 'modern', label: 'Modern' },
         ]
       );
     }
@@ -885,8 +888,10 @@ export class FieldProperties {
   /**
    * Build Border radius block: unit, link toggle, 4 corners (Top Left, Top Right, Bottom Right, Bottom Left).
    */
-  generateStyleBorderRadiusBlock(fieldData, fieldId) {
-    const prefix = 'styleBorderRadius';
+  generateStyleBorderRadiusBlock(fieldData, fieldId, options = {}) {
+    const prefix = options.prefix || 'styleBorderRadius';
+    const blockLabel = options.label || 'Border radius';
+    const layoutKind = options.layoutKind || (prefix === 'styleFieldBorderRadius' ? 'fieldBorderRadius' : 'borderRadius');
     const linked = fieldData?.[prefix + 'Linked'] === true || fieldData?.[prefix + 'Linked'] === 'true';
     const unit = fieldData?.[prefix + 'Unit'] || 'px';
     const corners = [
@@ -904,14 +909,14 @@ export class FieldProperties {
     const blockClass = 'quotemate-style-layout-block quotemate-style-layout-block--borderRadius' + (linked ? ' quotemate-style-layout-block--linked' : '');
 
     let block = `
-      <div class="${blockClass}" data-style-layout="borderRadius">
+      <div class="${blockClass}" data-style-layout="${layoutKind}">
         <div class="quotemate-style-layout-block__header">
-          <label class="quotemate-form-properties__label">Border radius</label>
+          <label class="quotemate-form-properties__label">${blockLabel}</label>
           <div class="quotemate-style-layout-block__controls">
             <select class="quotemate-style-layout-unit" data-property="${prefix}Unit" data-field-id="${fieldId}" title="Unit">
               ${unitOptions.map(o => `<option value="${o.value}" ${unit === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
             </select>
-            <button type="button" class="quotemate-style-layout-link" data-style-link-toggle="borderRadius" data-field-id="${fieldId}" title="${linked ? 'Unlink corners' : 'Link corners'}">
+            <button type="button" class="quotemate-style-layout-link" data-style-link-toggle="${layoutKind}" data-field-id="${fieldId}" title="${linked ? 'Unlink corners' : 'Link corners'}">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
             </button>
             <input type="hidden" data-property="${prefix}Linked" data-field-id="${fieldId}" value="${linked ? 'true' : 'false'}">
@@ -920,7 +925,7 @@ export class FieldProperties {
         <div class="quotemate-style-layout-block__grid">
           ${corners.map(({ key, label }) => {
             const prop = prefix + key;
-            const val = fieldData?.[prop] ?? fieldData?.styleBorderRadius ?? '';
+            const val = fieldData?.[prop] ?? (prefix === 'styleBorderRadius' ? fieldData?.styleBorderRadius : '') ?? '';
             const placeholder = key === 'TopLeft' ? '0' : '';
             return `
               <div class="quotemate-style-layout-block__cell">
@@ -1060,11 +1065,14 @@ export class FieldProperties {
     }
 
     const controlLabels = this.getControlStyleLabels(fieldType);
+    const dropdownTypes = ['select', 'project_type', 'project_category', 'service_type', 'completion_timeline', 'budget_range', 'unit_type', 'material_type', 'urgency_level', 'service', 'service_options'];
+    const isDropdownControl = dropdownTypes.includes(fieldType);
 
     // Panel 1: Layout (Margin + Padding)
     const layoutContent = '<div class="quotemate-form-properties__section quotemate-style-layout-section">' +
       this.generateStyleLayoutBlock('margin', fieldData, fieldId) +
       this.generateStyleLayoutBlock('padding', fieldData, fieldId) +
+      this.advanceSectionInput('Content spacing', 'Gap between label, description, and control (e.g. 24px)', fieldData?.styleFieldGap || '', 'styleFieldGap', fieldId, '') +
       '</div>';
     const layoutPanelHtml = this.wrapCollapsibleCategory('Layout', layoutContent);
 
@@ -1073,13 +1081,23 @@ export class FieldProperties {
 
     // Panel 3: Appearance (colors, borders, border radius 4-way, padding) – no Label Font Size (use Typography tab)
     const appearancePanelHtml =
+      '<div class="quotemate-form-properties__section-heading">Field container</div>' +
+      this.advanceSectionColor('Container background', 'Background color for the field wrapper', fieldData?.styleFieldBg || '', 'styleFieldBg', fieldId, '#f9f9f9') +
+      this.advanceSectionInput('Background opacity', 'Opacity from 0 to 100', fieldData?.styleFieldBgOpacity || '', 'styleFieldBgOpacity', fieldId, '30') +
+      this.advanceSectionInput('Container border width', 'Border width for the field wrapper (e.g. 1px)', fieldData?.styleFieldBorderWidth || '', 'styleFieldBorderWidth', fieldId, '') +
+      this.advanceSectionColor('Container border color', 'Border color for the field wrapper', fieldData?.styleFieldBorderColor || '', 'styleFieldBorderColor', fieldId, '#e2e2e2') +
+      '<div class="quotemate-form-properties__section">' + this.generateStyleBorderRadiusBlock(fieldData, fieldId, { prefix: 'styleFieldBorderRadius', label: 'Container border radius', layoutKind: 'fieldBorderRadius' }) + '</div>' +
+      this.advanceSectionInput('Shadow', 'CSS box-shadow for the field wrapper', fieldData?.styleFieldShadow || '', 'styleFieldShadow', fieldId, '') +
+      '<div class="quotemate-form-properties__section-heading">Field content</div>' +
       this.advanceSectionColor('Label Color', 'Hex color for label', fieldData?.styleLabelColor || '', 'styleLabelColor', fieldId, '#ffffff') +
-      this.advanceSectionColor(controlLabels.textColorLabel, controlLabels.textColorTitle, fieldData?.styleInputColor || '', 'styleInputColor', fieldId, '#ffffff') +
-      this.advanceSectionColor(controlLabels.backgroundLabel, controlLabels.backgroundTitle, fieldData?.styleInputBg || '', 'styleInputBg', fieldId, '#ffffff') +
-      this.advanceSectionInput('Border Width', 'Border width (e.g. 1px)', fieldData?.styleBorderWidth || '', 'styleBorderWidth', fieldId, '') +
-      this.advanceSectionColor('Border Color', 'Hex color for border', fieldData?.styleBorderColor || '', 'styleBorderColor', fieldId, '#ffffff') +
+      this.advanceSectionColor('Description color', 'Text color for the field description', fieldData?.styleDescriptionColor || '', 'styleDescriptionColor', fieldId, '#1f2937') +
+      this.advanceSectionColor('Placeholder color', 'Text color for input placeholders', fieldData?.stylePlaceholderColor || '', 'stylePlaceholderColor', fieldId, isDropdownControl ? '#000000' : '#6c757d') +
+      this.advanceSectionColor(controlLabels.textColorLabel, controlLabels.textColorTitle, fieldData?.styleInputColor || '', 'styleInputColor', fieldId, isDropdownControl ? '#000000' : '#ffffff') +
+      this.advanceSectionColor(controlLabels.backgroundLabel, controlLabels.backgroundTitle, fieldData?.styleInputBg || '', 'styleInputBg', fieldId, isDropdownControl ? '#f9f9f9' : '#ffffff') +
+      this.advanceSectionInput('Border Width', 'Border width (e.g. 1px)', fieldData?.styleBorderWidth || '', 'styleBorderWidth', fieldId, isDropdownControl ? '1px' : '') +
+      this.advanceSectionColor('Border Color', 'Hex color for border', fieldData?.styleBorderColor || '', 'styleBorderColor', fieldId, isDropdownControl ? '#e8e8e8' : '#ffffff') +
       '<div class="quotemate-form-properties__section">' + this.generateStyleBorderRadiusBlock(fieldData, fieldId) + '</div>' +
-      this.advanceSectionInput(controlLabels.paddingLabel, controlLabels.paddingTitle, fieldData?.stylePadding || '', 'stylePadding', fieldId, '');
+      this.advanceSectionInput(controlLabels.paddingLabel, controlLabels.paddingTitle, fieldData?.stylePadding || '', 'stylePadding', fieldId, isDropdownControl ? '0 48px 0 24px' : '');
 
     const html = '<div class="quotemate-form-properties quotemate-form-properties--style">' +
       '<div class="quotemate-style-sub-tabs">' +

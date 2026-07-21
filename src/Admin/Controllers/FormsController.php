@@ -338,6 +338,9 @@ class FormsController
             'styleFontFamily', 'styleFontSize', 'styleFontWeight', 'styleTextTransform', 'styleFontStyle', 'styleTextDecoration',
             'styleLineHeight', 'styleLetterSpacing', 'styleWordSpacing',
             'styleInputFontFamily', 'styleInputFontSize', 'styleInputFontWeight',
+            'styleFieldBg', 'styleFieldBgOpacity', 'styleFieldBorderWidth', 'styleFieldBorderColor',
+            'styleFieldBorderRadiusTopLeft', 'styleFieldBorderRadiusTopRight', 'styleFieldBorderRadiusBottomRight', 'styleFieldBorderRadiusBottomLeft', 'styleFieldBorderRadiusUnit',
+            'styleFieldShadow', 'styleFieldGap', 'styleDescriptionColor', 'stylePlaceholderColor',
             'heading_level', 'heading_align', 'paragraph_content',
             'page_break_align', 'page_break_button_color',
             'page_break_prev_align', 'page_break_prev_button_color',
@@ -368,7 +371,7 @@ class FormsController
 
         if (isset($field['optionStyle'])) {
             $option_style = sanitize_key((string) $field['optionStyle']);
-            if (in_array($option_style, ['default', 'standard'], true)) {
+            if (in_array($option_style, ['default', 'standard', 'modern'], true)) {
                 $sanitized['optionStyle'] = $option_style;
             }
         }
@@ -460,7 +463,7 @@ class FormsController
         // Sanitize boolean properties (Advance tab + Style layout linked)
         $bool_props = [
             'hideLabel', 'readOnly', 'show_tax', 'show_discount',
-            'styleMarginLinked', 'stylePaddingLinked', 'styleBorderRadiusLinked',
+            'styleMarginLinked', 'stylePaddingLinked', 'styleBorderRadiusLinked', 'styleFieldBorderRadiusLinked',
             'stylePrevMarginLinked', 'stylePrevPaddingLinked',
             'show_previous_button',
             'showSubtotal', 'showGrandTotal', 'showQuantity', 'showPricingType', 'showPath',
@@ -705,6 +708,9 @@ class FormsController
             'styleFontFamily', 'styleFontSize', 'styleFontWeight', 'styleTextTransform', 'styleFontStyle', 'styleTextDecoration',
             'styleLineHeight', 'styleLetterSpacing', 'styleWordSpacing',
             'styleInputFontFamily', 'styleInputFontSize', 'styleInputFontWeight',
+            'styleFieldBg', 'styleFieldBgOpacity', 'styleFieldBorderWidth', 'styleFieldBorderColor',
+            'styleFieldBorderRadiusTopLeft', 'styleFieldBorderRadiusTopRight', 'styleFieldBorderRadiusBottomRight', 'styleFieldBorderRadiusBottomLeft', 'styleFieldBorderRadiusUnit',
+            'styleFieldShadow', 'styleFieldGap', 'styleDescriptionColor', 'stylePlaceholderColor',
             'heading_level', 'heading_align',
         ];
 

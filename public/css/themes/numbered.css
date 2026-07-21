@@ -1,21 +1,48 @@
-/* Numbered Steps — Figma “Project Scope” tokens
-   Accent #FF7600 | Active #000 | Pending #C3C3C3
-   Input fill #F9F9F9 | Border #E8E8E8 | Selected radius 8px
+/* Numbered Steps — Figma “Project Scope” (12:735) tokens
+   Accent / completed / CTA / connectors: #FF7600
+   Current / active step: #000000
+   Upcoming / pending: #C3C3C3
+   Input fill #F9F9F9 | Border #E8E8E8 | Selected / button radius 8px
 */
 
 .quotemate-form-wrapper[data-qm-theme="numbered"],
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] {
     --qm-numbered-accent: #ff7600;
+    --qm-numbered-completed: #ff7600;
     --qm-numbered-active: #000000;
     --qm-numbered-pending: #c3c3c3;
     --qm-numbered-input-bg: #f9f9f9;
     --qm-numbered-input-border: #e8e8e8;
     --qm-numbered-text: #000000;
+    --qm-numbered-on-accent: #ffffff;
     --qm-numbered-muted: rgba(0, 0, 0, 0.6);
     --qm-numbered-radius: 8px;
     --qm-numbered-gap: 32px;
+    --qm-numbered-connector: #ff7600;
+    --qm-numbered-connector-weight: 3px;
+    /* Active step label underline — Figma Process (orange accent line under current label) */
+    --qm-numbered-active-underline: #ff7600;
+    --qm-numbered-active-underline-weight: 3px;
+    --qm-numbered-active-underline-offset: 10px;
+    /* Tech Stack dropdown — compact trigger (scaled from Frame 80) */
+    --qm-numbered-select-height: 56px;
+    --qm-numbered-select-padding-x: 24px;
+    --qm-numbered-select-font-size: 1.125rem;
+    --qm-numbered-select-chevron-size: 16px;
+    --qm-numbered-option-height: 44px;
+    --qm-numbered-option-radius: 0;
+    --qm-numbered-option-selected-radius: 8px;
+    --qm-numbered-control-height: 48px;
+    --qm-numbered-control-padding-y: 0.7rem;
+    --qm-numbered-control-padding-x: 2rem;
+    --qm-numbered-control-font-size: 1.0625rem;
+    --qm-numbered-textarea-min-height: 96px;
     --qm-accent-color: var(--qm-numbered-accent);
     --qm-focus-color: var(--qm-numbered-accent);
+    --qm-border-color: var(--qm-numbered-input-border);
+    --qm-text-color: var(--qm-numbered-text);
+    --qm-text-muted: var(--qm-numbered-muted);
+    --qm-label-color: var(--qm-numbered-text);
     --qm-focus-ring: rgba(255, 118, 0, 0.22);
     --qm-accent-shadow: rgba(255, 118, 0, 0.28);
     --qm-accent-shadow-hover: rgba(255, 118, 0, 0.38);
@@ -61,87 +88,155 @@
     line-height: 1.2;
 }
 
-/* Hide classic progress bar — numbered uses circle indicators */
+/* Classic track stays available for connector color; hide empty bar chrome */
 .quotemate-form-wrapper[data-qm-theme="numbered"] .progress-bar,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progress-bar {
     display: none;
 }
 
-/* ── Step indicators ── */
+/* Connector / progress fill — Figma Line accent #FF7600 @ 3px */
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progress-fill,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progress-bar .progress-fill,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progress-fill {
+    background: var(--qm-numbered-connector) !important;
+    background-image: none !important;
+    height: var(--qm-numbered-connector-weight);
+}
+
+/* ── Step indicators — Figma Process (12:544 / Project Scope)
+   Full-width row, steps evenly distributed & centered
+   Circle 40×40 radius 40 · gap circle→label 17px
+   Completed: #FF7600 + white check + orange label
+   Current:   #000000 + white number + black label + orange underline (#FF7600 @ 3px)
+   Upcoming:  #C3C3C3 + white number + gray label
+*/
 .quotemate-form-wrapper[data-qm-theme="numbered"] .step-progress,
 .quotemate-form-wrapper[data-qm-theme="numbered"] .unified-step-progress,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-progress,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .unified-step-progress {
+    width: 100%;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
     margin-bottom: 1.75rem;
+    text-align: center;
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicators,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicators {
     display: flex;
     flex-direction: row;
+    flex-wrap: nowrap;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 0.5rem 1.25rem;
-    padding-bottom: 0.75rem;
+    width: 100%;
+    max-width: 100%;
+    gap: 0.5rem;
+    padding: 0;
+    margin: 0 auto;
     border-bottom: none;
+    list-style: none;
+    box-sizing: border-box;
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator {
-    opacity: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
     flex: 1 1 0;
     min-width: 0;
     max-width: none;
+    width: auto;
     gap: 17px;
+    margin: 0;
+    padding: 0 0.25rem;
+    opacity: 1;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    text-align: center;
+    transition: color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
 }
 
-/* Pending steps — gray circle, white number */
+/* Pending / upcoming — gray circle, white number */
 .quotemate-form-wrapper[data-qm-theme="numbered"] .step-progress .step-number,
 .quotemate-form-wrapper[data-qm-theme="numbered"] .unified-step-progress .step-number,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .service-cascade-step-progress .step-number,
 .service-cascade-step-progress .step-number,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-number {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
     width: 40px;
     height: 40px;
     min-width: 40px;
+    min-height: 40px;
+    padding: 0;
+    margin: 0 auto;
+    border: none;
+    border-radius: 40px;
     background: var(--qm-numbered-pending) !important;
-    color: #ffffff !important;
+    color: var(--qm-numbered-on-accent) !important;
     box-shadow: none !important;
     font-size: 1rem;
     font-weight: 600;
     line-height: 1;
+    letter-spacing: 0;
+    text-align: center;
+    flex-shrink: 0;
 }
 
-/* Current step — black circle, white number */
+/* Current / active — black circle, white number (Figma step 4) */
 .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator.active .step-number,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator.active .step-number {
     background: var(--qm-numbered-active) !important;
-    color: #ffffff !important;
+    color: var(--qm-numbered-on-accent) !important;
     box-shadow: none !important;
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .step-label,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-label {
-    font-size: 0.875rem;
-    line-height: 1.35;
-    padding-bottom: 0.4rem;
-    border-bottom: 3px solid transparent;
-    margin-top: 0;
-    color: var(--qm-numbered-pending);
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-bottom: none;
+    box-shadow: none;
+    font-size: 1rem;
+    line-height: 1.625;
     font-weight: 500;
+    letter-spacing: 0;
     text-align: center;
+    color: var(--qm-numbered-pending);
+    white-space: normal;
+    word-break: break-word;
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator.active .step-label,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator.active .step-label {
     color: var(--qm-numbered-active);
-    border-bottom-color: var(--qm-numbered-accent);
-    font-weight: 600;
+    font-weight: 500;
+    border-bottom: none;
+    /* Underline tracks label text width (not the full step column) */
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    text-decoration-color: var(--qm-numbered-active-underline);
+    text-decoration-thickness: var(--qm-numbered-active-underline-weight);
+    text-underline-offset: var(--qm-numbered-active-underline-offset);
+    text-decoration-skip-ink: none;
+    -webkit-text-decoration-color: var(--qm-numbered-active-underline);
 }
 
-/* Completed — orange circle + white check */
+/* Completed — orange circle + white check + orange label (Figma steps 1–3) */
 .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator.completed:not(.active) .step-number,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator.completed:not(.active) .step-number {
-    background: var(--qm-numbered-accent) !important;
+    background: var(--qm-numbered-completed) !important;
     color: transparent !important;
     font-size: 0 !important;
     position: relative;
@@ -156,19 +251,39 @@
     top: 50%;
     width: 7px;
     height: 12px;
-    border: solid #ffffff;
+    border: solid var(--qm-numbered-on-accent);
     border-width: 0 2.5px 2.5px 0;
     transform: translate(-50%, -58%) rotate(45deg);
 }
 
-.quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator.completed .step-label,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator.completed .step-label {
-    color: var(--qm-numbered-accent);
+.quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator.completed:not(.active) .step-label,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator.completed:not(.active) .step-label {
+    color: var(--qm-numbered-completed);
 }
 
+/* Current remains black + orange underline even if also marked completed */
 .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator.completed.active .step-label,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator.completed.active .step-label {
     color: var(--qm-numbered-active);
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    text-decoration-color: var(--qm-numbered-active-underline);
+    text-decoration-thickness: var(--qm-numbered-active-underline-weight);
+    text-underline-offset: var(--qm-numbered-active-underline-offset);
+    text-decoration-skip-ink: none;
+    -webkit-text-decoration-color: var(--qm-numbered-active-underline);
+}
+
+/* Disabled */
+.quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator:disabled,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator.is-disabled,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator[aria-disabled="true"],
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator:disabled,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator.is-disabled,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator[aria-disabled="true"] {
+    opacity: 0.45;
+    pointer-events: none;
+    cursor: not-allowed;
 }
 
 /* ── Labels & helper text ── */
@@ -192,31 +307,199 @@
     font-size: 0.9375rem;
 }
 
-/* ── Inputs / selects / textareas ── */
-.quotemate-form-wrapper[data-qm-theme="numbered"] .form-control,
-.quotemate-form-wrapper[data-qm-theme="numbered"] .field-input input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-.quotemate-form-wrapper[data-qm-theme="numbered"] .field-input textarea,
-.quotemate-form-wrapper[data-qm-theme="numbered"] .field-input select,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .form-control,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input textarea,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input select {
+/* ── Form controls — shared height (matches dropdown) ── */
+.quotemate-form-wrapper[data-qm-theme="numbered"] .form-control:not(select):not(textarea),
+.quotemate-form-wrapper[data-qm-theme="numbered"] .field-input input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .form-control:not(select):not(textarea),
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]) {
     background-color: var(--qm-numbered-input-bg);
     border: 1px solid var(--qm-numbered-input-border);
     border-radius: 0;
     color: var(--qm-numbered-text);
-    min-height: 76px;
-    padding: 1.4rem 2rem;
-    font-size: 1.0625rem;
+    box-sizing: border-box;
+    min-height: var(--qm-numbered-control-height);
+    height: var(--qm-numbered-control-height);
+    padding: var(--qm-numbered-control-padding-y) var(--qm-numbered-control-padding-x);
+    font-size: var(--qm-numbered-control-font-size);
     font-weight: 500;
-    line-height: 1.4;
+    line-height: 1.35;
     box-shadow: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
+/* ── Number / quantity inputs — keep value visible + native spinner ── */
+.quotemate-form-wrapper[data-qm-theme="numbered"] input[type="number"],
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quantity-input,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .custom-quantity-input,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] input[type="number"],
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quantity-input,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .custom-quantity-input {
+    color: var(--qm-numbered-text) !important;
+    -webkit-text-fill-color: var(--qm-numbered-text);
+    caret-color: var(--qm-numbered-text);
+    opacity: 1 !important;
+    background-color: var(--qm-numbered-input-bg) !important;
+    background-image: none !important;
+    box-sizing: border-box;
+    min-height: var(--qm-numbered-control-height);
+    height: var(--qm-numbered-control-height);
+    /* Compact sides so digits + spinner fit; vertical pad 0 + line-height centers text */
+    padding: 0 0.75rem !important;
+    font-size: var(--qm-numbered-control-font-size);
+    font-weight: 500;
+    line-height: var(--qm-numbered-control-height);
+    text-align: center;
+    text-indent: 0;
+    letter-spacing: normal;
+    overflow: visible;
+    z-index: 1;
+    position: relative;
+    width: 100%;
+    min-width: 4.5rem;
+    max-width: 100%;
+    -moz-appearance: number-input;
+    appearance: auto;
+    -webkit-appearance: auto;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] input[type="number"]::-webkit-outer-spin-button,
+.quotemate-form-wrapper[data-qm-theme="numbered"] input[type="number"]::-webkit-inner-spin-button,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quantity-input::-webkit-outer-spin-button,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quantity-input::-webkit-inner-spin-button,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .custom-quantity-input::-webkit-outer-spin-button,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .custom-quantity-input::-webkit-inner-spin-button,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] input[type="number"]::-webkit-outer-spin-button,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] input[type="number"]::-webkit-inner-spin-button,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quantity-input::-webkit-outer-spin-button,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quantity-input::-webkit-inner-spin-button,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .custom-quantity-input::-webkit-outer-spin-button,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .custom-quantity-input::-webkit-inner-spin-button {
+    -webkit-appearance: auto;
+    appearance: auto;
+    margin: 0;
+    opacity: 1;
+    display: block;
+    height: auto;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] input[type="number"]:hover,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quantity-input:hover,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .custom-quantity-input:hover,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] input[type="number"]:hover,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quantity-input:hover,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .custom-quantity-input:hover {
+    color: var(--qm-numbered-text) !important;
+    -webkit-text-fill-color: var(--qm-numbered-text);
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] input[type="number"]:focus,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quantity-input:focus,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .custom-quantity-input:focus,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] input[type="number"]:focus,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quantity-input:focus,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .custom-quantity-input:focus {
+    color: var(--qm-numbered-text) !important;
+    -webkit-text-fill-color: var(--qm-numbered-text);
+    caret-color: var(--qm-numbered-text);
+    background-color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] input[type="number"]:disabled,
+.quotemate-form-wrapper[data-qm-theme="numbered"] input[type="number"][readonly],
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quantity-input:disabled,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quantity-input[readonly],
+.quotemate-form-wrapper[data-qm-theme="numbered"] .custom-quantity-input:disabled,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .custom-quantity-input[readonly],
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] input[type="number"]:disabled,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] input[type="number"][readonly],
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quantity-input:disabled,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quantity-input[readonly],
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .custom-quantity-input:disabled,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .custom-quantity-input[readonly] {
+    color: #6b6b6b !important;
+    -webkit-text-fill-color: #6b6b6b;
+    background-color: #f0f0f0 !important;
+    opacity: 1 !important;
+    cursor: not-allowed;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-pricing-row__input-wrap,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-pricing-row__input-wrap {
+    flex: 0 0 auto;
+    width: min(100%, 6.75rem);
+    min-width: 5.5rem;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quantity-input-container,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quantity-input-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: none;
+    min-width: 7rem;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quantity-section .quantity-input,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-pricing-calculator .quantity-input,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quantity-section .quantity-input,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-pricing-calculator .quantity-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 4.5rem;
+}
+
 .quotemate-form-wrapper[data-qm-theme="numbered"] .field-input textarea,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input textarea {
-    min-height: 120px;
+.quotemate-form-wrapper[data-qm-theme="numbered"] textarea.form-control,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input textarea,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] textarea.form-control {
+    background-color: var(--qm-numbered-input-bg);
+    border: 1px solid var(--qm-numbered-input-border);
+    border-radius: 0;
+    color: var(--qm-numbered-text);
+    box-sizing: border-box;
+    min-height: var(--qm-numbered-textarea-min-height);
+    height: auto;
+    padding: var(--qm-numbered-control-padding-y) var(--qm-numbered-control-padding-x);
+    font-size: var(--qm-numbered-control-font-size);
+    font-weight: 500;
+    line-height: 1.4;
+    box-shadow: none;
+    resize: vertical;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+/* Shared chrome for selects (height / padding set in Figma Tech Stack block below) */
+.quotemate-form-wrapper[data-qm-theme="numbered"] .field-input select,
+.quotemate-form-wrapper[data-qm-theme="numbered"] select.form-control,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-dropdown-level select,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-select,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector select,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .step-select,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] select.form-control,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-dropdown-level select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .step-select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] select.quotemate-form-field__input,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__select {
+    background-color: var(--qm-input-bg, var(--qm-numbered-input-bg));
+    border: 1px solid var(--qm-border-color, var(--qm-numbered-input-border));
+    border-width: var(--qm-border-width, 1px);
+    border-radius: 0;
+    border-top-left-radius: var(--qm-border-radius-tl, 0);
+    border-top-right-radius: var(--qm-border-radius-tr, 0);
+    border-bottom-right-radius: var(--qm-border-radius-br, 0);
+    border-bottom-left-radius: var(--qm-border-radius-bl, 0);
+    color: var(--qm-input-color, var(--qm-numbered-text));
+    font-size: var(--qm-input-font-size, var(--qm-numbered-select-font-size));
+    font-weight: var(--qm-input-font-weight, 500);
+    box-shadow: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .form-control::placeholder,
@@ -270,24 +553,281 @@
     opacity: 1;
 }
 
-/* Select chevron affordance */
+/* Select — Figma Tech Stack Frame 80 (80× / #F9F9F9 / #E8E8E8 / radius 0 / pad 32 / chevron 32) */
 .quotemate-form-wrapper[data-qm-theme="numbered"] .field-input select,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input select {
+.quotemate-form-wrapper[data-qm-theme="numbered"] select.form-control,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-dropdown-level select,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-select,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector select,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .step-select,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] select.form-control,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] select.quotemate-form-field__input,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-dropdown-level select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .step-select,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-select {
     appearance: none;
     -webkit-appearance: none;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--qm-numbered-select-height);
+    height: var(--qm-numbered-select-height);
+    padding: var(--qm-input-padding, 0 var(--qm-numbered-select-padding-x));
+    padding-right: calc(var(--qm-numbered-select-padding-x) + var(--qm-numbered-select-chevron-size) + 8px) !important;
+    line-height: calc(var(--qm-numbered-select-height) - 2px);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='12' viewBox='0 0 22 12' fill='none'%3E%3Cpath d='M1 1l10 10L21 1' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 1.5rem center;
-    background-size: 18px 10px;
-    padding-right: 3.5rem;
+    background-position: right var(--qm-numbered-select-padding-x) center;
+    background-size: var(--qm-numbered-select-chevron-size) 9px;
     cursor: pointer;
 }
 
+/* Open-list options — unselected #F9F9F9; selected #FF7600 / white / radius 8 (where browsers allow) */
 .quotemate-form-wrapper[data-qm-theme="numbered"] .field-input select option,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input select option {
+.quotemate-form-wrapper[data-qm-theme="numbered"] select.form-control option,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-select option,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector select option,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-select option,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input select option,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body select option,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-select option,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector select option {
     background: var(--qm-numbered-input-bg);
     color: var(--qm-numbered-text);
-    padding: 0.75rem 1rem;
+    min-height: var(--qm-numbered-option-height);
+    padding: 16px;
+    border-radius: var(--qm-numbered-option-radius);
+    font-weight: 500;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .field-input select option:checked,
+.quotemate-form-wrapper[data-qm-theme="numbered"] select.form-control option:checked,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-select option:checked,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector select option:checked,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-select option:checked,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input select option:checked,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body select option:checked,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-select option:checked,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector select option:checked {
+    background: var(--qm-numbered-accent) linear-gradient(0deg, var(--qm-numbered-accent) 0%, var(--qm-numbered-accent) 100%);
+    color: var(--qm-numbered-on-accent);
+    border-radius: var(--qm-numbered-option-selected-radius);
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .field-input select option:hover,
+.quotemate-form-wrapper[data-qm-theme="numbered"] select.form-control option:hover,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input select option:hover {
+    background: color-mix(in srgb, var(--qm-numbered-input-bg) 92%, #000000);
+}
+
+/* Service Selector page content — Figma Tech Stack (5:3) title + 48px gap to fields */
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    text-align: center;
+    margin: 0 0 48px;
+    padding: 0;
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+    font-family: var(--qm-font-family, inherit);
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content:empty,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content:empty,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content:empty,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content:empty {
+    display: none;
+    margin: 0;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .form-group--content-block,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .form-group--content-block,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .form-group--content-block,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .form-group--content-block {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: none;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+    color: var(--qm-numbered-text, #000000);
+    font-family: var(--qm-font-family, inherit);
+    font-size: clamp(2.25rem, 4.5vw, 4rem);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    text-align: center;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-left,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-left,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-left,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-left,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-left,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-left,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-left,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-left {
+    text-align: left;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-center,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-center,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-center,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-center,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-center,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-center,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-center,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-center {
+    text-align: center;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-right,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-right,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-right,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-right,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-right,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-right,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--align-right,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-field__heading--align-right {
+    text-align: right;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h3,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h4,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h5,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h6,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-subheading,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h3,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h4,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h5,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h6,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-subheading,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h3,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h4,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h5,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h6,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-subheading,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h3,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h4,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h5,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading.quotemate-form-heading--h6,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-subheading {
+    width: 100%;
+    max-width: none;
+    color: var(--qm-numbered-text, #000000);
+    font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading-wrap + .inline-cascade-page-heading-wrap,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading-wrap + .inline-cascade-page-description-wrap,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading-wrap + .inline-cascade-page-heading-wrap,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading-wrap + .inline-cascade-page-description-wrap,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading-wrap + .inline-cascade-page-heading-wrap,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-heading-wrap + .inline-cascade-page-description-wrap,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading-wrap + .inline-cascade-page-heading-wrap,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-heading-wrap + .inline-cascade-page-description-wrap {
+    margin-top: 12px;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    color: var(--qm-numbered-muted, rgba(0, 0, 0, 0.6));
+    font-family: var(--qm-font-family, inherit);
+    font-size: clamp(1rem, 1.4vw, 1.125rem);
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0;
+    text-align: center;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-left,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-left,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-left,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-left,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-left,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-left,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-left,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-left {
+    text-align: left;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-center,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-center,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-center,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-center,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-center,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-center,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-center,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-center {
+    text-align: center;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-right,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-right,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-right,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-right,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-right,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-right,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-heading--align-right,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns .inline-cascade-page-content .inline-cascade-page-description.quotemate-form-field__heading--align-right {
+    text-align: right;
+}
+
+/* Service selector row gap — Figma Frame 87 itemSpacing 32 */
+.quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-row,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector .inline-cascade-row,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns {
+    gap: var(--qm-numbered-gap);
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdowns > .inline-cascade-page-content,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdowns > .inline-cascade-page-content {
+    flex: 1 1 100%;
+    width: 100%;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-dropdown-level,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-dropdown-level {
+    flex: 1 1 0;
+    min-width: 220px;
 }
 
 /* ── Default checkbox / radio (native) ── */
@@ -295,8 +835,12 @@
 .quotemate-form-wrapper[data-qm-theme="numbered"] .radio-wrapper,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-wrapper,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-wrapper {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
     padding: 0;
-    gap: 0.75rem;
+    gap: 10px;
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .form-checkbox,
@@ -306,116 +850,213 @@
     accent-color: var(--qm-numbered-accent);
     width: 18px;
     height: 18px;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    align-self: center !important;
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-label,
 .quotemate-form-wrapper[data-qm-theme="numbered"] .radio-label,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-label,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-label {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
     color: var(--qm-numbered-text);
     font-weight: 500;
+    margin: 0;
+    padding: 0;
+    line-height: 1.25;
+    gap: 0;
 }
 
-/* Default layout: option rows matching Figma dropdown list */
-.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper,
-.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper {
-    width: 100%;
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-label:has(.choice-option-description),
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-label:has(.choice-option-description),
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-label:has(.choice-option-description),
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-label:has(.choice-option-description) {
+    flex-wrap: wrap !important;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .choice-option-label,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .choice-option-label {
+    flex: 0 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+    margin: 0;
+    padding: 0;
+}
+
+/* Default layout: content-sized option chips (icon + label), not full-width */
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern),
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern),
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern),
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) {
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    align-self: flex-start;
+    flex: 0 0 auto;
+    width: max-content;
     max-width: 100%;
     min-height: 54px;
-    padding: 0.9rem 1rem;
-    background: var(--qm-numbered-input-bg);
-    border: 1px solid var(--qm-numbered-input-border);
-    border-radius: 0;
-    align-items: center;
+    padding: var(--qm-input-padding, 0.9rem 1rem);
+    background: var(--qm-input-bg, var(--qm-numbered-input-bg));
+    border-style: solid;
+    border-width: var(--qm-border-width, 1px);
+    border-color: var(--qm-border-color, var(--qm-numbered-input-border));
+    border-top-left-radius: var(--qm-border-radius-tl, 0);
+    border-top-right-radius: var(--qm-border-radius-tr, 0);
+    border-bottom-right-radius: var(--qm-border-radius-br, 0);
+    border-bottom-left-radius: var(--qm-border-radius-bl, 0);
+    color: var(--qm-input-color, inherit);
+    font-size: var(--qm-input-font-size, inherit);
+    font-weight: var(--qm-input-font-weight, inherit);
     box-sizing: border-box;
     transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:hover,
-.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:hover,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:hover,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:hover {
-    border-color: #d4d4d4;
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:hover,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:hover,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:hover,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:hover {
+    border-color: color-mix(in srgb, var(--qm-border-color, var(--qm-numbered-input-border)) 88%, #000000);
 }
 
-.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:has(.form-checkbox:checked),
-.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:has(.form-radio:checked),
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:has(.form-checkbox:checked),
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:has(.form-radio:checked) {
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:has(.form-checkbox:checked),
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:has(.form-radio:checked),
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:has(.form-checkbox:checked),
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:has(.form-radio:checked) {
     background: var(--qm-numbered-accent);
-    border-color: var(--qm-numbered-input-border);
-    border-radius: var(--qm-numbered-radius);
+    border-color: var(--qm-border-color, var(--qm-numbered-input-border));
+    border-top-left-radius: var(--qm-border-radius-tl, var(--qm-numbered-radius));
+    border-top-right-radius: var(--qm-border-radius-tr, var(--qm-numbered-radius));
+    border-bottom-right-radius: var(--qm-border-radius-br, var(--qm-numbered-radius));
+    border-bottom-left-radius: var(--qm-border-radius-bl, var(--qm-numbered-radius));
 }
 
-.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:has(.form-checkbox:checked) .checkbox-label,
-.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:has(.form-radio:checked) .radio-label,
-.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:has(.form-checkbox:checked) .choice-option-label,
-.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:has(.form-radio:checked) .choice-option-label,
-.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:has(.form-checkbox:checked) .choice-option-price,
-.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:has(.form-radio:checked) .choice-option-price,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:has(.form-checkbox:checked) .checkbox-label,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:has(.form-radio:checked) .radio-label,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:has(.form-checkbox:checked) .choice-option-label,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:has(.form-radio:checked) .choice-option-label,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:has(.form-checkbox:checked) .choice-option-price,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:has(.form-radio:checked) .choice-option-price {
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:has(.form-checkbox:checked) .checkbox-label,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:has(.form-radio:checked) .radio-label,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:has(.form-checkbox:checked) .choice-option-label,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:has(.form-radio:checked) .choice-option-label,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:has(.form-checkbox:checked) .choice-option-price,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:has(.form-radio:checked) .choice-option-price,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:has(.form-checkbox:checked) .checkbox-label,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:has(.form-radio:checked) .radio-label,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:has(.form-checkbox:checked) .choice-option-label,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:has(.form-radio:checked) .choice-option-label,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:has(.form-checkbox:checked) .choice-option-price,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:has(.form-radio:checked) .choice-option-price {
     color: #ffffff;
 }
 
-.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:has(.form-checkbox:checked) .choice-option-description,
-.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:has(.form-radio:checked) .choice-option-description,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:has(.form-checkbox:checked) .choice-option-description,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:has(.form-radio:checked) .choice-option-description {
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:has(.form-checkbox:checked) .choice-option-description,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:has(.form-radio:checked) .choice-option-description,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:has(.form-checkbox:checked) .choice-option-description,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:has(.form-radio:checked) .choice-option-description {
     color: rgba(255, 255, 255, 0.85);
 }
 
-.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:has(.form-checkbox:disabled),
-.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:has(.form-radio:disabled),
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper:has(.form-checkbox:disabled),
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper:has(.form-radio:disabled) {
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:has(.form-checkbox:disabled),
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:has(.form-radio:disabled),
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper:has(.form-checkbox:disabled),
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper:has(.form-radio:disabled) {
     opacity: 0.55;
     cursor: not-allowed;
 }
 
 /* Hide native control when option row is fully selected visually — keep accessible via opacity */
-.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .form-checkbox,
-.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .form-radio,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .form-checkbox,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .form-radio {
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .form-checkbox,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .form-radio,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .form-checkbox,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .form-radio {
     flex-shrink: 0;
 }
 
-/* ── Standard option style (pills) — Figma selected/unselected ── */
+/* ── Standard option style — Figma pill (56px / radius 50 / #F9F9F9 / #E8E8E8) ── */
 .quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard,
 .quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group--style-standard,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group--style-standard,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group--style-standard {
-    gap: 0;
+    gap: 10px;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-wrapper,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group--style-standard .radio-wrapper,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-wrapper,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group--style-standard .radio-wrapper {
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    width: max-content;
+    max-width: 100%;
+    flex: 0 1 auto;
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-label,
 .quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group--style-standard .radio-label,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-label,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group--style-standard .radio-label {
-    background: var(--qm-numbered-input-bg);
-    border: 1px solid var(--qm-numbered-input-border);
-    border-radius: 0;
-    min-height: 54px;
-    padding: 16px 20px;
-    color: var(--qm-numbered-text);
-    justify-content: center;
-    width: 100%;
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    background: var(--qm-input-bg, #f9f9f9);
+    border-style: solid;
+    border-width: var(--qm-border-width, 1px);
+    border-color: var(--qm-border-color, #e8e8e8);
+    border-top-left-radius: var(--qm-border-radius-tl, 50px);
+    border-top-right-radius: var(--qm-border-radius-tr, 50px);
+    border-bottom-right-radius: var(--qm-border-radius-br, 50px);
+    border-bottom-left-radius: var(--qm-border-radius-bl, 50px);
+    min-height: 56px;
+    padding: var(--qm-input-padding, 16px 40px);
+    color: var(--qm-input-color, #1f2937);
+    font-size: var(--qm-input-font-size, 14px);
+    font-weight: var(--qm-input-font-weight, 500);
+    justify-content: flex-start;
+    column-gap: 10px;
+    row-gap: 4px;
+    gap: 4px 10px;
+    width: max-content;
+    max-width: 100%;
+    flex: 0 1 auto;
     box-sizing: border-box;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-label:has(.choice-option-description),
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group--style-standard .radio-label:has(.choice-option-description),
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-label:has(.choice-option-description),
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group--style-standard .radio-label:has(.choice-option-description) {
+    flex-wrap: wrap !important;
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-label:hover,
 .quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group--style-standard .radio-label:hover,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-label:hover,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group--style-standard .radio-label:hover {
-    background: #f0f0f0;
-    border-color: #d4d4d4;
+    background: color-mix(in srgb, var(--qm-input-bg, #f9f9f9) 94%, #000000);
+    border-color: color-mix(in srgb, var(--qm-border-color, #e8e8e8) 88%, #000000);
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-label:active,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group--style-standard .radio-label:active,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-label:active,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group--style-standard .radio-label:active {
+    background: color-mix(in srgb, var(--qm-input-bg, #f9f9f9) 90%, #000000);
+    border-color: color-mix(in srgb, var(--qm-border-color, #e8e8e8) 82%, #000000);
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard .form-checkbox:checked + .checkbox-label,
@@ -423,8 +1064,11 @@
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group--style-standard .form-checkbox:checked + .checkbox-label,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group--style-standard .form-radio:checked + .radio-label {
     background: var(--qm-numbered-accent) !important;
-    border-color: var(--qm-numbered-input-border) !important;
-    border-radius: var(--qm-numbered-radius);
+    border-color: var(--qm-numbered-accent) !important;
+    border-top-left-radius: var(--qm-border-radius-tl, 50px);
+    border-top-right-radius: var(--qm-border-radius-tr, 50px);
+    border-bottom-right-radius: var(--qm-border-radius-br, 50px);
+    border-bottom-left-radius: var(--qm-border-radius-bl, 50px);
     color: #ffffff !important;
 }
 
@@ -433,24 +1077,40 @@
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group--style-standard .form-checkbox:checked + .checkbox-label:hover,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group--style-standard .form-radio:checked + .radio-label:hover {
     background: #e56800 !important;
-    border-color: var(--qm-numbered-input-border) !important;
+    border-color: #e56800 !important;
 }
 
-.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard .form-checkbox:checked + .checkbox-label::before,
-.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group--style-standard .form-radio:checked + .radio-label::before,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group--style-standard .form-checkbox:checked + .checkbox-label::before,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group--style-standard .form-radio:checked + .radio-label::before {
-    background: #ffffff;
-    color: var(--qm-numbered-accent);
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard .form-checkbox:checked + .checkbox-label:active,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group--style-standard .form-radio:checked + .radio-label:active,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group--style-standard .form-checkbox:checked + .checkbox-label:active,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group--style-standard .form-radio:checked + .radio-label:active {
+    background: #d45f00 !important;
+    border-color: #d45f00 !important;
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-label::before,
 .quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group--style-standard .radio-label::before,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-label::before,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group--style-standard .radio-label::before {
-    background: transparent;
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='10' fill='%231F2937' fill-opacity='0.6'/%3E%3Cpath d='M5.5 10.25l3.1 3.1 5.9-5.9' stroke='%23ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-size: 20px 20px;
+    background-position: 2px 2px;
+    background-repeat: no-repeat;
+    border: none;
     color: transparent;
-    border: 1.5px solid #c3c3c3;
+    -webkit-mask-image: none;
+    mask-image: none;
+}
+
+.quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard .form-checkbox:checked + .checkbox-label::before,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group--style-standard .form-radio:checked + .radio-label::before,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .checkbox-group--style-standard .form-checkbox:checked + .checkbox-label::before,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .radio-group--style-standard .form-radio:checked + .radio-label::before {
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='10' fill='%23ffffff'/%3E%3Cpath d='M5.5 10.25l3.1 3.1 5.9-5.9' stroke='%23FF7600' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    border: none;
+    color: transparent;
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard .form-checkbox:focus-visible + .checkbox-label,
@@ -475,17 +1135,35 @@
     color: rgba(255, 255, 255, 0.85);
 }
 
-/* ── Buttons ── */
+/* ── Buttons — same height as form controls ── */
+.quotemate-form-wrapper[data-qm-theme="numbered"] .btn,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .btn-primary,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .btn-secondary,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .submit-btn,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .next-step,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .prev-step,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .btn,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .btn-primary,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .btn-secondary,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-builder__submit-btn {
+    box-sizing: border-box;
+    min-height: var(--qm-numbered-control-height);
+    height: var(--qm-numbered-control-height);
+    padding: var(--qm-numbered-control-padding-y) 2rem;
+    font-size: var(--qm-numbered-control-font-size);
+    line-height: 1.35;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .quotemate-form-wrapper[data-qm-theme="numbered"] .btn-primary,
 .quotemate-form-wrapper[data-qm-theme="numbered"] .submit-btn,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .next-step,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .btn-primary,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-builder__submit-btn {
     border-radius: var(--qm-numbered-radius);
     min-width: 220px;
-    min-height: 72px;
-    padding: 1.35rem 2.5rem;
-    justify-content: center;
-    font-size: 1.25rem;
     font-weight: 700;
     letter-spacing: 0.01em;
     background: var(--qm-button-color, var(--qm-numbered-accent)) !important;
@@ -535,6 +1213,7 @@
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .btn-secondary,
+.quotemate-form-wrapper[data-qm-theme="numbered"] .prev-step,
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .btn-secondary {
     background: var(--qm-numbered-input-bg);
     color: var(--qm-numbered-text);
@@ -542,8 +1221,6 @@
     box-shadow: none;
     font-weight: 700;
     border-radius: var(--qm-numbered-radius);
-    min-height: 64px;
-    padding: 1rem 2rem;
 }
 
 .quotemate-form-wrapper[data-qm-theme="numbered"] .btn-secondary:hover:not(:disabled),
@@ -603,29 +1280,37 @@
 }
 
 /* ── Admin canvas field chrome (quotemate-form-field__*) ── */
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__input,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body textarea,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body select {
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__input:not(select):not(textarea),
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]) {
     background-color: var(--qm-numbered-input-bg);
     border: 1px solid var(--qm-numbered-input-border);
     border-radius: 0;
     color: var(--qm-numbered-text);
-    min-height: 76px;
-    padding: 1.4rem 2rem;
-    font-size: 1.0625rem;
+    box-sizing: border-box;
+    min-height: var(--qm-numbered-control-height);
+    height: var(--qm-numbered-control-height);
+    padding: var(--qm-numbered-control-padding-y) var(--qm-numbered-control-padding-x);
+    font-size: var(--qm-numbered-control-font-size);
     font-weight: 500;
+    line-height: 1.35;
     box-shadow: none;
 }
 
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body select {
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='12' viewBox='0 0 22 12' fill='none'%3E%3Cpath d='M1 1l10 10L21 1' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 1.5rem center;
-    background-size: 18px 10px;
-    padding-right: 3.5rem;
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body textarea,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] textarea.quotemate-form-field__input {
+    background-color: var(--qm-numbered-input-bg);
+    border: 1px solid var(--qm-numbered-input-border);
+    border-radius: 0;
+    color: var(--qm-numbered-text);
+    box-sizing: border-box;
+    min-height: var(--qm-numbered-textarea-min-height);
+    height: auto;
+    padding: var(--qm-numbered-control-padding-y) var(--qm-numbered-control-padding-x);
+    font-size: var(--qm-numbered-control-font-size);
+    font-weight: 500;
+    line-height: 1.4;
+    box-shadow: none;
+    resize: vertical;
 }
 
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__input:focus,
@@ -652,85 +1337,161 @@
     width: 100%;
 }
 
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard) > label {
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard):not(.quotemate-form-field__options--style-modern) {
+    gap: 8px;
+    align-items: flex-start;
     width: 100%;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard):not(.quotemate-form-field__options--style-modern) > label {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    align-self: flex-start;
+    flex: 0 0 auto;
+    gap: 10px;
+    width: max-content;
     max-width: 100%;
     min-height: 54px;
-    padding: 0.9rem 1rem;
+    padding: var(--qm-input-padding, 0.9rem 1rem);
     margin: 0;
-    background: var(--qm-numbered-input-bg);
-    border: 1px solid var(--qm-numbered-input-border);
-    border-radius: 0;
-    align-items: center;
+    background: var(--qm-input-bg, var(--qm-numbered-input-bg));
+    border-style: solid;
+    border-width: var(--qm-border-width, 1px);
+    border-color: var(--qm-border-color, var(--qm-numbered-input-border));
+    border-top-left-radius: var(--qm-border-radius-tl, 0);
+    border-top-right-radius: var(--qm-border-radius-tr, 0);
+    border-bottom-right-radius: var(--qm-border-radius-br, 0);
+    border-bottom-left-radius: var(--qm-border-radius-bl, 0);
+    color: var(--qm-input-color, inherit);
+    font-size: var(--qm-input-font-size, inherit);
+    font-weight: var(--qm-input-font-weight, inherit);
     box-sizing: border-box;
     transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard) > label:hover {
-    border-color: #d4d4d4;
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard):not(.quotemate-form-field__options--style-modern) > label:has(.choice-option-description) {
+    flex-wrap: wrap !important;
 }
 
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard) > label:has(input:checked) {
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard):not(.quotemate-form-field__options--style-modern) > label > input {
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    align-self: center !important;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard):not(.quotemate-form-field__options--style-modern) > label:hover {
+    border-color: color-mix(in srgb, var(--qm-border-color, var(--qm-numbered-input-border)) 88%, #000000);
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard):not(.quotemate-form-field__options--style-modern) > label:has(input:checked) {
     background: var(--qm-numbered-accent);
-    border-color: var(--qm-numbered-input-border);
-    border-radius: var(--qm-numbered-radius);
+    border-color: var(--qm-border-color, var(--qm-numbered-input-border));
+    border-top-left-radius: var(--qm-border-radius-tl, var(--qm-numbered-radius));
+    border-top-right-radius: var(--qm-border-radius-tr, var(--qm-numbered-radius));
+    border-bottom-right-radius: var(--qm-border-radius-br, var(--qm-numbered-radius));
+    border-bottom-left-radius: var(--qm-border-radius-bl, var(--qm-numbered-radius));
     color: #ffffff;
 }
 
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard) > label:has(input:checked) .choice-option-label,
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard) > label:has(input:checked) .choice-option-price {
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard):not(.quotemate-form-field__options--style-modern) > label:has(input:checked) .choice-option-label,
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard):not(.quotemate-form-field__options--style-modern) > label:has(input:checked) .choice-option-price {
     color: #ffffff;
 }
 
-.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard) > label:has(input:checked) .choice-option-description {
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard):not(.quotemate-form-field__options--style-modern) > label:has(input:checked) .choice-option-description {
     color: rgba(255, 255, 255, 0.85);
 }
 
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--style-standard {
-    gap: 0;
+    gap: 10px;
     width: 100%;
 }
 
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--style-standard > label {
-    width: 100%;
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    width: max-content;
     max-width: 100%;
-    min-height: 54px;
-    padding: 16px 20px;
-    border-radius: 0;
-    background: var(--qm-numbered-input-bg);
-    border: 1px solid var(--qm-numbered-input-border);
-    color: var(--qm-numbered-text);
-    justify-content: center;
+    min-height: 56px;
+    padding: var(--qm-input-padding, 16px 40px);
+    border-style: solid;
+    border-width: var(--qm-border-width, 1px);
+    border-color: var(--qm-border-color, #e8e8e8);
+    border-top-left-radius: var(--qm-border-radius-tl, 50px);
+    border-top-right-radius: var(--qm-border-radius-tr, 50px);
+    border-bottom-right-radius: var(--qm-border-radius-br, 50px);
+    border-bottom-left-radius: var(--qm-border-radius-bl, 50px);
+    background: var(--qm-input-bg, #f9f9f9);
+    color: var(--qm-input-color, #1f2937);
+    font-size: var(--qm-input-font-size, 14px);
+    font-weight: var(--qm-input-font-weight, 500);
+    justify-content: flex-start;
+    column-gap: 10px;
+    row-gap: 4px;
+    gap: 4px 10px;
     box-sizing: border-box;
 }
 
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--style-standard > label:has(.choice-option-description) {
+    flex-wrap: wrap !important;
+}
+
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--style-standard > label:hover {
-    background: #f0f0f0;
-    border-color: #d4d4d4;
+    background: color-mix(in srgb, var(--qm-input-bg, #f9f9f9) 94%, #000000);
+    border-color: color-mix(in srgb, var(--qm-border-color, #e8e8e8) 88%, #000000);
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--style-standard > label:active {
+    background: color-mix(in srgb, var(--qm-input-bg, #f9f9f9) 90%, #000000);
+    border-color: color-mix(in srgb, var(--qm-border-color, #e8e8e8) 82%, #000000);
 }
 
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--style-standard > label:has(input:checked) {
     background: var(--qm-numbered-accent) !important;
-    border-color: var(--qm-numbered-input-border) !important;
-    border-radius: var(--qm-numbered-radius);
+    border-color: var(--qm-numbered-accent) !important;
+    border-top-left-radius: var(--qm-border-radius-tl, 50px);
+    border-top-right-radius: var(--qm-border-radius-tr, 50px);
+    border-bottom-right-radius: var(--qm-border-radius-br, 50px);
+    border-bottom-left-radius: var(--qm-border-radius-bl, 50px);
     color: #ffffff !important;
 }
 
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--style-standard > label:has(input:checked):hover {
     background: #e56800 !important;
-    border-color: var(--qm-numbered-input-border) !important;
+    border-color: #e56800 !important;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--style-standard > label:has(input:checked):active {
+    background: #d45f00 !important;
+    border-color: #d45f00 !important;
 }
 
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--style-standard > label::before {
-    background: transparent;
-    color: transparent;
-    border: 1.5px solid #c3c3c3;
+    background-color: transparent !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='10' fill='%231F2937' fill-opacity='0.6'/%3E%3Cpath d='M5.5 10.25l3.1 3.1 5.9-5.9' stroke='%23ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+    background-size: 20px 20px !important;
+    background-position: 2px 2px !important;
+    background-repeat: no-repeat !important;
+    color: transparent !important;
+    border: none !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
 }
 
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--style-standard > label:has(input:checked)::before {
-    background: #ffffff !important;
-    color: var(--qm-numbered-accent) !important;
-    border-color: transparent;
+    background-color: transparent !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='10' fill='%23ffffff'/%3E%3Cpath d='M5.5 10.25l3.1 3.1 5.9-5.9' stroke='%23FF7600' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+    color: transparent !important;
+    border: none !important;
+}
+
+.quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--style-standard > label:has(input:focus-visible) {
+    outline: 2px solid var(--qm-numbered-accent);
+    outline-offset: 2px;
 }
 
 .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--style-standard > label:has(input:checked) .choice-option-description {
@@ -744,16 +1505,19 @@
 
 /* ── Responsive ── */
 
-/* Tablet: keep horizontal steps, tighten type/spacing */
+/* Tablet: keep full-width even distribution, tighten type */
 @media (max-width: 1200px) {
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicators,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicators {
-        gap: 0.35rem 0.75rem;
+        justify-content: space-between;
+        gap: 0.5rem;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-label,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-label {
-        font-size: 0.75rem;
+        font-size: 0.9375rem;
+        line-height: 1.5;
+        max-width: 100%;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .section-title,
@@ -769,45 +1533,36 @@
     }
 }
 
-/* Narrow tablet / small laptop: scrollable step row */
+/* Narrow tablet / small laptop: keep full-width evenly distributed steps */
 @media (max-width: 900px) {
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-progress,
     .quotemate-form-wrapper[data-qm-theme="numbered"] .unified-step-progress,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-progress,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .unified-step-progress {
         margin-bottom: 1.25rem;
-        overflow: hidden;
+        width: 100%;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicators,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicators {
         flex-direction: row !important;
         flex-wrap: nowrap;
-        overflow-x: auto;
-        overflow-y: hidden;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-x: contain;
-        scrollbar-width: none;
-        gap: 0.75rem 1rem;
-        justify-content: flex-start;
+        width: 100%;
+        gap: 0.35rem;
+        justify-content: space-between;
         align-items: flex-start;
-        padding: 0 0 0.65rem;
-        margin: 0;
-        scroll-snap-type: x proximity;
-    }
-
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicators::-webkit-scrollbar,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicators::-webkit-scrollbar {
-        display: none;
+        padding: 0;
+        margin: 0 auto;
+        overflow: visible;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator {
-        flex: 0 0 auto;
-        min-width: 5.25rem;
-        max-width: 7.5rem;
-        gap: 10px;
-        scroll-snap-align: start;
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+        gap: 14px;
+        padding: 0 0.15rem;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-progress .step-number,
@@ -816,31 +1571,50 @@
         width: 36px;
         height: 36px;
         min-width: 36px;
+        min-height: 36px;
+        border-radius: 40px;
         font-size: 0.9375rem;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-label,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-label {
-        font-size: 0.6875rem;
-        line-height: 1.25;
-        padding-bottom: 0.3rem;
-        border-bottom-width: 2px;
+        font-size: 0.8125rem;
+        line-height: 1.4;
+        padding: 0;
+        border-bottom: none;
+        max-width: 100%;
         word-break: break-word;
         hyphens: auto;
+    }
+
+    .quotemate-form-wrapper[data-qm-theme="numbered"],
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] {
+        --qm-numbered-control-height: 44px;
+        --qm-numbered-control-padding-y: 0.6rem;
+        --qm-numbered-control-padding-x: 1.25rem;
+        --qm-numbered-control-font-size: 1rem;
+        --qm-numbered-textarea-min-height: 88px;
+        --qm-numbered-select-height: 52px;
+        --qm-numbered-select-padding-x: 20px;
+        --qm-numbered-select-font-size: 1.0625rem;
+        --qm-numbered-select-chevron-size: 15px;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .btn-primary,
     .quotemate-form-wrapper[data-qm-theme="numbered"] .submit-btn,
     .quotemate-form-wrapper[data-qm-theme="numbered"] .btn-secondary,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .next-step,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .prev-step,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .btn-primary,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-builder__submit-btn,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .btn-secondary {
         width: 100%;
         max-width: 360px;
-        min-height: 64px;
         min-width: 0;
-        font-size: 1.125rem;
-        padding: 1.1rem 1.75rem;
+        min-height: var(--qm-numbered-control-height);
+        height: var(--qm-numbered-control-height);
+        padding: var(--qm-numbered-control-padding-y) 1.75rem;
+        font-size: var(--qm-numbered-control-font-size);
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .form-navigation,
@@ -851,35 +1625,18 @@
         padding: 1.5rem 0 1rem;
         gap: 0.85rem;
     }
-
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .form-control,
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .field-input input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .field-input select,
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .field-input textarea,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .form-control,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input select,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input textarea,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__input,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body select,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body textarea {
-        min-height: 64px;
-        padding: 1.1rem 1.25rem;
-        font-size: 1rem;
-    }
-
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .field-input select,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input select,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body select {
-        padding-right: 3rem;
-        background-position: right 1.15rem center;
-        background-size: 16px 9px;
-    }
 }
 
 /* Phone: override global column-stacked steps; full-width controls */
 @media (max-width: 768px) {
+    .quotemate-form-wrapper[data-qm-theme="numbered"],
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] {
+        --qm-numbered-select-height: 48px;
+        --qm-numbered-select-padding-x: 18px;
+        --qm-numbered-select-font-size: 1.0625rem;
+        --qm-numbered-select-chevron-size: 14px;
+    }
+
     .quotemate-form-wrapper[data-qm-theme="numbered"] .form-header,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .form-header,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-builder__form-header {
@@ -897,21 +1654,25 @@
         min-height: 0;
     }
 
-    /* Keep Figma-style horizontal strip (do not stack vertically) */
+    /* Keep full-width evenly distributed horizontal steps (do not stack) */
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicators,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicators {
         flex-direction: row !important;
         flex-wrap: nowrap !important;
-        overflow-x: auto;
-        gap: 0.65rem 0.85rem;
-        padding-bottom: 0.5rem;
+        width: 100%;
+        gap: 0.25rem;
+        padding-bottom: 0;
+        justify-content: space-between;
+        overflow: visible;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator {
-        min-width: 4.75rem;
-        max-width: 6.5rem;
-        gap: 8px;
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+        gap: 12px;
+        padding: 0 0.1rem;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-progress .step-number,
@@ -920,6 +1681,8 @@
         width: 32px;
         height: 32px;
         min-width: 32px;
+        min-height: 32px;
+        border-radius: 40px;
         font-size: 0.875rem;
     }
 
@@ -932,8 +1695,11 @@
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-label,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-label {
-        font-size: 0.625rem;
-        padding-bottom: 0.25rem;
+        font-size: 0.75rem;
+        line-height: 1.35;
+        padding: 0;
+        border-bottom: none;
+        max-width: 100%;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .section-title,
@@ -963,22 +1729,29 @@
         max-width: 100%;
     }
 
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .form-control,
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .field-input input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
     .quotemate-form-wrapper[data-qm-theme="numbered"] .field-input select,
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .field-input textarea,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .form-control,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+    .quotemate-form-wrapper[data-qm-theme="numbered"] select.form-control,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-dropdown-level select,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-select,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .progressive-service-selector select,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .quotemate-service-select,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .field-input select,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__input,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body select {
-        min-height: 56px;
-        padding: 0.95rem 1rem;
-        font-size: 1rem;
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] select.form-control,
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body select,
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__select,
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .progressive-service-selector select,
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-service-select {
         width: 100%;
         max-width: 100%;
-        box-sizing: border-box;
+    }
+
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .form-control:not(select):not(textarea),
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .field-input input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .form-control:not(select):not(textarea),
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__input:not(select):not(textarea),
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) {
+        width: 100%;
+        max-width: 100%;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group,
@@ -996,18 +1769,33 @@
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--horizontal {
         flex-direction: column;
         flex-wrap: nowrap;
-        align-items: stretch;
+        align-items: flex-start;
     }
 
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard) .checkbox-wrapper,
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard) .radio-wrapper,
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-label,
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group--style-standard .radio-label,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options > label {
-        width: 100%;
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group:not(.checkbox-group--style-standard):not(.checkbox-group--style-modern) .checkbox-wrapper,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group:not(.radio-group--style-standard):not(.radio-group--style-modern) .radio-wrapper,
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options:not(.quotemate-form-field__options--style-standard):not(.quotemate-form-field__options--style-modern) > label {
+        width: max-content;
         max-width: 100%;
         min-height: 48px;
         padding: 0.85rem 1rem;
+    }
+
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .checkbox-group--style-standard .checkbox-label,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .radio-group--style-standard .radio-label,
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__options--style-standard > label {
+        display: inline-flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        width: 100%;
+        max-width: 100%;
+        min-height: 56px;
+        padding: var(--qm-input-padding, 16px 24px);
+        border-top-left-radius: var(--qm-border-radius-tl, 50px);
+        border-top-right-radius: var(--qm-border-radius-tr, 50px);
+        border-bottom-right-radius: var(--qm-border-radius-br, 50px);
+        border-bottom-left-radius: var(--qm-border-radius-bl, 50px);
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .form-navigation,
@@ -1025,19 +1813,24 @@
     .quotemate-form-wrapper[data-qm-theme="numbered"] .btn-primary,
     .quotemate-form-wrapper[data-qm-theme="numbered"] .btn-secondary,
     .quotemate-form-wrapper[data-qm-theme="numbered"] .submit-btn,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .next-step,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .prev-step,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .btn-primary,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .btn-secondary,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-builder__submit-btn {
         width: 100%;
         max-width: none;
-        min-height: 56px;
-        font-size: 1.0625rem;
+        min-height: var(--qm-numbered-control-height);
+        height: var(--qm-numbered-control-height);
+        font-size: var(--qm-numbered-control-font-size);
+        padding: var(--qm-numbered-control-padding-y) 1.5rem;
         box-shadow:
             1px 6px 12px rgba(255, 118, 0, 0.1),
             3px 18px 20px rgba(255, 118, 0, 0.08);
     }
 
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .btn-secondary {
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .btn-secondary,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .prev-step {
         box-shadow: none;
     }
 
@@ -1046,12 +1839,35 @@
     }
 }
 
-/* Small phones */
+/* Small phones — keep all controls on one shared height */
 @media (max-width: 480px) {
+    .quotemate-form-wrapper[data-qm-theme="numbered"],
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] {
+        --qm-numbered-control-height: 42px;
+        --qm-numbered-control-padding-y: 0.5rem;
+        --qm-numbered-control-padding-x: 0.9rem;
+        --qm-numbered-control-font-size: 0.9375rem;
+        --qm-numbered-textarea-min-height: 84px;
+        --qm-numbered-select-height: 46px;
+        --qm-numbered-select-padding-x: 16px;
+        --qm-numbered-select-font-size: 1rem;
+        --qm-numbered-select-chevron-size: 13px;
+    }
+
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicator,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicator {
-        min-width: 4.25rem;
-        max-width: 5.5rem;
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+        gap: 10px;
+        padding: 0 0.05rem;
+    }
+
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .step-indicators,
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-indicators {
+        gap: 0.2rem;
+        justify-content: space-between;
+        width: 100%;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-progress .step-number,
@@ -1060,12 +1876,18 @@
         width: 28px;
         height: 28px;
         min-width: 28px;
+        min-height: 28px;
+        border-radius: 40px;
         font-size: 0.8125rem;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .step-label,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .step-label {
-        font-size: 0.5625rem;
+        font-size: 0.6875rem;
+        line-height: 1.3;
+        padding: 0;
+        border-bottom: none;
+        max-width: 100%;
     }
 
     .quotemate-form-wrapper[data-qm-theme="numbered"] .section-title,
@@ -1073,23 +1895,17 @@
         font-size: 1.35rem;
     }
 
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .form-control,
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .field-input input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-    .quotemate-form-wrapper[data-qm-theme="numbered"] .field-input select,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__input,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-field__body select {
-        min-height: 52px;
-        padding: 0.85rem 0.9rem;
-        font-size: 0.9375rem;
-    }
-
     .quotemate-form-wrapper[data-qm-theme="numbered"] .btn-primary,
     .quotemate-form-wrapper[data-qm-theme="numbered"] .submit-btn,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .btn-secondary,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .next-step,
+    .quotemate-form-wrapper[data-qm-theme="numbered"] .prev-step,
     .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .btn-primary,
-    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-builder__submit-btn {
-        min-height: 52px;
-        font-size: 1rem;
-        padding: 0.9rem 1.25rem;
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .quotemate-form-builder__submit-btn,
+    .quotemate-form-builder__form-preview[data-qm-theme="numbered"] .btn-secondary {
+        min-height: var(--qm-numbered-control-height);
+        height: var(--qm-numbered-control-height);
+        font-size: var(--qm-numbered-control-font-size);
+        padding: var(--qm-numbered-control-padding-y) 1.25rem;
     }
 }

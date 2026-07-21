@@ -495,6 +495,53 @@ class QuotemateFormBuilder {
     if (!fieldData) return fieldData;
     fieldData.styleMarginBottom = '5';
     fieldData.styleMarginUnit = fieldData.styleMarginUnit || 'px';
+    this.applyDefaultDropdownStyles(fieldData);
+    return fieldData;
+  }
+
+  /** Figma Tech Stack (5:3) dropdown tokens — seed Style panel defaults for select-like fields. */
+  applyDefaultDropdownStyles(fieldData) {
+    if (!fieldData) return fieldData;
+    const dropdownTypes = [
+      'select',
+      'project_type',
+      'project_category',
+      'service_type',
+      'completion_timeline',
+      'budget_range',
+      'unit_type',
+      'material_type',
+      'urgency_level',
+      'service',
+      'service_options',
+    ];
+    if (!dropdownTypes.includes(fieldData.type)) return fieldData;
+
+    const themeId =
+      document.querySelector('.quotemate-form-builder__form-preview')?.dataset?.qmTheme ||
+      document.querySelector('.qm-theme-option--active')?.dataset?.themeId ||
+      '';
+    if (themeId !== 'numbered') return fieldData;
+
+    const setIfEmpty = (key, value) => {
+      if (fieldData[key] === undefined || fieldData[key] === null || fieldData[key] === '') {
+        fieldData[key] = value;
+      }
+    };
+
+    setIfEmpty('styleInputBg', '#f9f9f9');
+    setIfEmpty('styleInputColor', '#000000');
+    setIfEmpty('styleBorderWidth', '1px');
+    setIfEmpty('styleBorderColor', '#e8e8e8');
+    setIfEmpty('styleBorderRadiusTopLeft', '0');
+    setIfEmpty('styleBorderRadiusTopRight', '0');
+    setIfEmpty('styleBorderRadiusBottomRight', '0');
+    setIfEmpty('styleBorderRadiusBottomLeft', '0');
+    setIfEmpty('styleBorderRadiusUnit', 'px');
+    setIfEmpty('stylePadding', '0 48px 0 24px');
+    setIfEmpty('stylePlaceholderColor', '#000000');
+    setIfEmpty('styleInputFontSize', '18px');
+    setIfEmpty('styleInputFontWeight', '500');
     return fieldData;
   }
 
@@ -743,6 +790,33 @@ class QuotemateFormBuilder {
     return getFieldStyleVars(fieldData);
   }
 
+  applyFieldStyleVarsInCanvas(fieldId, fieldData = null) {
+    const fieldElement = this.getCanvasFieldElement(fieldId);
+    if (!fieldElement) return;
+
+    const resolvedFieldData = fieldData || this.formData.fields.find((f) => f.id === fieldId);
+    if (!resolvedFieldData) return;
+
+    const styleVars = this.getFieldStyleVars(resolvedFieldData);
+    if (styleVars) {
+      fieldElement.setAttribute('style', styleVars);
+      // Ensure custom properties are present for theme CSS (inheritance), not only attribute selectors.
+      styleVars.split(';').forEach((pair) => {
+        const trimmed = pair.trim();
+        if (!trimmed || !trimmed.startsWith('--')) return;
+        const colon = trimmed.indexOf(':');
+        if (colon <= 0) return;
+        const name = trimmed.slice(0, colon).trim();
+        const value = trimmed.slice(colon + 1).trim();
+        if (name && value) {
+          fieldElement.style.setProperty(name, value);
+        }
+      });
+    } else {
+      fieldElement.removeAttribute('style');
+    }
+  }
+
   resolveFieldDataById(fieldId) {
     if (this.virtualFields?.[fieldId]) {
       return this.virtualFields[fieldId];
@@ -970,7 +1044,7 @@ class QuotemateFormBuilder {
    * Live canvas preview for Checkbox / Multiple Choice options.
    * Reads directly from the field model (labels, descriptions, prices, layout).
    */
-  buildChoiceOptionsPreviewHtml(fieldId, fieldData) {
+  buildChoiceOptionsPreviewHtml(fieldId, fieldData, previewOptions = {}) {
     const options = fieldData?.options || [];
     if (!options.length) {
       return {
@@ -984,21 +1058,30 @@ class QuotemateFormBuilder {
     const inputName = isCheckbox ? `${fieldId}[]` : fieldId;
     const defaultVals = isCheckbox
       ? (fieldData.defaultValue || '').split(',').map((s) => s.trim().toLowerCase().replace(/\s+/g, '_')).filter(Boolean)
-      : [(fieldData.defaultValue || '').toLowerCase().replace(/\s+/g, '_')];
+      : [(fieldData.defaultValue || '').toLowerCase().replace(/\s+/g, '_')].filter(Boolean);
+    const preservedVals = Array.isArray(previewOptions.selectedValues)
+      ? previewOptions.selectedValues.map((value) => String(value ?? '').toLowerCase().replace(/\s+/g, '_')).filter(Boolean)
+      : [];
+    const activeVals = preservedVals.length ? preservedVals : defaultVals;
+    const checkedVals = isCheckbox
+      ? activeVals
+      : (activeVals.length ? [activeVals[0]] : []);
     const descriptions = fieldData.optionDescriptions || {};
     const prices = fieldData.optionPrices || {};
     const showDescription = !!fieldData.addDescription;
     const showPrice = !!fieldData.addPrice && fieldData.showPrice !== false;
     const layoutClass = [
       fieldData.optionLayout === 'horizontal' ? ' quotemate-form-field__options--horizontal' : '',
-      fieldData.optionStyle === 'standard' ? ' quotemate-form-field__options--style-standard' : '',
+      ['standard', 'modern'].includes(fieldData.optionStyle)
+        ? ` quotemate-form-field__options--style-${fieldData.optionStyle}`
+        : '',
     ].join('');
 
     const innerHtml = options
       .map((option) => {
         const label = String(option ?? '');
         const optVal = label.toLowerCase().replace(/\s+/g, '_');
-        const checked = defaultVals.includes(optVal) ? ' checked' : '';
+        const checked = checkedVals.includes(optVal) ? ' checked' : '';
         const description = showDescription ? String(descriptions[label] || '').trim() : '';
         const descriptionHtml = description
           ? `<span class="choice-option-description">${this.escapeHtml(description)}</span>`
@@ -1076,12 +1159,58 @@ class QuotemateFormBuilder {
     return `<option value="${this.escapeAttr(path)}" data-path="${this.escapeAttr(path)}" data-has-children="${hasChildren ? '1' : '0'}">${this.escapeHtml(text)}</option>`;
   }
 
+  /** Build Service Selector page Heading/Subheading/Description HTML (omit empty fields). */
+  buildServiceSelectorPageContentHtml(fieldData = {}) {
+    const parts = [];
+    const headingField = fieldData?.pageBreakHeadingField && typeof fieldData.pageBreakHeadingField === 'object'
+      ? fieldData.pageBreakHeadingField
+      : null;
+    const headingText = String(headingField?.label || fieldData?.pageBreakHeading || '').trim();
+    if (headingText) {
+      const tag = resolveHeadingLevel(headingField?.heading_level || 'h2');
+      const isSubheading = ['h3', 'h4', 'h5', 'h6'].includes(tag);
+      const roleClass = isSubheading ? ' inline-cascade-page-subheading' : '';
+      const alignClass = getHeadingAlignClass(headingField?.heading_align || 'center');
+      const styleAttr = getFieldStyleVars(headingField || {});
+      const cssClass = headingField?.cssClass ? ` ${this.escapeHtml(headingField.cssClass)}` : '';
+      parts.push(
+        `<div class="form-group form-group--content-block inline-cascade-page-heading-wrap"${styleAttr ? ` style="${styleAttr}"` : ''}>` +
+          `<${tag} class="inline-cascade-page-heading quotemate-form-heading quotemate-form-field__heading quotemate-form-heading--${tag}${roleClass} ${alignClass}${cssClass}">` +
+          `${formatHeadingText(headingText)}` +
+          `</${tag}>` +
+        `</div>`
+      );
+    }
+
+    const descriptionField = fieldData?.pageBreakDescriptionField && typeof fieldData.pageBreakDescriptionField === 'object'
+      ? fieldData.pageBreakDescriptionField
+      : null;
+    const descriptionText = String(
+      descriptionField?.paragraph_content || fieldData?.pageBreakDescription || ''
+    ).trim();
+    if (descriptionText) {
+      const alignClass = getHeadingAlignClass(descriptionField?.heading_align || 'center');
+      const styleAttr = getFieldStyleVars(descriptionField || {});
+      const cssClass = descriptionField?.cssClass ? ` ${this.escapeHtml(descriptionField.cssClass)}` : '';
+      const formatted = this.escapeHtml(descriptionText).replace(/\r\n/g, '\n').replace(/\n/g, '<br>');
+      parts.push(
+        `<div class="form-group form-group--content-block inline-cascade-page-description-wrap"${styleAttr ? ` style="${styleAttr}"` : ''}>` +
+          `<div class="inline-cascade-page-description quotemate-form-paragraph ${alignClass}${cssClass}">${formatted}</div>` +
+        `</div>`
+      );
+    }
+
+    if (!parts.length) return '';
+    return `<div class="inline-cascade-page-content">${parts.join('')}</div>`;
+  }
+
   /** Build HTML for cascading service dropdowns: only first dropdown + container for next levels (shown on selection) */
   getServiceCascadingDropdownsHtml(fieldId, fieldData) {
     const enhancedServiceStructure = fieldData.enhancedServiceStructure || [];
     if (enhancedServiceStructure.length === 0) return '';
     const topItems = enhancedServiceStructure.filter((s) => s.type !== 'page_break');
     const levelLabels = this.getServiceLevelLabels(fieldData);
+    const pageContentHtml = this.buildServiceSelectorPageContentHtml(fieldData);
 
     const choosePlaceholder = (label) => `Choose ${label || 'option'}`;
     let level0Options = `<option value="">${this.escapeHtml(choosePlaceholder(levelLabels[0]))}</option>`;
@@ -1091,6 +1220,7 @@ class QuotemateFormBuilder {
 
     return `
     <div class="quotemate-service-dropdowns" data-field-id="${this.escapeAttr(fieldId)}">
+      ${pageContentHtml}
       <div class="quotemate-service-dropdown-level" data-level="0">
         <select class="quotemate-form-field__input quotemate-service-select" data-level="0" data-path="">
           ${level0Options}
@@ -1429,7 +1559,7 @@ class QuotemateFormBuilder {
     const actionsHtml = `
       <div class="quotemate-form-field__actions">
         <button type="button" class="quotemate-form-field__action" data-action="edit-field" data-field-id="${fieldId}">Edit</button>
-        <button type="button" class="quotemate-form-field__action" data-action="duplicate-field" data-field-id="${fieldId}">Copy</button>
+        <button type="button" class="quotemate-form-field__action" data-action="duplicate-field" data-field-id="${fieldId}">Duplicate</button>
         <button type="button" class="quotemate-form-field__action" data-action="delete-field" data-field-id="${fieldId}">Delete</button>
       </div>
     `;
@@ -1486,6 +1616,7 @@ class QuotemateFormBuilder {
   init() {
     // this.dragDropHandler.init(); // Remove this line to prevent duplicate field creation
     this.initFieldSelection();
+    this.initCanvasChoiceInputHandlers();
     this.initFormTitleEditing();
     this.initFieldPropertyDelegation();
     this.formPreview.init();
@@ -1823,7 +1954,7 @@ class QuotemateFormBuilder {
       const isLinked = hidden.value === 'true';
       hidden.value = isLinked ? 'false' : 'true';
       block.classList.toggle('quotemate-style-layout-block--linked', !isLinked);
-      const linkLabel = kind === 'borderRadius' ? 'corners' : 'sides';
+      const linkLabel = kind === 'borderRadius' || kind === 'fieldBorderRadius' ? 'corners' : 'sides';
       btn.title = !isLinked ? `Unlink ${linkLabel}` : `Link ${linkLabel}`;
       if (fieldId && hidden.dataset.property) {
         const builder = window.formBuilder;
@@ -1926,12 +2057,18 @@ class QuotemateFormBuilder {
 
       switch (action) {
         case "edit-field":
+          e.preventDefault();
+          e.stopPropagation();
           this.editField(button.dataset.fieldId);
           break;
         case "duplicate-field":
+          e.preventDefault();
+          e.stopPropagation();
           this.duplicateField(button.dataset.fieldId);
           break;
         case "delete-field":
+          e.preventDefault();
+          e.stopPropagation();
           this.deleteField(button.dataset.fieldId);
           break;
         case "delete-row":
@@ -2061,6 +2198,7 @@ class QuotemateFormBuilder {
     }
     this.formData.fields.push(fieldData);
     this.updateFormData();
+    this.refreshBuilderLivePreview();
 
     // Initialize conditional logic for the new field
     setTimeout(() => {
@@ -2340,14 +2478,41 @@ class QuotemateFormBuilder {
 
   initFieldSelection() {
     document.addEventListener("click", (e) => {
-      // Prevent opening settings when clicking delete button
-      if (e.target.closest(".quotemate-form-field__action[data-action='delete-field']")) {
+      // Toolbar actions handle their own flow; don't treat them as field selection.
+      if (e.target.closest(".quotemate-form-field__action[data-action='delete-field'], .quotemate-form-field__action[data-action='duplicate-field']")) {
+        return;
+      }
+      if (e.target.closest('.quotemate-form-field__options input, .quotemate-form-field__options label')) {
         return;
       }
       if (e.target.closest(".quotemate-form-field")) {
         const field = e.target.closest(".quotemate-form-field");
         this.selectField(field);
       }
+    });
+  }
+
+  initCanvasChoiceInputHandlers() {
+    const dropZone = document.getElementById('form-drop-zone');
+    if (!dropZone || dropZone.dataset.choiceHandlersBound === '1') {
+      return;
+    }
+    dropZone.dataset.choiceHandlersBound = '1';
+
+    dropZone.addEventListener('change', (e) => {
+      const input = e.target;
+      if (!input.matches('.quotemate-form-field__options input[type="radio"]')) {
+        return;
+      }
+
+      const group = input.closest('.quotemate-form-field__options');
+      if (!group || !input.name) {
+        return;
+      }
+
+      group.querySelectorAll(`input[type="radio"][name="${CSS.escape(input.name)}"]`).forEach((radio) => {
+        radio.checked = radio === input;
+      });
     });
   }
 
@@ -2546,7 +2711,7 @@ class QuotemateFormBuilder {
       this.updateFormData();
 
       // Keep the edited property authoritative after panel sync (layout/style/showPrice must stick).
-      if (['optionLayout', 'optionStyle', 'showPrice'].includes(property)) {
+      if (['optionLayout', 'optionStyle', 'showPrice'].includes(property) || property.startsWith('style')) {
         fieldData[property] = value;
       }
 
@@ -2557,7 +2722,13 @@ class QuotemateFormBuilder {
         isSummaryBodyProp;
 
       if (!skipCanvasRefresh) {
-        if (isPageBreakButtonText) {
+        if (property.startsWith('style') || property === 'fieldSize') {
+          if (property.startsWith('style')) {
+            this.applyFieldStyleVarsInCanvas(fieldId, fieldData);
+          } else {
+            this.refreshFieldInCanvas(fieldId);
+          }
+        } else if (isPageBreakButtonText) {
           const fieldElement = this.getCanvasFieldElement(fieldId);
           if (!syncPageBreakButtonTextInCanvas(fieldElement, property, value, fieldData)) {
             const inputWrapper = fieldElement?.querySelector('.field-input');
@@ -2857,7 +3028,19 @@ class QuotemateFormBuilder {
       } else if (fieldData.type === "radio" || fieldData.type === "checkbox") {
         const inputWrapper = fieldElement.querySelector(".field-input");
         if (inputWrapper) {
-          const preview = this.buildChoiceOptionsPreviewHtml(fieldId, fieldData);
+          const optionsEl = inputWrapper.querySelector('.quotemate-form-field__options');
+          let selectedValues = [];
+          if (optionsEl) {
+            if (fieldData.type === 'radio') {
+              const checkedRadio = optionsEl.querySelector('input[type="radio"]:checked');
+              if (checkedRadio) {
+                selectedValues = [checkedRadio.value];
+              }
+            } else {
+              selectedValues = Array.from(optionsEl.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
+            }
+          }
+          const preview = this.buildChoiceOptionsPreviewHtml(fieldId, fieldData, { selectedValues });
           inputWrapper.innerHTML = `<div class="quotemate-form-field__options${preview.layoutClass}">${preview.innerHtml}</div>`;
         }
       } else if (fieldData.type === 'heading') {
@@ -2964,21 +3147,64 @@ class QuotemateFormBuilder {
   }
 
   editField(fieldId) {
-    const fieldElement = document.querySelector(`[data-field-id="${fieldId}"]`);
-    this.selectField(fieldElement);
+    const fieldElement = this.getCanvasFieldElement(fieldId);
+    if (fieldElement) {
+      this.selectField(fieldElement);
+    }
+  }
+
+  removeFieldIdFromLayout(fieldId) {
+    if (!fieldId || !this.formData?.layout?.rows) return;
+    this.formData.layout.rows.forEach((row) => {
+      (row.columns || []).forEach((col) => {
+        col.fieldIds = (col.fieldIds || []).filter((id) => id !== fieldId);
+      });
+    });
+  }
+
+  clearSelectedFieldSettings(fieldId = null) {
+    const selectedId = this.selectedField?.dataset?.fieldId;
+    if (fieldId && selectedId && selectedId !== fieldId) {
+      return;
+    }
+
+    this.selectedField = null;
+    document.querySelectorAll(".quotemate-form-field.selected").forEach((el) => {
+      el.classList.remove("selected");
+    });
+
+    const propertiesPanel = document.getElementById("properties-panel");
+    if (propertiesPanel) {
+      propertiesPanel.style.display = "none";
+    }
+
+    const propertiesContent = document.querySelector(".quotemate-form-builder__properties-content");
+    const advanceContent = document.querySelector(".quotemate-form-builder__advance-properties-content");
+    const styleContent = document.querySelector(".quotemate-form-builder__style-properties-content");
+    if (propertiesContent) {
+      propertiesContent.innerHTML = '<p class="quotemate-form-builder__no-selection">Select a field to edit its settings</p>';
+    }
+    if (advanceContent) advanceContent.innerHTML = '';
+    if (styleContent) styleContent.innerHTML = '';
   }
 
   duplicateField(fieldId) {
-    const fieldData = this.formData.fields.find((f) => f.id === fieldId);
-    if (!fieldData) return;
+    if (!fieldId) return;
+
+    const fieldData = this.resolveFieldDataById(fieldId);
+    if (!fieldData || isVirtualPageContentFieldId(fieldId)) return;
+
+    const originalElement = this.getCanvasFieldElement(fieldId);
+    if (!originalElement) return;
 
     this.fieldCounter++;
     const newFieldId = `field_${this.fieldCounter}`;
     const newFieldData = this.cloneFieldData(fieldData, newFieldId);
 
-    const originalElement = document.querySelector(`[data-field-id="${fieldId}"]`);
-    if (!originalElement) return;
-
+    // Keep a live independent copy in formData before DOM insert/sync.
+    if (!Array.isArray(this.formData.fields)) {
+      this.formData.fields = [];
+    }
     this.formData.fields.push(newFieldData);
 
     const columnEl = originalElement.closest('.quotemate-form-builder__column');
@@ -2990,17 +3216,32 @@ class QuotemateFormBuilder {
       const wrap = document.createElement('div');
       wrap.innerHTML = this.generateFieldHtmlFromData(newFieldData);
       const newElement = wrap.firstElementChild;
-      if (!newElement) return;
+      if (!newElement) {
+        this.formData.fields = this.formData.fields.filter((f) => f.id !== newFieldId);
+        return;
+      }
       originalElement.parentNode.insertBefore(newElement, originalElement.nextSibling);
       this.syncLayoutFromDOM();
       this.syncFieldsFromLayout();
       this.updateFormData();
+      this.refreshBuilderLivePreview();
     } else {
+      this.formData.fields = this.formData.fields.filter((f) => f.id !== newFieldId);
       return;
     }
 
+    // Ensure Sortable picks up the new Service Selector / field node immediately.
+    if (this.initSortableFields) {
+      this.initSortableFields();
+    }
     this.syncPageBreakFieldsAfterOrderChange();
+    this.refreshBuilderLivePreview();
     if (this.renderStructurePanel) this.renderStructurePanel();
+
+    const newElement = this.getCanvasFieldElement(newFieldId);
+    if (newElement) {
+      this.selectField(newElement);
+    }
   }
 
   showConfirmationDialog(message, onConfirm) {
@@ -3138,47 +3379,41 @@ class QuotemateFormBuilder {
   }
 
   async deleteField(fieldId) {
+    if (!fieldId || isVirtualPageContentFieldId(fieldId)) return;
+
     const confirmed = await this.showConfirmationDialog("Are you sure you want to delete this field?");
+    if (!confirmed) return;
 
-    if (confirmed) {
-      const fieldElement = document.querySelector(
-        `[data-field-id="${fieldId}"]`
-      );
-      const columnEl = fieldElement?.closest('.quotemate-form-builder__column');
+    // Always target the canvas field wrapper (not nested data-field-id nodes / settings inputs).
+    const fieldElement = this.getCanvasFieldElement(fieldId);
+    const columnEl = fieldElement?.closest('.quotemate-form-builder__column');
 
-      if (fieldElement) {
-        fieldElement.remove();
-      }
+    if (fieldElement) {
+      fieldElement.remove();
+    }
 
-      if (columnEl) {
-        this.ensureColumnPlaceholder(columnEl);
-      }
+    if (columnEl) {
+      this.ensureColumnPlaceholder(columnEl);
+    }
 
-      this.formData.fields = this.formData.fields.filter(
-        (f) => f.id !== fieldId
-      );
+    this.removeFieldIdFromLayout(fieldId);
+    this.formData.fields = (this.formData.fields || []).filter((f) => f.id !== fieldId);
 
-      this.syncLayoutFromDOM();
-      this.syncFieldsFromLayout();
-      this.syncPageBreakFieldsAfterOrderChange();
-      this.updateFormData();
-      this.refreshBuilderLivePreview();
-      if (this.renderStructurePanel) this.renderStructurePanel();
+    this.syncLayoutFromDOM();
+    this.syncFieldsFromLayout();
+    this.syncPageBreakFieldsAfterOrderChange();
+    this.updateFormData();
+    this.refreshBuilderLivePreview();
+    if (this.renderStructurePanel) this.renderStructurePanel();
+    if (this.initSortableFields) this.initSortableFields();
 
-      // Hide properties panel if this field was selected
-      if (
-        this.selectedField &&
-        this.selectedField.dataset.fieldId === fieldId
-      ) {
-        document.getElementById("properties-panel").style.display = "none";
-        this.selectedField = null;
-      }
+    this.clearSelectedFieldSettings(fieldId);
 
-      // Show placeholder if no fields left
-      if (this.formData.fields.length === 0) {
-        document.querySelector(
-          ".quotemate-form-builder__drop-placeholder"
-        ).style.display = "flex";
+    // Show placeholder if no fields left
+    if ((this.formData.fields || []).length === 0) {
+      const placeholder = document.querySelector(".quotemate-form-builder__drop-placeholder");
+      if (placeholder) {
+        placeholder.style.display = "flex";
       }
     }
   }
@@ -3224,6 +3459,8 @@ class QuotemateFormBuilder {
 
     container.querySelectorAll("[data-property][data-field-id]").forEach((input) => {
       if (!this.isPanelPropertyInputVisible(input)) return;
+      // Color swatches are buttons with the same data-property; skip them so they don't clear values.
+      if (input.tagName === 'BUTTON') return;
       const fieldId = input.dataset.fieldId;
       const property = input.dataset.property;
       if (!fieldId || !property) return;
@@ -3241,7 +3478,7 @@ class QuotemateFormBuilder {
         value = input.value;
       }
 
-      if (property === 'styleMarginLinked' || property === 'stylePaddingLinked' || property === 'styleBorderRadiusLinked' || property === 'stylePrevMarginLinked' || property === 'stylePrevPaddingLinked') {
+      if (property === 'styleMarginLinked' || property === 'stylePaddingLinked' || property === 'styleBorderRadiusLinked' || property === 'styleFieldBorderRadiusLinked' || property === 'stylePrevMarginLinked' || property === 'stylePrevPaddingLinked') {
         value = value === 'true' || value === true;
       }
 
@@ -3727,7 +3964,8 @@ class QuotemateFormBuilder {
         direction: 'vertical',
         invertSwap: true,
         swapThreshold: 0.5,
-        filter: '.quotemate-form-builder__column-placeholder',
+        filter: '.quotemate-form-builder__column-placeholder, .quotemate-form-field__action',
+        preventOnFilter: false,
         placeholderClass: 'quotemate-form-field__sortable-placeholder',
         onMove: (evt) => {
           const isPaletteItem = evt.dragged.classList.contains('quotemate-form-builder__field-item');

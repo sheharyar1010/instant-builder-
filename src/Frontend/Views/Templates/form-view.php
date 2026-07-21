@@ -495,15 +495,72 @@ $form_width_class = DesignHelper::get_width_class($form_design);
 .form-group[style*="--qm-input-font-weight"] .radio-label,
 .form-group[style*="--qm-input-font-weight"] .checkbox-label { font-weight: var(--qm-input-font-weight); }
 .form-group[style*="--qm-input-bg"] .form-control { background-color: var(--qm-input-bg); }
+.form-group[style*="--qm-input-bg"] .checkbox-label,
+.form-group[style*="--qm-input-bg"] .radio-label { background-color: var(--qm-input-bg); }
 .form-group[style*="--qm-border-width"] .form-control { border-width: var(--qm-border-width); }
+.form-group[style*="--qm-border-width"] .checkbox-label,
+.form-group[style*="--qm-border-width"] .radio-label {
+    border-style: solid;
+    border-width: var(--qm-border-width);
+    box-sizing: border-box;
+}
 .form-group[style*="--qm-border-color"] .form-control { border-color: var(--qm-border-color); }
+.form-group[style*="--qm-border-color"] .checkbox-label,
+.form-group[style*="--qm-border-color"] .radio-label { border-color: var(--qm-border-color); box-sizing: border-box; }
 .form-group[style*="--qm-border-radius-tl"] .form-control {
   border-top-left-radius: var(--qm-border-radius-tl);
   border-top-right-radius: var(--qm-border-radius-tr);
   border-bottom-right-radius: var(--qm-border-radius-br);
   border-bottom-left-radius: var(--qm-border-radius-bl);
 }
+.form-group[style*="--qm-border-radius-tl"] .checkbox-label,
+.form-group[style*="--qm-border-radius-tl"] .radio-label {
+  border-top-left-radius: var(--qm-border-radius-tl);
+  border-top-right-radius: var(--qm-border-radius-tr);
+  border-bottom-right-radius: var(--qm-border-radius-br);
+  border-bottom-left-radius: var(--qm-border-radius-bl);
+  box-sizing: border-box;
+}
 .form-group[style*="--qm-input-padding"] .form-control { padding: var(--qm-input-padding); }
+.form-group[style*="--qm-input-padding"] .checkbox-label,
+.form-group[style*="--qm-input-padding"] .radio-label { padding: var(--qm-input-padding); box-sizing: border-box; }
+
+.form-group[style*="--qm-field-bg"] {
+    background-color: var(--qm-field-bg);
+}
+.form-group[style*="--qm-field-border-width"] {
+    border-style: solid;
+    border-width: var(--qm-field-border-width);
+    box-sizing: border-box;
+}
+.form-group[style*="--qm-field-border-color"] {
+    border-color: var(--qm-field-border-color);
+    box-sizing: border-box;
+}
+.form-group[style*="--qm-field-border-radius-tl"] {
+    border-top-left-radius: var(--qm-field-border-radius-tl);
+    border-top-right-radius: var(--qm-field-border-radius-tr);
+    border-bottom-right-radius: var(--qm-field-border-radius-br);
+    border-bottom-left-radius: var(--qm-field-border-radius-bl);
+    box-sizing: border-box;
+}
+.form-group[style*="--qm-field-shadow"] {
+    box-shadow: var(--qm-field-shadow);
+}
+.form-group[style*="--qm-field-gap"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--qm-field-gap);
+}
+.form-group[style*="--qm-description-color"] .field-description {
+    color: var(--qm-description-color);
+}
+.form-group[style*="--qm-placeholder-color"] .form-control::placeholder,
+.form-group[style*="--qm-placeholder-color"] input::placeholder,
+.form-group[style*="--qm-placeholder-color"] textarea::placeholder {
+    color: var(--qm-placeholder-color);
+    opacity: 1;
+}
 
 .required {
     color: #dc3545;
@@ -548,11 +605,13 @@ $form_width_class = DesignHelper::get_width_class($form_design);
     opacity: 1;
 }
 
-/* Checkbox and Radio */
+/* Checkbox and Radio — keep control/icon + label on one line (all choice fields) */
 .checkbox-wrapper, .radio-wrapper {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 10px;
     padding: 0.5rem 0;
     flex: 0 0 auto;
     max-width: 100%;
@@ -579,29 +638,47 @@ $form_width_class = DesignHelper::get_width_class($form_design);
 
 .checkbox-group--horizontal .checkbox-wrapper,
 .radio-group--horizontal .radio-wrapper {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
     max-width: 100%;
 }
 
 .form-checkbox, .form-radio {
     width: 18px;
     height: 18px;
-    margin-top: 0.2rem;
-    flex-shrink: 0;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    align-self: center !important;
     accent-color: var(--qm-accent-color, #667eea);
 }
 
 .checkbox-label, .radio-label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 0.25rem 0.5rem;
     font-weight: 500;
     color: var(--qm-label-color, #495057);
     cursor: pointer;
+    margin: 0;
+    padding: 0;
+    line-height: 1.25;
+}
+
+.checkbox-label:has(.choice-option-description),
+.radio-label:has(.choice-option-description) {
+    flex-wrap: wrap !important;
 }
 
 .choice-option-label {
-    white-space: pre-line;
+    flex: 0 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+    margin: 0;
+    padding: 0;
 }
 
 .choice-option-price {
@@ -611,6 +688,7 @@ $form_width_class = DesignHelper::get_width_class($form_design);
 
 .choice-option-description {
     display: block;
+    flex: 1 0 100%;
     font-size: 0.875em;
     font-weight: 400;
     line-height: 1.4;
@@ -618,14 +696,14 @@ $form_width_class = DesignHelper::get_width_class($form_design);
     white-space: pre-line;
 }
 
-/* Standard option style (pill + checkmark) — Default keeps native controls */
+/* Standard option style — Figma pill (190×56): #F9F9F9 / #E8E8E8 / radius 50 / icon 24 + label */
 .checkbox-group--style-standard,
 .radio-group--style-standard {
     display: flex;
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: flex-start;
-    gap: 10px 12px;
+    gap: 10px;
     width: 100%;
     max-width: 100%;
 }
@@ -635,7 +713,7 @@ $form_width_class = DesignHelper::get_width_class($form_design);
     flex-direction: row;
     flex-wrap: wrap;
     align-items: flex-start;
-    gap: 10px 12px;
+    gap: 10px;
     max-width: 100%;
 }
 
@@ -643,12 +721,14 @@ $form_width_class = DesignHelper::get_width_class($form_design);
 .radio-group--style-standard .radio-wrapper {
     position: relative;
     display: inline-flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: stretch;
     align-self: flex-start;
     margin: 0;
     padding: 0;
     gap: 0;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
     width: max-content;
     max-width: 100%;
     box-sizing: border-box;
@@ -666,67 +746,106 @@ $form_width_class = DesignHelper::get_width_class($form_design);
 
 .checkbox-group--style-standard .checkbox-label,
 .radio-group--style-standard .radio-label {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
     align-self: flex-start;
     column-gap: 10px;
     row-gap: 4px;
+    gap: 4px 10px;
     margin: 0;
-    padding: 12px 20px;
-    border-radius: 999px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    color: #111827;
-    font-weight: 500;
-    line-height: 1.3;
+    min-height: 56px;
+    padding: var(--qm-input-padding, 16px 40px);
+    border-style: solid;
+    border-width: var(--qm-border-width, 1px);
+    border-color: var(--qm-border-color, #e8e8e8);
+    border-top-left-radius: var(--qm-border-radius-tl, 50px);
+    border-top-right-radius: var(--qm-border-radius-tr, 50px);
+    border-bottom-right-radius: var(--qm-border-radius-br, 50px);
+    border-bottom-left-radius: var(--qm-border-radius-bl, 50px);
+    background: var(--qm-input-bg, #f9f9f9);
+    color: var(--qm-input-color, #1f2937);
+    font-weight: var(--qm-input-font-weight, 500);
+    font-size: var(--qm-input-font-size, 14px);
+    line-height: 24px;
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
     user-select: none;
     width: max-content;
     max-width: 100%;
     box-sizing: border-box;
+    flex: 0 1 auto;
 }
 
+.checkbox-group--style-standard .checkbox-label:has(.choice-option-description),
+.radio-group--style-standard .radio-label:has(.choice-option-description) {
+    flex-wrap: wrap !important;
+}
+
+/* Figma fi_18875612: 24×24 frame, 20×20 circular check vector @ #1F2937 60% */
 .checkbox-group--style-standard .checkbox-label::before,
 .radio-group--style-standard .radio-label::before {
-    content: "✓";
-    flex: 0 0 22px;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: #4b5563;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 22px;
-    text-align: center;
+    content: "";
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='10' fill='%231F2937' fill-opacity='0.6'/%3E%3Cpath d='M5.5 10.25l3.1 3.1 5.9-5.9' stroke='%23ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-size: 20px 20px;
+    background-position: 2px 2px;
+    background-repeat: no-repeat;
+    -webkit-mask-image: none;
+    mask-image: none;
     flex-shrink: 0;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    align-self: center;
+    transition: opacity 0.15s ease, filter 0.15s ease;
 }
 
 .checkbox-group--style-standard .checkbox-label:hover,
 .radio-group--style-standard .radio-label:hover {
-    background: #e5e7eb;
-    border-color: #d1d5db;
+    background: color-mix(in srgb, var(--qm-input-bg, #f9f9f9) 94%, #000000);
+    border-color: color-mix(in srgb, var(--qm-border-color, #e8e8e8) 88%, #000000);
+}
+
+.checkbox-group--style-standard .checkbox-label:active,
+.radio-group--style-standard .radio-label:active {
+    background: color-mix(in srgb, var(--qm-input-bg, #f9f9f9) 90%, #000000);
+    border-color: color-mix(in srgb, var(--qm-border-color, #e8e8e8) 82%, #000000);
 }
 
 .checkbox-group--style-standard .form-checkbox:checked + .checkbox-label,
 .radio-group--style-standard .form-radio:checked + .radio-label {
     background: var(--qm-accent-color, #667eea);
     border-color: var(--qm-accent-color, #667eea);
+    color: #ffffff;
 }
 
 .checkbox-group--style-standard .form-checkbox:checked + .checkbox-label:hover,
 .radio-group--style-standard .form-radio:checked + .radio-label:hover {
-    background: color-mix(in srgb, var(--qm-accent-color, #667eea) 85%, #000000);
-    border-color: color-mix(in srgb, var(--qm-accent-color, #667eea) 85%, #000000);
+    background: color-mix(in srgb, var(--qm-accent-color, #667eea) 88%, #000000);
+    border-color: color-mix(in srgb, var(--qm-accent-color, #667eea) 88%, #000000);
+}
+
+.checkbox-group--style-standard .form-checkbox:checked + .checkbox-label:active,
+.radio-group--style-standard .form-radio:checked + .radio-label:active {
+    background: color-mix(in srgb, var(--qm-accent-color, #667eea) 78%, #000000);
+    border-color: color-mix(in srgb, var(--qm-accent-color, #667eea) 78%, #000000);
 }
 
 .checkbox-group--style-standard .form-checkbox:checked + .checkbox-label::before,
 .radio-group--style-standard .form-radio:checked + .radio-label::before {
-    background: #111827;
-    color: #ffffff;
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Ccircle cx='10' cy='10' r='10' fill='%23ffffff'/%3E%3Cpath d='M5.5 10.25l3.1 3.1 5.9-5.9' stroke='%231F2937' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.checkbox-group--style-standard .form-checkbox:focus-visible + .checkbox-label,
+.radio-group--style-standard .form-radio:focus-visible + .radio-label {
+    outline: 2px solid var(--qm-accent-color, #667eea);
+    outline-offset: 2px;
 }
 
 .checkbox-group--style-standard .form-checkbox:disabled + .checkbox-label,
@@ -738,23 +857,222 @@ $form_width_class = DesignHelper::get_width_class($form_design);
 
 .checkbox-group--style-standard .choice-option-label,
 .radio-group--style-standard .choice-option-label {
-    flex: 0 0 auto;
-    min-width: auto;
+    flex: 1 1 auto;
+    min-width: 0;
     color: inherit;
+    line-height: 24px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .checkbox-group--style-standard .choice-option-description,
 .radio-group--style-standard .choice-option-description {
     flex: 1 0 100%;
     margin: 0;
-    padding-left: 32px;
+    padding-left: 34px;
     color: #6b7280;
     white-space: pre-line;
 }
 
+.checkbox-group--style-standard .form-checkbox:checked + .checkbox-label .choice-option-description,
+.radio-group--style-standard .form-radio:checked + .radio-label .choice-option-description {
+    color: rgba(255, 255, 255, 0.85);
+}
+
 .checkbox-group--style-standard .choice-option-price,
 .radio-group--style-standard .choice-option-price {
+    color: inherit;
+    white-space: nowrap;
+}
+
+/* Modern option style — dual-circle control, theme-driven colors, gap 24 / 16 */
+.checkbox-group--style-modern,
+.radio-group--style-modern {
+    --qm-modern-option-ring: var(--qm-border-color, #ced4da);
+    --qm-modern-option-fill: var(--qm-border-color, #ced4da);
+    --qm-modern-option-ring-hover: var(--qm-focus-color, var(--qm-accent-color, #667eea));
+    --qm-modern-option-ring-checked: var(--qm-accent-color, #667eea);
+    --qm-modern-option-fill-checked: var(--qm-accent-color, #667eea);
+    --qm-modern-option-label: var(--qm-text-muted, #6c757d);
+    --qm-modern-option-label-checked: var(--qm-text-color, #333333);
+    --qm-modern-option-focus: var(--qm-focus-color, var(--qm-accent-color, #667eea));
+    --qm-modern-option-desc: var(--qm-text-muted, #6c757d);
+
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 24px;
+    width: 100%;
+    max-width: 100%;
+}
+
+.checkbox-group--style-modern.checkbox-group--horizontal,
+.radio-group--style-modern.radio-group--horizontal {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 24px 32px;
+    max-width: 100%;
+}
+
+.checkbox-group--style-modern .checkbox-wrapper,
+.radio-group--style-modern .radio-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    align-self: stretch;
+    margin: 0;
+    padding: 0;
+    gap: 0;
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-sizing: border-box;
+}
+
+.checkbox-group--style-modern.checkbox-group--horizontal .checkbox-wrapper,
+.radio-group--style-modern.radio-group--horizontal .radio-wrapper {
+    width: auto;
+    max-width: 100%;
+    flex: 0 1 auto;
+}
+
+.checkbox-group--style-modern .form-checkbox,
+.radio-group--style-modern .form-radio {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 1;
+}
+
+.checkbox-group--style-modern .checkbox-label,
+.radio-group--style-modern .radio-label {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 16px;
+    margin: 0;
+    min-height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--qm-modern-option-label);
+    font-weight: 400;
+    font-size: var(--qm-font-size, 16px);
+    line-height: 24px;
+    cursor: pointer;
+    transition: color 0.15s ease;
+    user-select: none;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+}
+
+.checkbox-group--style-modern .checkbox-label:has(.choice-option-description),
+.radio-group--style-modern .radio-label:has(.choice-option-description) {
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+}
+
+.checkbox-group--style-modern .checkbox-label::before,
+.radio-group--style-modern .radio-label::before {
+    content: "";
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    margin: 0;
+    border-radius: 50%;
+    border: 1px solid var(--qm-modern-option-ring);
+    background: radial-gradient(
+        circle,
+        var(--qm-modern-option-fill) 0,
+        var(--qm-modern-option-fill) 57%,
+        transparent 57%
+    );
+    box-sizing: border-box;
+    flex-shrink: 0;
+    align-self: center;
+    pointer-events: none;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.checkbox-group--style-modern .checkbox-label:hover,
+.radio-group--style-modern .radio-label:hover {
+    color: var(--qm-modern-option-label-checked);
+}
+
+.checkbox-group--style-modern .checkbox-label:hover::before,
+.radio-group--style-modern .radio-label:hover::before {
+    border-color: var(--qm-modern-option-ring-hover);
+}
+
+.checkbox-group--style-modern .form-checkbox:checked + .checkbox-label,
+.radio-group--style-modern .form-radio:checked + .radio-label {
+    color: var(--qm-modern-option-label-checked);
+    background: transparent;
+    border: none;
+}
+
+.checkbox-group--style-modern .form-checkbox:checked + .checkbox-label::before,
+.radio-group--style-modern .form-radio:checked + .radio-label::before {
+    border-color: var(--qm-modern-option-ring-checked);
+    background: radial-gradient(
+        circle,
+        var(--qm-modern-option-fill-checked) 0,
+        var(--qm-modern-option-fill-checked) 57%,
+        transparent 57%
+    );
+}
+
+.checkbox-group--style-modern .form-checkbox:focus-visible + .checkbox-label,
+.radio-group--style-modern .form-radio:focus-visible + .radio-label {
+    outline: 2px solid var(--qm-modern-option-focus);
+    outline-offset: 4px;
+    border-radius: 4px;
+}
+
+.checkbox-group--style-modern .form-checkbox:disabled + .checkbox-label,
+.radio-group--style-modern .form-radio:disabled + .radio-label {
+    opacity: 0.55;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.checkbox-group--style-modern .choice-option-label,
+.radio-group--style-modern .choice-option-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: inherit;
+    line-height: 24px;
+}
+
+.checkbox-group--style-modern .choice-option-description,
+.radio-group--style-modern .choice-option-description {
+    flex: 1 0 100%;
+    margin: 0;
+    padding-left: 40px;
+    color: var(--qm-modern-option-desc);
+    white-space: pre-line;
+}
+
+.checkbox-group--style-modern .choice-option-price,
+.radio-group--style-modern .choice-option-price {
     color: inherit;
     white-space: nowrap;
 }

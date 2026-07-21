@@ -2342,6 +2342,11 @@ export class EnhancedServiceManager {
     // Refresh the field in the canvas to show updated services
     this.formBuilder.refreshFieldInCanvas(this.currentFieldId);
 
+    // Rebuild Admin Canvas step indicators (Service Selector + internal page-break steps)
+    if (typeof this.formBuilder.refreshBuilderLivePreview === 'function') {
+      this.formBuilder.refreshBuilderLivePreview();
+    }
+
     // Refresh the properties panel to show updated service structure
     if (this.formBuilder.fieldProperties) {
       const fieldElement = document.querySelector(`[data-field-id="${this.currentFieldId}"]`);

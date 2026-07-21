@@ -111,7 +111,10 @@ $form_group_class = trim($field_size_class . ($is_content_block ? ' form-group--
                                                     if (!empty($field['options']) && is_array($field['options'])):
                                                         $choice_layout = (($field['optionLayout'] ?? 'vertical') === 'horizontal') ? 'horizontal' : 'vertical';
                                                         $choice_layout_class = $choice_layout === 'horizontal' ? ' checkbox-group--horizontal' : '';
-                                                        $choice_style_class = (($field['optionStyle'] ?? 'default') === 'standard') ? ' checkbox-group--style-standard' : '';
+                                                        $choice_option_style = $field['optionStyle'] ?? 'default';
+                                                        $choice_style_class = in_array($choice_option_style, ['standard', 'modern'], true)
+                                                            ? ' checkbox-group--style-' . $choice_option_style
+                                                            : '';
                                                         echo '<div class="checkbox-group' . $choice_layout_class . $choice_style_class . '">';
                                                         foreach ($field['options'] as $option):
                                                             $option_price = $choice_add_price && isset($choice_option_prices[$option])
@@ -173,7 +176,10 @@ $form_group_class = trim($field_size_class . ($is_content_block ? ' form-group--
                                                             : [];
                                                         $choice_layout = (($field['optionLayout'] ?? 'vertical') === 'horizontal') ? 'horizontal' : 'vertical';
                                                         $choice_layout_class = $choice_layout === 'horizontal' ? ' radio-group--horizontal' : '';
-                                                        $choice_style_class = (($field['optionStyle'] ?? 'default') === 'standard') ? ' radio-group--style-standard' : '';
+                                                        $choice_option_style = $field['optionStyle'] ?? 'default';
+                                                        $choice_style_class = in_array($choice_option_style, ['standard', 'modern'], true)
+                                                            ? ' radio-group--style-' . $choice_option_style
+                                                            : '';
                                                         echo '<div class="radio-group' . $choice_layout_class . $choice_style_class . '">';
                                                         foreach ($field['options'] as $option):
                                                             $option_price = $choice_add_price && isset($choice_option_prices[$option])
